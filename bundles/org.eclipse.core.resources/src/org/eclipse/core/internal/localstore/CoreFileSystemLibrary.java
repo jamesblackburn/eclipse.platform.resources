@@ -65,11 +65,15 @@ public static long getLastModified(String fileName) {
 	return new File(fileName).lastModified();
 }
 public static long getStat(String fileName) {
+	/* Calling String.getBytes() creates a new encoding object and other garbage.  
+	 * This can be avoided by calling String.getBytes(String encoding) instead.  
+	 */
 	if (hasNatives) {
-		//try to use the default encoding, avoids creating an encoding object instance
+		//default encoding is unknown or previously failed, use no-arg getBytes().
 		if (defaultEncoding == null) {
 			return internalGetStat(fileName.getBytes());
 		}
+		//try to use the default encoding
 		try {
 			return internalGetStat(fileName.getBytes(defaultEncoding));
 		} catch (java.io.UnsupportedEncodingException e) {
