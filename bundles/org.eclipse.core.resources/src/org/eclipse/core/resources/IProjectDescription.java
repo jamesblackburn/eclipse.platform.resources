@@ -123,7 +123,7 @@ public IResourceMapping getMapping(String name);
  * @see #addMapping
  * @see #removeMapping
  */
-public Map getMappings() throws CoreException;
+public Map getMappings();
 /**
  * Returns the name of the described project.
  *

@@ -17,7 +17,6 @@ import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
-
 public class Project extends Container implements IProject {
 	/**
 	 * Used to ensure we don't read the description immediately after writing it.
@@ -51,6 +50,7 @@ protected MultiStatus basicSetDescription(ProjectDescription description) {
 	workspace.getNatureManager().configureNatures(this, current, description, result);
 	return result;
 }
+
 /** 
  * @see IProject#build
  */
@@ -120,14 +120,21 @@ protected void checkDescription(IProject project, IProjectDescription desc, bool
 		// is null (we are using the default) or if the locations aren't equal, then validate the location
 		// of the new description. Otherwise both locations aren't null and they are equal so ignore validation.
 		IProjectDescription sourceDesc = internalGetDescription();
-		if (sourceDesc.getLocation() == null || !locationsEqual(sourceDesc, desc))
+		if (sourceDesc.getLocation() == null || !locationsEqual(sourceDesc, desc)) {
 			status.merge(workspace.validateProjectLocation(project, location));
-	} else
+			LocationValidator.validateProjectDescription(this, desc);
+		}
+	} else {
 		// otherwise continue on like before
 		status.merge(workspace.validateProjectLocation(project, location));
+		LocationValidator.validateProjectDescription(this, desc);
+	}
 	if (!status.isOK())
 		throw new ResourceException(status);
 }
+
+
+
 /**
  * @see IProject#close
  */
@@ -386,6 +393,29 @@ public boolean hasNature(String natureID) throws CoreException {
 		checkAccessible(NULL_FLAG);
 	return desc.hasNature(natureID);
 }
+/**
+ * Closes the project.  This is called during restore when there is a failure
+ * to read the project description.  Since it is called during workspace restore,
+ * it cannot start any operations.
+ */
+protected void internalClose() throws CoreException {
+	workspace.flushBuildOrder();
+	getMarkerManager().removeMarkers(this, IResource.DEPTH_INFINITE);
+	// remove each member from the resource tree. 
+	// DO NOT use resource.delete() as this will delete it from disk as well.
+	IResource[] members = members(IContainer.INCLUDE_PHANTOMS | IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
+	for (int i = 0; i < members.length; i++) {
+		Resource member = (Resource) members[i];
+		workspace.deleteResource(member);
+	}
+	// finally mark the project as closed.
+	ResourceInfo info = getResourceInfo(false, true);
+	info.clear(M_OPEN);
+	info.clearSessionProperties();
+	info.setModificationStamp(IResource.NULL_STAMP);
+	info.setSyncInfo(null);
+}
+
 protected void internalCopy(IProjectDescription destDesc, boolean force, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
@@ -486,7 +516,7 @@ public ProjectDescription internalGetDescription() {
  * corresponding API method but is needed separately since it is used
  * during workspace restore (i.e., when you cannot do an operation)
  */
-void internalSetDescription(IProjectDescription value, boolean incrementContentId) throws CoreException {
+void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
 	ResourceInfo info = getResourceInfo(false, true);
 	((ProjectInfo) info).setDescription((ProjectDescription) value);
 	if (incrementContentId) {
@@ -559,11 +589,13 @@ public boolean isOpen(int flags) {
 	return flags != NULL_FLAG && ResourceInfo.isSet(flags, M_OPEN);
 }
 /**
- * @see IProject#move
+ * Returns true if the two given paths overlap each other.  Null paths
+ * are tolerated, and null paths never overlap anything.
  */
-public void move(IProjectDescription destination, boolean force, IProgressMonitor monitor) throws CoreException {
-	Assert.isNotNull(destination);
-	move(destination, force ? IResource.FORCE : IResource.NONE, monitor);
+protected boolean isOverlapping(IPath path1, IPath path2) {
+	if (path1 == null || path2 == null)
+		return false;
+	return path1.isPrefixOf(path2) || path2.isPrefixOf(path1);
 }
 protected boolean locationsEqual(IProjectDescription desc1, IProjectDescription desc2) {
 	IPath loc1 = desc1.getLocation();
@@ -574,6 +606,14 @@ protected boolean locationsEqual(IProjectDescription desc1, IProjectDescription 
 		return false;
 	return loc1.equals(loc2);
 }
+/**
+ * @see IProject#move
+ */
+public void move(IProjectDescription destination, boolean force, IProgressMonitor monitor) throws CoreException {
+	Assert.isNotNull(destination);
+	move(destination, force ? IResource.FORCE : IResource.NONE, monitor);
+}
+
 /**
  * @see IResource#move
  */
@@ -623,6 +663,11 @@ public void open(IProgressMonitor monitor) throws CoreException {
 		monitor.done();
 	}
 }
+protected void renameMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
+	java.io.File oldMetaArea = workspace.getMetaArea().locationFor(source).toFile();
+	java.io.File newMetaArea = workspace.getMetaArea().locationFor(destination).toFile();
+	getLocalManager().getStore().move(oldMetaArea, newMetaArea, false, monitor);
+}
 /**
  * @see IProject
  */
@@ -637,7 +682,6 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 			workspace.prepareOperation();
 			ResourceInfo info = getResourceInfo(false, false);
 			checkAccessible(getFlags(info));
-			validateMappings(description);
 			//If we're out of sync and !FORCE, then fail.
 			//If the file is missing, we want to write the new description then throw an exception.
 			boolean hadSavedDescription = true;
@@ -670,13 +714,6 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 	} finally {
 		monitor.done();
 	}
-}
-
-/**
- * Validates the mappings for the given project description.
- */
-private void validateMappings(IProjectDescription description) {
-	throw new RuntimeException("Not yet implemented");
 }
 
 /**
@@ -737,41 +774,9 @@ protected void updateDescription() throws CoreException {
  * @see IProject#validateMapping
  */
 public IStatus validateMapping(IResourceMapping mapping) {
-	Assert.isLegal(mapping != null);
-	IPath localLocation = mapping.getLocation();
-	if (localLocation == null)
-		return ResourceStatus.OK_STATUS;
-	// test if the given local location overlaps the default default location
-	IPath defaultDefaultLocation = Platform.getLocation();
-	if (defaultDefaultLocation.isPrefixOf(localLocation) || localLocation.isPrefixOf(defaultDefaultLocation)) {
-		String message = Policy.bind("overlapLocal", new String[] { localLocation.toString(), defaultDefaultLocation.toString()});
-		return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
-	}
-
-	// Iterate over each known project and ensure that the mapping to validate does not 
-	// conflict with any of the mappings already defined.
-	IProject[] projects = getWorkspace().getRoot().getProjects();
-	for (int i = 0; i < projects.length; i++) {
-		IProject project = (IProject) projects[i];
-		boolean sameProject = project.equals(this);
-		// iterate over each mapping skipping the one we are validating (if it exists)
-		IProjectDescription description = ((Project) project).internalGetDescription();
-		if (description == null)
-			continue;
-		for (Iterator mappings = ((ProjectDescription) description).getMappings(false).keySet().iterator(); mappings.hasNext();) {
-			IResourceMapping map = (IResourceMapping) mappings.next();
-			if (sameProject && map.getName().equals(mapping.getName()))
-				continue;
-			IPath definedLocalLocation = map.getLocation();
-			if (definedLocalLocation != null)
-				if (localLocation.isPrefixOf(definedLocalLocation) || definedLocalLocation.isPrefixOf(localLocation)) {
-					String message = Policy.bind("overlapLocal", new String[] { localLocation.toString(), definedLocalLocation.toString()});
-					return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
-				}
-		}
-	}
-	return new ResourceStatus(IResourceStatus.OK, Policy.bind("validMapping"));
+	return LocationValidator.validateLocation(mapping.getLocation(), this, mapping.getName(), false);
 }
+
 /**
  * Writes the project description file to disk.  This is the only method
  * that should ever be writing the description, because it ensures that
@@ -795,31 +800,5 @@ public void writeDescription(IProjectDescription description, int updateFlags) t
 		isWritingDescription = false;
 	}
 }
-protected void renameMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
-	java.io.File oldMetaArea = workspace.getMetaArea().locationFor(source).toFile();
-	java.io.File newMetaArea = workspace.getMetaArea().locationFor(destination).toFile();
-	getLocalManager().getStore().move(oldMetaArea, newMetaArea, false, monitor);
-}
-/**
- * Closes the project.  This is called during restore when there is a failure
- * to read the project description.  Since it is called during workspace restore,
- * it cannot start any operations.
- */
-protected void internalClose() throws CoreException {
-	workspace.flushBuildOrder();
-	getMarkerManager().removeMarkers(this, IResource.DEPTH_INFINITE);
-	// remove each member from the resource tree. 
-	// DO NOT use resource.delete() as this will delete it from disk as well.
-	IResource[] members = members(IContainer.INCLUDE_PHANTOMS | IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
-	for (int i = 0; i < members.length; i++) {
-		Resource member = (Resource) members[i];
-		workspace.deleteResource(member);
-	}
-	// finally mark the project as closed.
-	ResourceInfo info = getResourceInfo(false, true);
-	info.clear(M_OPEN);
-	info.clearSessionProperties();
-	info.setModificationStamp(IResource.NULL_STAMP);
-	info.setSyncInfo(null);
-}
+
 }

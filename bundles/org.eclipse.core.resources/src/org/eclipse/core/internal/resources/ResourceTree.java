@@ -10,7 +10,9 @@
  **********************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.io.*;
+import java.util.Iterator;
+import java.util.Map;
+
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.properties.PropertyManager;
 import org.eclipse.core.internal.utils.Assert;
@@ -690,6 +692,15 @@ public void standardDeleteProject(IProject project, int updateFlags, IProgressMo
 					for (int i = 0; i < list.length; i++)
 						success &= Workspace.clear(new java.io.File(root, list[i]));
 			}
+			//delete all mapped locations
+			if (description != null) {
+				Map mappings = ((ProjectDescription)description).getMappings(false);
+				for (Iterator it = mappings.values().iterator(); it.hasNext();) {
+					IResourceMapping mapping = (IResourceMapping)it.next();
+					if (mapping.getLocation() != null)
+						success &= Workspace.clear(mapping.getLocation().toFile());
+				}
+			}
 		}
 		// deleting project content is 75% of the work
 		monitor.worked(Policy.totalWork*3/4);
@@ -940,7 +951,7 @@ private boolean internalDeleteProject(IProject project, int updateFlags, IProgre
 	// get here we know that force is false.
 	java.io.File root = project.getLocation().toFile();
 	IProjectDescription description = ((Project) project).internalGetDescription();
-	// If we have a user-defined location delete the directory, otherwise just see if its empty
+	// If we are in the default location then delete the directory, otherwise just see if its empty
 	boolean success;
 	if (description == null || description.getLocation() == null) {
 		success = root.delete();

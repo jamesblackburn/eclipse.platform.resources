@@ -25,7 +25,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected IProject[] projects;
 	protected String[] natures;
 	protected ICommand[] buildSpec;
-	protected HashMap mappings;
+	protected Map mappings;
 
 	protected String comment =""; //$NON-NLS-1$
 	protected boolean dirty = true;
@@ -172,7 +172,7 @@ public void setLocation(IPath location) {
 	this.location = location;
 	dirty = true;
 }
-/* package */ void setMappings(HashMap mappings) {
+/* package */ void setMappings(Map mappings) {
 	Assert.isLegal(mappings != null);
 	this.mappings = mappings;
 	dirty = true;

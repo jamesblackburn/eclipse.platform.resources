@@ -1673,45 +1673,8 @@ public IStatus validateProjectLocation(IProject context, IPath location) {
 		if (!result.isOK())
 			return result;
 	}
-	//if the location doesn't have a device, see if the OS will assign one
-	if (location.getDevice() == null)
-		location = new Path(location.toFile().getAbsolutePath());
-	// test if the given location overlaps the default default location
-	IPath defaultDefaultLocation = Platform.getLocation();
-	if (defaultDefaultLocation.isPrefixOf(location) || location.isPrefixOf(defaultDefaultLocation)) {
-		message = Policy.bind("resources.overlapLocal", location.toString(), defaultDefaultLocation.toString()); //$NON-NLS-1$
-		return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
-	}
-	// Iterate over each known project and ensure that the location does not
-	// conflict with any of their already defined locations.
-	IProject[] projects = getRoot().getProjects();
-	for (int j = 0; j < projects.length; j++) {
-		IProject project = (IProject) projects[j];
-		// since we are iterating over the project in the workspace, we
-		// know that they have been created before and must have a description
-		IProjectDescription desc  = ((Project) project).internalGetDescription();
-		IPath definedLocalLocation = desc.getLocation();
-		// if the project uses the default location then continue
-		if (definedLocalLocation == null)
-			continue;
-		if (definedLocalLocation != null && location != null)
-			//tolerate locations being the same if this is the project being tested
-			if (project.equals(context) && definedLocalLocation.equals(location))
-				continue;
-			IPath one = location;
-			IPath two = definedLocalLocation;
-			// If we are on a case-insensitive file system then we will convert to all lowercase.
-			if (!CoreFileSystemLibrary.isCaseSensitive()) {
-				one = new Path(location.toOSString().toLowerCase());
-				two = new Path(definedLocalLocation.toOSString().toLowerCase());
-			}
-			if (one.isPrefixOf(two) || two.isPrefixOf(one)) {
-				message = Policy.bind("resources.overlapLocal", location.toString(), definedLocalLocation.toString()); //$NON-NLS-1$
-				return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
-			}
-	}
-	message = Policy.bind("resources.validLocation"); //$NON-NLS-1$
-	return new ResourceStatus(IResourceStatus.OK, message);
+	//check for overlap with other existing projects and mappings
+	return LocationValidator.validateLocation(location, context, null, false);
 }
 /**
  * Internal method. To be called only from the following methods:
