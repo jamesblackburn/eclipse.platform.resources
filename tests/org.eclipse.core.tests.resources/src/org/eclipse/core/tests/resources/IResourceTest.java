@@ -372,7 +372,7 @@ public class IResourceTest extends EclipseWorkspaceTest {
 		return true;
 	}
 	private void resetVerifier() {
-		waitForNotify();
+//		TestingSupport.waitForAutoBuild();
 		verifier.reset();
 	}
 	protected void setUp() throws Exception {
