@@ -195,9 +195,11 @@ public class PropertyBucket extends Bucket {
 	 * ENTRY ::= PATH PROPERTY_COUNT PROPERTY+
 	 * PATH ::= string
 	 * PROPERTY_COUNT ::= int
-	 * PROPERTY ::= KEY VALUE
-	 * KEY ::= string
-	 * UUID	 ::= byte[16]
+	 * PROPERTY ::= QUALIFIER LOCAL_NAME VALUE
+	 * QUALIFIER ::= INDEX | QNAME
+	 * INDEX -> byte int
+	 * QNAME -> byte string   
+	 * UUID ::= byte[16]
 	 * LAST_MODIFIED ::= byte[8]
 	 * </pre>
 	 * </p>
