@@ -17,28 +17,32 @@ import junit.framework.TestSuite;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.tests.harness.CSVPerformanceTestResult;
 import org.eclipse.core.tests.harness.CorePerformanceTest;
-import org.eclipse.core.tests.harness.LoggingPerformanceTestResult;
 
 /**
  * Basic performance calculations for standard workspace operations.
  */
 public class WorkspacePerformanceTest extends CorePerformanceTest {
 	private static final String chars = "abcdefghijklmnopqrstuvwxyz";
-	private static final String COPYING_TIMER = "COPYING_TIMER";
-	private static final String CREATING_TIMER = "CREATING_TIMER";
-	private static final String DELETING_TIMER = "DELETING_TIMER";
-	private static final String MOVING_TIMER = "MOVING_TIMER";
+	private static final String COPYING_TIMER = "Copying";
+	private static final String CREATING_TIMER = "Creating";
+	private static final String DELETING_TIMER = "Deleting";
+	private static final String MOVING_TIMER = "Moving";
+	private static final String OVERALL_TIMER = "Overall";
+	
+	//following two values should be powers of ten only
+	private static final int TOTAL_RESOURCES = 4096;
+	private static final int TREE_WIDTH = 8;
+	
+	private static final int ITERATIONS = 6;
 
-	private static final String OVERALL_TIMER = "OVERALL_TIMER";
-	private static final int TOTAL_RESOURCES = 10000;
-	private static final int TREE_WIDTH = 10;
+	private final Random random = new Random();
 
 	public static Test suite() {
 		return new TestSuite(WorkspacePerformanceTest.class);
 	}
 
-	private final Random random = new Random();
 	public WorkspacePerformanceTest() {
 		super();
 	}
@@ -74,13 +78,19 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 		}
 		return buf.toString();
 	}
+	public void loopTestWorkspaceOperations() throws CoreException {
+		for (int i = 0; i < ITERATIONS; i++) {
+			System.out.println("Starting iteration: " + i);
+			doTestWorkspaceOperations();
+		}
+	}
 	public void doTestWorkspaceOperations() throws CoreException {
 		startTimer(OVERALL_TIMER);
 		final IProject project = getWorkspace().getRoot().getProject("Project");
 		project.create(getMonitor());
 		project.open(getMonitor());
 		final IFolder topFolder = project.getFolder("TopFolder");
-
+		
 		//create the project contents
 		getWorkspace().run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor monitor) throws CoreException {
@@ -89,7 +99,10 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 				stopTimer(CREATING_TIMER);
 			}
 		}, getMonitor());
-
+		
+//		int count = ((Resource)getWorkspace().getRoot()).countResources(IResource.DEPTH_INFINITE, false);
+//		System.out.println("Resource count: " + count);
+		
 		//copy the project contents		
 		getWorkspace().run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor monitor) throws CoreException {
@@ -98,7 +111,7 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 				stopTimer(COPYING_TIMER);
 			}
 		}, getMonitor());
-
+		
 		//move the project contents
 		getWorkspace().run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor monitor) throws CoreException {
@@ -107,7 +120,7 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 				stopTimer(MOVING_TIMER);
 			}
 		}, getMonitor());
-
+		
 		//delete the project contents
 		getWorkspace().run(new IWorkspaceRunnable() {
 			public void run(IProgressMonitor monitor) throws CoreException {
@@ -116,7 +129,7 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 				stopTimer(DELETING_TIMER);
 			}
 		}, getMonitor());
-
+		
 		stopTimer(OVERALL_TIMER);
 	}
 	private IFolder moveFolder(IFolder source) throws CoreException {
@@ -143,9 +156,9 @@ public class WorkspacePerformanceTest extends CorePerformanceTest {
 		}
 	}
 	public void testPerformance() {
-		String fileName = "c:\\temp\\" + getClassName() + "_" + System.currentTimeMillis() + ".html";
-		java.io.File logFile = new java.io.File(fileName);
-		LoggingPerformanceTestResult result = new LoggingPerformanceTestResult(logFile);
-		new WorkspacePerformanceTest("doTestWorkspaceOperations").run(result);
+		String timingFile = "d:\\performance\\" + getClassName() + "_timing.csv";
+		String memoryFile = "d:\\performance\\" + getClassName() + "_memory.csv";
+		CSVPerformanceTestResult result = new CSVPerformanceTestResult(timingFile, memoryFile);
+		new WorkspacePerformanceTest("loopTestWorkspaceOperations").run(result);
 	}
 }
