@@ -125,11 +125,10 @@ public IPath locationFor(IResource target) {
 			IPath projectLocation = null;
 			description = ((Project)target.getProject()).internalGetDescription();
 			if (description != null && description.getLocation() != null) {
-				projectLocation = description.getLocation().removeFirstSegments(1);
+				return description.getLocation().append(target.getProjectRelativePath());
 			} else {
-				projectLocation = Platform.getLocation();
+				return Platform.getLocation().append(target.getFullPath());
 			}
-			return projectLocation.append(target.getFullPath());
 	}
 }
 public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
