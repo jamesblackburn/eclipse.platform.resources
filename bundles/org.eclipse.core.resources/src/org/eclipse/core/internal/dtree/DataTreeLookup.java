@@ -31,6 +31,11 @@ public class DataTreeLookup {
 		}
 	}
 /**
+ * Constructors for internal use only.  Use factory methods.
+ */
+private DataTreeLookup() {
+}
+/**
  * Factory method for creating a new lookup object.
  */
 public static DataTreeLookup newLookup(IPath nodeKey, boolean isPresent, Object data) {
@@ -53,10 +58,5 @@ public static DataTreeLookup newLookup(IPath nodeKey, boolean isPresent, Object 
 	instance.data = data;
 	instance.foundInFirstDelta = foundInFirstDelta;
 	return instance;
-}
-/**
- * Constructors for internal use only.  Use factory methods.
- */
-private DataTreeLookup() {
 }
 }
