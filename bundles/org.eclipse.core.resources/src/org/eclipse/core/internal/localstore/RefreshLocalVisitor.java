@@ -9,6 +9,12 @@ import org.eclipse.core.runtime.*;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.utils.Policy;
 //
+/**
+ * Visits a unified tree, and synchronizes the file system with the
+ * resource tree.  After the visit is complete, the file system will
+ * be synchronized with the workspace tree with respect to
+ * resource existence, gender, and timestamp.
+ */
 public class RefreshLocalVisitor implements IUnifiedTreeVisitor, ILocalStoreConstants {
 	protected IProgressMonitor monitor;
 	protected Workspace workspace;
@@ -34,18 +40,12 @@ public class RefreshLocalVisitor implements IUnifiedTreeVisitor, ILocalStoreCons
 	protected static final int RL_IN_SYNC 		= 1;
 	protected static final int RL_NOT_IN_SYNC 	= 2;
 
-/**
- * Visits a unified tree, and synchronizes the file system with the
- * resource tree.  After the visit is complete, the file system will
- * be synchronized with the workspace tree with respect to
- * resource existence, gender, and timestamp.
- */
 public RefreshLocalVisitor(IProgressMonitor monitor) {
 	this.monitor = monitor;
 	workspace = (Workspace) ResourcesPlugin.getWorkspace();
 	resourceChanged = false;
-	String msg = Policy.bind("");
-	errors = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_LOCAL, "", null);
+	String msg = Policy.bind("resources.errorMultiRefresh");
+	errors = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_LOCAL, msg, null);
 }
 /**
  * This method has the same implementation as resourceChanged but as they are different
@@ -215,15 +215,25 @@ public boolean visit(UnifiedTreeNode node) throws CoreException {
 		} else {
 			int state = synchronizeExistence(node, target, node.getLevel());
 			if (state == RL_IN_SYNC || state == RL_NOT_IN_SYNC) {
-				if (targetType == IResource.FILE)
-					((File)target).updateProjectDescription();
+				if (targetType == IResource.FILE) {
+					try {
+						((File)target).updateProjectDescription();
+					} catch (CoreException e) {
+						errors.merge(e.getStatus());
+					}
+				}
 				return true;
 			}
 		}
 		if (synchronizeGender(node, target))
 			synchronizeLastModified(node, target);
-		if (targetType == IResource.FILE)
-			((File)target).updateProjectDescription();
+		if (targetType == IResource.FILE) {
+			try {
+				((File)target).updateProjectDescription();
+			} catch (CoreException e) {
+				errors.merge(e.getStatus());
+			}
+		}
 		return true;
 	} finally {
 		if (--nextProgress <= 0) {

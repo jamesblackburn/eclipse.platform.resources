@@ -703,7 +703,7 @@ protected IStatus saveMetaInfo(Project project, IProgressMonitor monitor) throws
 	//if there is nothing on disk, write the description
 	if (!workspace.getFileSystemManager().hasSavedProject(project)) {
 		workspace.getFileSystemManager().writeSilently(project);
-		String msg = Policy.bind("resources.missingProjectMeta", project.getName());
+		String msg = Policy.bind("resources.missingProjectMetaRepaired", project.getName());
 		//FIXME: Should just return an INFO status here.
 		return new ResourceStatus(IResourceStatus.FAILED_WRITE_METADATA, project.getFullPath(), msg);
 	}
@@ -1116,7 +1116,9 @@ public IStatus save(int kind, Project project, IProgressMonitor monitor) throws 
 						visitAndSave(project);
 						// reset the snapshot file
 						resetSnapshots(project);
-						saveMetaInfo(project, null);
+						IStatus result = saveMetaInfo(project, null);
+						if (!result.isOK())
+							warnings.merge(result);
 						monitor.worked(1);
 						break;
 				}

@@ -262,7 +262,7 @@ public void movedProjectSubtree(IProject project, IProjectDescription destDescri
 	// Set the new project description on the destination project.
 	try {
 		destination.internalSetDescription(destDescription, false);
-		destination.getLocalManager().write(destination, IResource.FORCE);
+		destination.writeDescription(IResource.FORCE);
 	} catch (CoreException e) {
 		String message = Policy.bind("resources.projectDesc");
 		IStatus status = new ResourceStatus(IStatus.ERROR, destination.getFullPath(), message, e);

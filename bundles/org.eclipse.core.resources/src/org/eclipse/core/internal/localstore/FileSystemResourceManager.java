@@ -259,17 +259,18 @@ public ProjectDescription read(IProject target, boolean creation) throws CoreExc
 		}
 		return description;
 	}
+	ResourceException error = null;
 	try {
 		description = (ProjectDescription)new ModelObjectReader().read(descriptionPath);
 	} catch (IOException e) {
 		String msg = Policy.bind("resources.readProjectMeta", target.getName());
-		throw new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, e);
+		error = new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, e);
 	}
-	if (description == null) {
+	if (error == null && description == null) {
 		String msg = Policy.bind("resources.readProjectMeta", target.getName());
-		throw new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
+		error = new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
 	}
-	if (!isDefaultLocation)
+	if (description != null && !isDefaultLocation)
 		description.setLocation(projectLocation);
 	long lastModified = CoreFileSystemLibrary.getLastModified(descriptionPath.toOSString());
 	IFile descriptionFile = target.getFile(F_PROJECT);
@@ -287,6 +288,8 @@ public ProjectDescription read(IProject target, boolean creation) throws CoreExc
 	info = ((Resource) target).getResourceInfo(false, true);
 	updateLocalSync(info, lastModified, true);
 
+	if (error != null)
+		throw error;
 	return description;
 }
 public boolean refresh(IResource target, int depth, IProgressMonitor monitor) throws CoreException {
@@ -496,7 +499,9 @@ public void write(IFolder target, boolean force, IProgressMonitor monitor) throw
 	updateLocalSync(info, lastModified, false);
 }
 /**
- * The target must exist in the workspace.
+ * The target must exist in the workspace.  This method must only ever
+ * be called from Project.writeDescription(), because that method ensures
+ * that the description isn't then immediately discovered as a new change.
  */
 public void write(IProject target, int updateFlags) throws CoreException {
 	IPath location = locationFor(target);

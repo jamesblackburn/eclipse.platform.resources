@@ -16,6 +16,11 @@ import java.io.*;
 import java.util.*;
 
 public class Project extends Container implements IProject {
+	/**
+	 * Used to ensure we don't read the description immediately after writing it.
+	 */
+	private boolean isWritingDescription = false;
+	
 protected Project(IPath path, Workspace container) {
 	super(path, container);
 }
@@ -151,9 +156,10 @@ public void close(boolean save, IProgressMonitor monitor) throws CoreException {
 			workspace.beginOperation(true);
 			// flush the build order early in case there is a problem
 			workspace.flushBuildOrder();
+			IStatus saveStatus = null;
 			if (save) {
 				IProgressMonitor sub = Policy.subMonitorFor(monitor, Policy.opWork / 2, SubProgressMonitor.SUPPRESS_SUBTASK_LABEL);
-				workspace.getSaveManager().save(ISaveContext.PROJECT_SAVE, this, sub);
+				saveStatus = workspace.getSaveManager().save(ISaveContext.PROJECT_SAVE, this, sub);
 			}
 			// If the project has never been saved at this point, delete the 
 			// project but leave its contents.
@@ -164,6 +170,8 @@ public void close(boolean save, IProgressMonitor monitor) throws CoreException {
 			}
 			internalClose();
 			monitor.worked(Policy.opWork / 2);
+			if (saveStatus != null && !saveStatus.isOK())
+				throw new ResourceException(saveStatus);
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -232,7 +240,6 @@ public void create(IProjectDescription description, IProgressMonitor monitor) th
 			if (description == null) {
 				desc = new ProjectDescription();
 			} else {
-				//FIXME: Ensure cloning is the right thing here
 				desc = (ProjectDescription)((ProjectDescription)description).clone();
 			}
 			desc.setName(getName());
@@ -241,9 +248,11 @@ public void create(IProjectDescription description, IProgressMonitor monitor) th
 			try {
 				if (getLocalManager().hasSavedProject(this)) {
 					updateDescription();
+					//make sure the .location file is written
+					workspace.getMetaArea().writeLocation(this);
 				} else {
 					//write out the project
-					getLocalManager().write(this, IResource.FORCE);
+					writeDescription(IResource.FORCE);
 				}
 			} catch (CoreException e) {
 				workspace.deleteResource(this);
@@ -428,7 +437,7 @@ protected void internalCopy(IProjectDescription destDesc, boolean force, IProgre
 			// write out the new project description to the meta area. This will ovewrite 
 			//the .project file that was copied during the recursive copy in the previous step
 			try {
-				getLocalManager().write(destProject, IResource.FORCE);
+				writeDescription(IResource.FORCE);
 			} catch (CoreException e) {
 				try {
 					destProject.delete(force, null);
@@ -673,7 +682,7 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 			workspace.beginOperation(true);
 			workspace.changing(this);
 			MultiStatus status = basicSetDescription((ProjectDescription) description);
-			getLocalManager().write(this, updateFlags);
+			writeDescription(updateFlags);
 			info = getResourceInfo(false, true);
 			info.incrementContentId();
 			workspace.updateModificationStamp(info);
@@ -740,6 +749,8 @@ public void touch(IProgressMonitor monitor) throws CoreException {
  * description file contents.
  */
 protected void updateDescription() throws CoreException {
+	if (isWritingDescription)
+		return;
 	FileSystemResourceManager manager = getLocalManager();
 	workspace.changing(this);
 	//if changed, read description from disk and update in memory
@@ -748,6 +759,20 @@ protected void updateDescription() throws CoreException {
 	ProjectDescription description = manager.read(this, false);
 	//set the description in memory
 	internalSetDescription(description, true);
+}
+/**
+ * Writes the project description file to disk.  This is the only method
+ * that should ever be writing the description, because it ensures that
+ * the description isn't then immediately discovered as an incoming
+ * change and read back from disk.
+ */
+public void writeDescription(int updateFlags) throws CoreException {
+	isWritingDescription = true;
+	try {
+		getLocalManager().write(this, updateFlags);
+	} finally {
+		isWritingDescription = false;
+	}
 }
 protected void renameMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
 	java.io.File oldMetaArea = workspace.getMetaArea().locationFor(source).toFile();
