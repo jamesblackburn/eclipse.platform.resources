@@ -18,6 +18,90 @@ import org.eclipse.core.runtime.*;
 
 public class BucketTable {
 
+	public static final class Entry {
+		public final static int LONG_LENGTH = 8;
+		public final static int UUID_LENGTH = UniversalUniqueIdentifier.BYTES_SIZE;
+		public final static int DATA_LENGTH = UUID_LENGTH + LONG_LENGTH;		
+		byte[][] data;
+		IPath path;
+
+		public static byte[] getDataAsByteArray(byte[] uuid, long timestamp) {
+			byte[] data = new byte[DATA_LENGTH];
+			System.arraycopy(uuid, 0, data, 0, uuid.length);
+			for (int j = 0; j < LONG_LENGTH; j++)
+				data[UUID_LENGTH + j] = (byte) (timestamp >>> j * 8);
+			return data;
+		}
+
+		Entry(IPath path, byte[][] data) {
+			this.path = path;
+			this.data = data;
+		}
+		/**
+		 * Compacts the given array removing any null slots.
+		 */
+		void compact() {
+			if(data == null)
+				return;
+			int occurrences = 0;
+			for (int i = 0; i < data.length; i++)
+				if (data[i] != null)
+					data[occurrences++] = data[i];
+			if (occurrences == data.length)
+				// no items deleted
+				return;
+			if (occurrences == 0) {
+				// no items remaining
+				data = null;
+				return;
+			}
+			byte[][] result = new byte[occurrences][];
+			System.arraycopy(data, 0, result, 0, occurrences);
+			data = result;
+		}
+		
+		public void deleteOccurrence(int i) {
+			data[i] = null;
+		}
+
+		public byte[][] getData() {
+			return getData(false);
+		}
+
+		public byte[][] getData(boolean clone) {
+			if (!clone)
+				return data == null ? new byte[0][] : data;
+			// don't need to clone the contained arrays because they immutable
+			byte[][] newData = new byte[data.length][];
+			System.arraycopy(data, 0, newData, 0, data.length);
+			return newData;
+		}
+
+		int getOccurrences() {
+			return data == null ? 0 : data.length;
+		}
+
+		public IPath getPath() {
+			return path;
+		}
+
+		public long getTimestamp(int i) {			
+			long timestamp = 0;
+			for (int j = 0; j < LONG_LENGTH; j++)
+				timestamp += (data[i][UUID_LENGTH + j] & 0xFF) << j * 8;
+			return timestamp;
+		}
+
+		public UniversalUniqueIdentifier getUUID(int i) {
+			return new UniversalUniqueIdentifier(data[i]);
+		}
+
+		public boolean isEmpty() {
+			return data == null || data.length == 0;
+		}
+
+	}
+
 	public abstract static class Visitor {
 
 		// should stop the traversal
@@ -38,7 +122,7 @@ public class BucketTable {
 		/** 
 		 * @return either STOP, CONTINUE or RETURN and optionally DELETE
 		 */
-		public abstract int visit(IPath path, byte[][] uuids);
+		public abstract int visit(Entry entry);
 	}
 
 	private static final String BUCKET = ".bucket"; //$NON-NLS-1$
@@ -88,15 +172,15 @@ public class BucketTable {
 				if (!filter.isPrefixOf(path) || (exactMatch && !filter.equals(path)))
 					continue;
 				// calls the visitor passing all uuids for the entry
-				byte[][] uuids = (byte[][]) entry.getValue();
-				int outcome = visitor.visit(path, uuids);
+				final Entry fileEntry = new Entry(path, (byte[][]) entry.getValue());
+				int outcome = visitor.visit(fileEntry);
 				if ((outcome & Visitor.UPDATE) != 0) {
 					needSaving = true;
-					uuids = compact(uuids);
-					if (uuids == null)
+					fileEntry.compact();
+					if (fileEntry.isEmpty())
 						i.remove();
 					else
-						entry.setValue(uuids);
+						entry.setValue(fileEntry.getData());
 				} else if ((outcome & Visitor.DELETE) != 0) {
 					needSaving = true;
 					i.remove();
@@ -114,11 +198,11 @@ public class BucketTable {
 		}
 	}
 
-	public void addBlob(IPath path, byte[] uuid) {
+	public void addBlob(IPath path, byte[] uuid, long lastModified) {
 		String pathAsString = path.toString();
 		byte[][] existing = (byte[][]) entries.get(pathAsString);
 		if (existing == null) {
-			entries.put(pathAsString, new byte[][] {uuid});
+			entries.put(pathAsString, new byte[][] {Entry.getDataAsByteArray(uuid, lastModified)});
 			needSaving = true;
 			return;
 		}
@@ -128,29 +212,27 @@ public class BucketTable {
 			return;
 		byte[][] newValue = new byte[existing.length + 1][];
 		System.arraycopy(existing, 0, newValue, 0, existing.length);
-		newValue[newValue.length - 1] = uuid;
+		newValue[newValue.length - 1] = Entry.getDataAsByteArray(uuid, lastModified);
 		sortUUIDs(newValue);
 		entries.put(pathAsString, newValue);
 		needSaving = true;
 	}
 
-	public void addBlob(IPath path, UniversalUniqueIdentifier uuid) {
-		addBlob(path, uuid.toBytes());
-	}
-
-	public void addBlobs(IPath path, byte[][] uuids) {
+	public void addBlobs(Entry fileEntry) {
+		IPath path = fileEntry.getPath();
+		byte[][] data = fileEntry.getData();
 		String pathAsString = path.toString();
 		byte[][] existing = (byte[][]) entries.get(pathAsString);
 		if (existing == null) {
-			entries.put(pathAsString, uuids);
+			entries.put(pathAsString, data);
 			needSaving = true;
 			return;
 		}
 		// add after looking for existing occurrences
-		List newUUIDs = new ArrayList(existing.length + uuids.length);
-		for (int i = 0; i < uuids.length; i++)
-			if (!contains(existing, uuids[i]))
-				newUUIDs.add(uuids[i]);
+		List newUUIDs = new ArrayList(existing.length + data.length);
+		for (int i = 0; i < data.length; i++)
+			if (!contains(existing, data[i]))
+				newUUIDs.add(data[i]);
 		if (newUUIDs.isEmpty())
 			// none added
 			return;
@@ -159,25 +241,6 @@ public class BucketTable {
 		System.arraycopy(existing, 0, newValue, newUUIDs.size(), existing.length);
 		entries.put(pathAsString, newValue);
 		needSaving = true;
-	}
-
-	/**
-	 * Compacts the given array removing any null slots.
-	 */
-	private byte[][] compact(byte[][] array) {
-		int occurrences = 0;
-		for (int i = 0; i < array.length; i++)
-			if (array[i] != null)
-				array[occurrences++] = array[i];
-		if (occurrences == array.length)
-			// no items deleted
-			return array;
-		if (occurrences == 0)
-			// no items remaining
-			return null;
-		byte[][] result = new byte[occurrences][];
-		System.arraycopy(array, 0, result, 0, occurrences);
-		return result;
 	}
 
 	private boolean contains(byte[][] array, byte[] item) {
@@ -196,17 +259,17 @@ public class BucketTable {
 			delete(toDelete.getParentFile());
 	}
 
-	File getLocation() {
-		return location == null ? null : location.getParentFile();
-	}
-
-	public byte[][] getUUIDs(IPath path) {
+	public Entry getEntry(IPath path) {
 		String pathAsString = path.toString();
 		byte[][] existing = (byte[][]) entries.get(pathAsString);
 		if (existing == null)
-			return new byte[0][];
+			return new Entry(path, null);
 		sortUUIDs(existing);
-		return existing;
+		return new Entry(path, existing);
+	}
+
+	File getLocation() {
+		return location == null ? null : location.getParentFile();
 	}
 
 	public void load(File baseLocation) throws CoreException {
@@ -229,7 +292,7 @@ public class BucketTable {
 				for (int i = 0; i < entryCount; i++) {
 					String key = source.readUTF();
 					int length = source.readUnsignedShort();
-					byte[][] uuids = new byte[length][UniversalUniqueIdentifier.BYTES_SIZE];
+					byte[][] uuids = new byte[length][Entry.DATA_LENGTH];
 					for (int j = 0; j < uuids.length; j++)
 						source.read(uuids[j]);
 					this.entries.put(key, uuids);

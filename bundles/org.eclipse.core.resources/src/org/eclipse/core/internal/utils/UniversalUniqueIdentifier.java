@@ -100,10 +100,15 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 	 @see #BYTES_SIZE
 	 */
 	public UniversalUniqueIdentifier(byte[] byteValue) {
-		fBits = new byte[BYTES_SIZE];
-		if (byteValue.length == BYTES_SIZE)
-			System.arraycopy(byteValue, 0, fBits, 0, byteValue.length);
+		this(byteValue, 0);
 	}
+	
+	public UniversalUniqueIdentifier(byte[] byteValue, int start) {
+		fBits = new byte[BYTES_SIZE];
+		if (byteValue.length - start >= BYTES_SIZE)
+			System.arraycopy(byteValue, start, fBits, 0, fBits.length);
+	}
+	
 
 	/**
 	 Construct an instance whose internal representation is defined by the given string.  

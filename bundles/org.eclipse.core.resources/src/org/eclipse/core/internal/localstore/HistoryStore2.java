@@ -13,6 +13,7 @@ package org.eclipse.core.internal.localstore;
 import java.io.File;
 import java.io.InputStream;
 import java.util.*;
+import org.eclipse.core.internal.localstore.BucketTable.Entry;
 import org.eclipse.core.internal.localstore.BucketTable.Visitor;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.utils.*;
@@ -90,7 +91,7 @@ public class HistoryStore2 implements IHistoryStore {
 			uuid = blobStore.addBlob(localFile, moveContents);
 			File bucketDir = locationFor(key.removeLastSegments(1));
 			currentBucket.load(bucketDir);
-			currentBucket.addBlob(key, uuid);
+			currentBucket.addBlob(key, uuid.toBytes(), lastModified);
 			currentBucket.save();
 		} catch (CoreException e) {
 			ResourcesPlugin.getPlugin().getLog().log(e.getStatus());
@@ -102,8 +103,8 @@ public class HistoryStore2 implements IHistoryStore {
 		final Set allFiles = new HashSet();
 		try {
 			accept(new Visitor() {
-				public int visit(IPath path, byte[][] uuids) {
-					allFiles.add(path);
+				public int visit(Entry fileEntry) {
+					allFiles.add(fileEntry.getPath());
 					return CONTINUE;
 				}
 			}, root, depth);
@@ -119,21 +120,21 @@ public class HistoryStore2 implements IHistoryStore {
 			final long minimumTimestamp = System.currentTimeMillis() - description.getFileStateLongevity();
 			final int max = description.getMaxFileStates();
 			final BlobStore tmpBlobStore = blobStore;
-			final Set tmpBlobsToRemove = blobsToRemove;			
+			final Set tmpBlobsToRemove = blobsToRemove;
 			accept(new Visitor() {
-				public int visit(IPath path, byte[][] uuids) {
+				public int visit(Entry fileEntry) {
 					int statesCounter = 0;
 					boolean changed = false;
-					for (int i = 0; i < uuids.length; i++) {
+					for (int i = 0; i < fileEntry.getOccurrences(); i++) {
+						UniversalUniqueIdentifier uuidObject = fileEntry.getUUID(i);
 						if (++statesCounter <= max) {
-							UniversalUniqueIdentifier uuidObject = new UniversalUniqueIdentifier(uuids[i]);							
 							File blobFile = tmpBlobStore.fileFor(uuidObject);
 							if (blobFile.lastModified() >= minimumTimestamp)
 								continue;
 						}
 						// "delete" the current uuid
-						tmpBlobsToRemove.add(new UniversalUniqueIdentifier(uuids[i]));							
-						uuids[i] = null;
+						tmpBlobsToRemove.add(uuidObject);
+						fileEntry.deleteOccurrence(i);
 						changed = true;
 					}
 					return changed ? UPDATE : CONTINUE;
@@ -182,12 +183,13 @@ public class HistoryStore2 implements IHistoryStore {
 
 		try {
 
-			// special case: source and origin are the same bucket (renaming a file/copying a file/folder to the same directory) 
+			// special case: source and origin are the same bucket (renaming a file/copying a file/folder to the same directory)
+			//TODO isn't this missing the folder case (should be recursive)? 
 			if (baseSourceLocation.equals(baseDestinationLocation)) {
 				currentBucket.load(baseSourceLocation.toFile());
-				byte[][] uuids = currentBucket.getUUIDs(source);
-				for (int i = 0; i < uuids.length; i++)
-					currentBucket.addBlob(destination, uuids[i]);
+				Entry sourceEntry = currentBucket.getEntry(source);
+				Entry destinationEntry = new Entry(destination, sourceEntry.getData(true));
+				currentBucket.addBlobs(destinationEntry);
 				currentBucket.save();
 				clean(destinationResource.getFullPath());
 				return;
@@ -211,9 +213,10 @@ public class HistoryStore2 implements IHistoryStore {
 					}
 				}
 
-				public int visit(IPath path, byte[][] uuids) {
-					IPath destinationPath = destination.append(path.removeFirstSegments(source.segmentCount()));
-					destinationBucket.addBlobs(destinationPath, uuids);
+				public int visit(Entry sourceEntry) {
+					IPath destinationPath = destination.append(sourceEntry.getPath().removeFirstSegments(source.segmentCount()));
+					Entry destinationEntry = new Entry(destinationPath, sourceEntry.getData(true));
+					destinationBucket.addBlobs(destinationEntry);
 					return CONTINUE;
 				}
 			}, source, IResource.DEPTH_INFINITE);
@@ -249,12 +252,9 @@ public class HistoryStore2 implements IHistoryStore {
 			final List states = new ArrayList();
 			final BlobStore tmpBlobStore = blobStore;
 			accept(new Visitor() {
-				public int visit(IPath path, byte[][] uuids) {
-					for (int i = 0; i < uuids.length; i++) {
-						UniversalUniqueIdentifier blobUUID = new UniversalUniqueIdentifier(uuids[i]);
-						File blobFile = tmpBlobStore.fileFor(blobUUID);
-						states.add(new FileState(HistoryStore2.this, path, blobFile.lastModified(), blobUUID));
-					}
+				public int visit(Entry fileEntry) {
+					for (int i = 0; i < fileEntry.getOccurrences(); i++)
+						states.add(new FileState(HistoryStore2.this, fileEntry.getPath(), fileEntry.getTimestamp(i), fileEntry.getUUID(i)));
 					return CONTINUE;
 				}
 			}, filePath, IResource.DEPTH_ZERO, true);
@@ -340,10 +340,10 @@ public class HistoryStore2 implements IHistoryStore {
 		try {
 			final Set tmpBlobsToRemove = blobsToRemove;
 			accept(new Visitor() {
-				public int visit(IPath path, byte[][] uuids) {
-					for (int i = 0; i < uuids.length; i++)
+				public int visit(Entry fileEntry) {
+					for (int i = 0; i < fileEntry.getOccurrences(); i++)
 						// remember we need to delete the files later
-						tmpBlobsToRemove.add(new UniversalUniqueIdentifier(uuids[i]));
+						tmpBlobsToRemove.add(fileEntry.getUUID(i));
 					return DELETE;
 				}
 			}, root, IResource.DEPTH_INFINITE);
@@ -355,14 +355,14 @@ public class HistoryStore2 implements IHistoryStore {
 	/**
 	 * @see IHistoryStore#removeGarbage()
 	 */
-	public void removeGarbage() {		
-		try {			
+	public void removeGarbage() {
+		try {
 			final Set tmpBlobsToRemove = blobsToRemove;
 			accept(new Visitor() {
-				public int visit(IPath path, byte[][] uuids) {
-					for (int i = 0; i < uuids.length; i++)
+				public int visit(Entry fileEntry) {
+					for (int i = 0; i < fileEntry.getOccurrences(); i++)
 						// remember we need to delete the files later
-						tmpBlobsToRemove.remove(new UniversalUniqueIdentifier(uuids[i]));
+						tmpBlobsToRemove.remove(fileEntry.getUUID(i));
 					return CONTINUE;
 				}
 			}, Path.ROOT, IResource.DEPTH_INFINITE);
