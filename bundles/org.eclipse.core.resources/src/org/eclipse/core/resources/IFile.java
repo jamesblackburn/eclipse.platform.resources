@@ -437,6 +437,54 @@ public String getName();
 public boolean isReadOnly();
 
 /**
+ * Creates a new file resource as a member of this handle's parent resource.
+ * The file's contents will be located in the file specified by the given
+ * file system path.  This resource must not already exist; the file
+ * specified by the given local location must already exist.  This handle's parent
+ * resource must be a project.
+ * <p>
+ * There are currently no update flags applicable for this operation.
+ * </p>
+ * <p>
+ * This method synchronizes this resource with the local file system at the given
+ * location.
+ * </p>
+ * <p>
+ * This method changes resources; these changes will be reported
+ * in a subsequent resource change event, including an indication 
+ * that the folder has been added to its parent.
+ * </p>
+ * <p>
+ * This method is long-running; progress and cancellation are provided
+ * by the given progress monitor. 
+ * </p>
+ * 
+ * @param updateFlags bit-wise or of update flag constants
+ *   (none are currently applicable)
+ * @param localLocation a file system path where the file should be mounted
+ * @param monitor a progress monitor, or <code>null</code> if progress
+ *    reporting and cancellation are not desired
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This resource already exists in the workspace.</li>
+ * <li> The workspace contains a resource of a different type 
+ *      at the same path as this resource.</li>
+ * <li> The parent of this resource does not exist.</li>
+ * <li> The parent of this resource is a closed project.</li>
+ * <li> The name of this resource is not valid (according to 
+ *    <code>IWorkspace.validateName</code>).</li>
+ * <li> The corresponding location in the local file system is occupied
+ *    by a directory (as opposed to a file).</li>
+ * <li> The corresponding location in the local file system is already 
+ * 	associated with a resource in this workspace.</li>
+ * <li> Resource changes are disallowed during certain types of resource change 
+ *       event notification.  See IResourceChangeEvent for more details.</li>
+ * </ul>
+ * @see #unmount
+ * @since 2.1
+ */
+public void mount(IPath localLocation, int updateFlags, IProgressMonitor monitor) throws CoreException;
+/**
  * Moves this resource to be at the given location.
  * <p>
  * This is a convenience method, fully equivalent to:
@@ -631,6 +679,42 @@ public void setContents(IFileState source, boolean force, boolean keepHistory, I
  * @since 2.0
  */
 public void setContents(InputStream source, int updateFlags, IProgressMonitor monitor) throws CoreException;
+/**
+ * Removes this mounted file from the workspace, but leaves the 
+ * contents in the file system intact.  This operation is only allowed
+ * on files that have been mounted with the <code>mount</code>
+ * method.
+ * <p>
+ * Unmounting a resource also deletes its session and persistent 
+ * properties and markers.
+ * </p>
+ * <p>
+ * Unmounting a resource which has sync information converts the resource 
+ * to a phantom and retains the sync information for future use.
+ * </p>
+ * <p>
+ * This method changes resources; these changes will be reported
+ * in a subsequent resource change event.
+ * </p>
+ * <p>
+ * This method is long-running; progress and cancellation are provided
+ * by the given progress monitor. 
+ * </p>
+ * 
+ * @param updateFlags bit-wise or of update flag constants 
+ *   (none are currently applicable)
+ * @param monitor a progress monitor, or <code>null</code> if progress
+ *    reporting and cancellation are not desired
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This resource does not exist.</li>
+ * <li> Resource changes are disallowed during certain types of resource change 
+ *       event notification. See IResourceChangeEvent for more details.</li>
+ * </ul>
+ * @see #mount
+ * @since 2.1
+ */
+public void unmount(int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 /**
  * Sets the contents of this file to the bytes in the given file state.

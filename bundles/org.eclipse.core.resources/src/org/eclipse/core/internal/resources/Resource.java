@@ -12,6 +12,7 @@ package org.eclipse.core.internal.resources;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.properties.PropertyManager;
 import org.eclipse.core.internal.utils.Assert;
@@ -77,6 +78,27 @@ protected void assertCopyRequirements(IPath destination, int destinationType) th
 		// check method above indicate assertion conditions.
 		Assert.isTrue(false, status.getChildren()[0].getMessage());
 	}
+}
+protected void assertMountRequirements(IPath localLocation) throws CoreException {
+	checkDoesNotExist(getFlags(getResourceInfo(false, false)), true);
+	Container parent = (Container) getParent();
+	if (parent == null || parent.getType() != IResource.PROJECT) {
+		String msg = Policy.bind("resources.mountNonProject", getFullPath().toString());//$NON-NLS-1$
+		Assert.isLegal(false, msg);
+	}
+	parent.checkAccessible(getFlags(parent.getResourceInfo(false, false)));
+	java.io.File localFile = localLocation.toFile();
+	if (!localFile.exists()) {
+		String msg = Policy.bind("resources.mountDoesNotExist", getFullPath().toString());//$NON-NLS-1$
+		throw new ResourceException(IResourceStatus.NOT_FOUND_LOCAL, getFullPath(), msg, null);
+	}
+	//resource type and file system type must match
+	if ((getType() == IResource.FOLDER) != localFile.isDirectory()) {
+		String msg = Policy.bind("resources.mountWrongType", getFullPath().toString());//$NON-NLS-1$
+		throw new ResourceException(IResourceStatus.WRONG_TYPE_LOCAL, getFullPath(), msg, null);
+	}
+	//TODO:The corresponding location in the local file system is already 
+	//associated with a resource in this workspace.</li>
 }
 protected void assertMoveRequirements(IPath destination, int destinationType) throws CoreException {
 	IStatus status = checkMoveRequirements(destination, destinationType);
@@ -764,6 +786,13 @@ public boolean isLocal(int flags, int depth) {
 		return flags != NULL_FLAG && ResourceInfo.isSet(flags, M_LOCAL_EXISTS);
 }
 /**
+ * @see org.eclipse.core.resources.IResource#isMounted()
+ */
+public boolean isMounted() {
+	ResourceInfo info = getResourceInfo(false, false);
+	return info != null && info.isSet(M_MOUNTED);
+}
+/**
  * @see IResource
  */
 public boolean isPhantom() {
@@ -1185,7 +1214,4 @@ public void setTeamPrivateMember(boolean isTeamPrivate) throws CoreException {
 		}
 	}
 }
-
-
-
 }

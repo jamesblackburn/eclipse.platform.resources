@@ -123,6 +123,13 @@ public interface IResourceStatus extends IStatus {
  	 */
 	public static final int CASE_VARIANT_EXISTS = 275;
 
+	/** Status code constant (value 276) indicating a file exists in the
+	 * file system but is not of the expected type (file instead of directory,
+	 * or vice-versa).
+ 	 * Severity: error. Category: workspace.
+ 	 */
+	public static final int WRONG_TYPE_LOCAL = 276;
+
 	// Workspace constants [300-398]
 	// Information Only [300-332]
 
@@ -184,7 +191,13 @@ public interface IResourceStatus extends IStatus {
  	 * Severity: error. Category: workspace.
  	 */
 	public static final int MARKER_NOT_FOUND = 376;
-		
+
+	/** Status code constant (value 377) indicating a resource is 
+	 * unexpectedly not mounted.
+ 	 * Severity: error. Category: workspace.
+ 	 */
+	public static final int RESOURCE_NOT_MOUNTED = 377;
+
 	// Internal constants [500-598]
 	// Information Only [500-532]
 

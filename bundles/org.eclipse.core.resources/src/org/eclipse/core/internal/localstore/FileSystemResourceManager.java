@@ -239,6 +239,8 @@ public boolean isSynchronized(IResource resource, int depth) {
 	}
 }
 public IPath locationFor(IResource target) {
+	//note: this method is a critical performance path,
+	//code may be inlined to prevent method calls
 	switch (target.getType()) {
 		case IResource.ROOT :
 			return Platform.getLocation();
@@ -250,7 +252,22 @@ public IPath locationFor(IResource target) {
 			}
 			return getProjectDefaultLocation(project);
 		default:
-			//first get the location of the project (without the project name)
+			//check if the resource is mounted
+			IPath targetPath = target.getFullPath();
+			int numSegments = targetPath.segmentCount();
+			IResource mounted = target;
+			if (numSegments > 2) {
+				//parent could be a mounted resource
+				mounted = workspace.getRoot().getFolder(
+					targetPath.removeLastSegments(numSegments-2));
+			}
+			ResourceInfo mountedInfo = ((Resource)mounted).getResourceInfo(true, false);
+			if (mountedInfo != null && mountedInfo.isSet(M_MOUNTED)) {
+				String location = (String)mountedInfo.getSessionProperty(K_MOUNT_LOCATION);
+				return new Path(location).append(targetPath.removeFirstSegments(2));
+			}
+				
+			//not a mounted resource -- get location of project
 			description = ((Project)target.getProject()).internalGetDescription();
 			if (description != null && description.getLocation() != null) {
 				return description.getLocation().append(target.getProjectRelativePath());
@@ -259,6 +276,13 @@ public IPath locationFor(IResource target) {
 			}
 	}
 }
+public void mount(Folder target, IPath localLocation) {
+	//resource already exists when mounting -- just need to update sync info
+	long lastModified = CoreFileSystemLibrary.getLastModified(localLocation.toFile().getAbsolutePath());
+	ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
+	updateLocalSync(info, lastModified, false);
+}
+
 public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {

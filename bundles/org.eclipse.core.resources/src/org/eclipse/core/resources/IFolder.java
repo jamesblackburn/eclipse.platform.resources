@@ -200,6 +200,53 @@ public IFile getFile(String name);
  * @see #getFile
  */
 public IFolder getFolder(String name);
+/**
+ * Creates a new folder resource as a member of this handle's parent resource.
+ * The folder's contents will be located in the directory specified by the given
+ * file system path.
+ * <p>
+ * There are currently no update flags applicable for this operation.
+ * </p>
+ * <p>
+ * This method synchronizes this resource with the local file system at the given
+ * location.
+ * </p>
+ * <p>
+ * This method changes resources; these changes will be reported
+ * in a subsequent resource change event, including an indication 
+ * that the folder has been added to its parent.
+ * </p>
+ * <p>
+ * This method is long-running; progress and cancellation are provided
+ * by the given progress monitor. 
+ * </p>
+ * 
+ * @param updateFlags bit-wise or of update flag constants
+ *   (none are currently applicable)
+ * @param localLocation a file system path where the folder should be mounted
+ * @param monitor a progress monitor, or <code>null</code> if progress
+ *    reporting and cancellation are not desired
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This resource already exists in the workspace.</li>
+ * <li> The workspace contains a resource of a different type 
+ *      at the same path as this resource.</li>
+ * <li> The parent of this resource does not exist.</li>
+ * <li> The parent of this resource is not an open project</li>
+ * <li> The name of this resource is not valid (according to 
+ *    <code>IWorkspace.validateName</code>).</li>
+ * <li> The corresponding location in the local file system does not exist.</li>
+ * <li> The corresponding location in the local file system is occupied
+ *    by a file (as opposed to a directory).</li>
+ * <li> The corresponding location in the local file system is already 
+ * 	associated with a resource in this workspace.</li>
+ * <li> Resource changes are disallowed during certain types of resource change 
+ *       event notification.  See IResourceChangeEvent for more details.</li>
+ * </ul>
+ * @see #unmount
+ * @since 2.1
+ */
+public void mount(IPath localLocation, int updateFlags, IProgressMonitor monitor) throws CoreException;
 
 /**
  * Moves this resource so that it is located at the given path.  
@@ -247,4 +294,42 @@ public IFolder getFolder(String name);
  * @see IResource#move(IPath,int,IProgressMonitor)
  */
 public void move(IPath destination, boolean force, boolean keepHistory, IProgressMonitor monitor) throws CoreException;
+/**
+ * Removes this mounted folder from the workspace, but leaves the 
+ * contents in the file system intact.  This operation is only allowed
+ * on folders that have been mounted with the <code>mount</code>
+ * method.
+ * <p>
+ * Unmounting a resource also deletes its session and persistent 
+ * properties and markers.
+ * </p>
+ * <p>
+ * Unmounting a resource which has sync information converts the resource 
+ * to a phantom and retains the sync information for future use.
+ * </p>
+ * <p>
+ * This method changes resources; these changes will be reported
+ * in a subsequent resource change event.
+ * </p>
+ * <p>
+ * This method is long-running; progress and cancellation are provided
+ * by the given progress monitor. 
+ * </p>
+ * 
+ * @param updateFlags bit-wise or of update flag constants 
+ *   (none are currently applicable)
+ * @param monitor a progress monitor, or <code>null</code> if progress
+ *    reporting and cancellation are not desired
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This resource does not exist.</li>
+ * <li> Resource changes are disallowed during certain types of resource change 
+ *       event notification. See IResourceChangeEvent for more details.</li>
+ * <li> This resource is not a mounted folder.</li>
+ * </ul>
+ * @see #mount
+ * @see IResource#isMounted
+ * @since 2.1
+ */
+public void unmount(int updateFlags, IProgressMonitor monitor) throws CoreException;
 }

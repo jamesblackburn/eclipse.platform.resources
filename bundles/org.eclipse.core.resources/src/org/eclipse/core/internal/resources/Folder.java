@@ -10,12 +10,10 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
 import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
 
 public class Folder extends Container implements IFolder {
 protected Folder(IPath path, Workspace container) {
@@ -159,4 +157,63 @@ public void internalCreate(boolean force, boolean local, IProgressMonitor monito
 	}
 }
 
+/**
+ * @see org.eclipse.core.resources.IFolder#mount(IPath, int, IProgressMonitor)
+ */
+public void mount(IPath localLocation, int updateFlags, IProgressMonitor monitor) throws CoreException {
+	monitor = Policy.monitorFor(monitor);
+	try {
+		String message = Policy.bind("resources.mounting", getFullPath().toString()); //$NON-NLS-1$
+		monitor.beginTask(message, Policy.totalWork);
+		checkValidPath(path, FOLDER);
+		try {
+			workspace.prepareOperation();
+			assertMountRequirements(localLocation);
+			workspace.beginOperation(true);
+			ResourceInfo info = workspace.createResource(this, false);
+			info.setSessionProperty(K_MOUNT_LOCATION, localLocation.toString());
+			info.set(M_MOUNTED);
+			getLocalManager().mount(this, localLocation);
+			monitor.worked(Policy.opWork * 10 / 100);
+			refreshLocal(DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 90 / 100));
+		} catch (OperationCanceledException e) {
+			workspace.getWorkManager().operationCanceled();
+			throw e;
+		} finally {
+			workspace.endOperation(true, Policy.subMonitorFor(monitor, Policy.buildWork));
+		}
+	} finally {
+		monitor.done();
+	}
+}
+
+/**
+ * @see org.eclipse.core.resources.IFolder#unmount(int, IProgressMonitor)
+ */
+public void unmount(int updateFlags, IProgressMonitor monitor) throws CoreException {
+	monitor = Policy.monitorFor(monitor);
+	try {
+		String message = Policy.bind("resources.unmounting", getFullPath().toString()); //$NON-NLS-1$
+		monitor.beginTask(message, Policy.totalWork);
+		try {
+			workspace.prepareOperation();
+			ResourceInfo info = getResourceInfo(true, false);
+			checkExists(getFlags(info), true);
+			//check if mounted
+			if (!info.isSet(M_MOUNTED)) {
+				String msg = Policy.bind("resources.notMounted", getFullPath().toString());//$NON-NLS-1$
+				throw new ResourceException(IResourceStatus.RESOURCE_NOT_MOUNTED, getFullPath(), msg, null);
+			}
+			workspace.beginOperation(true);
+			deleteResource(true, null);
+		} catch (OperationCanceledException e) {
+			workspace.getWorkManager().operationCanceled();
+			throw e;
+		} finally {
+			workspace.endOperation(true, Policy.subMonitorFor(monitor, Policy.buildWork));
+		}
+	} finally {
+		monitor.done();
+	}
+}
 }
