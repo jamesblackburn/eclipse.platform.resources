@@ -5,20 +5,19 @@ package org.eclipse.core.internal.events;
  * All Rights Reserved.
  */
 
-import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
-import org.eclipse.core.internal.dtree.*;
-import org.eclipse.core.internal.events.ResourceDeltaInfo;
-import org.eclipse.core.internal.resources.IMarkerSetElement;
-import org.eclipse.core.internal.resources.MarkerSet;
-import org.eclipse.core.internal.resources.ResourceInfo;
-import org.eclipse.core.internal.utils.Assert;
 import java.util.*;
 
+import org.eclipse.core.internal.resources.*;
+import org.eclipse.core.internal.utils.Assert;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
+/**
+ * Concrete implementation of the IResourceDelta interface.  Each ResourceDelta
+ * object represents changes that have occurred between two states of the
+ * resource tree.
+ */
 public class ResourceDelta extends PlatformObject implements IResourceDelta {
 	protected IPath path;
-	protected IPath movedToPath;
-	protected IPath movedFromPath;
 	protected ResourceDeltaInfo deltaInfo;
 	protected int status;
 	protected ResourceInfo oldInfo;
@@ -82,7 +81,8 @@ protected void checkForMarkerDeltas() {
  * reflect moves (setting MOVED_FROM and MOVED_TO), and marker changes on
  * added and removed resources.
  */
-protected void fixMovesAndMarkers(NodeIDMap nodeIDMap) {
+protected void fixMovesAndMarkers() {
+	NodeIDMap nodeIDMap = deltaInfo.getNodeIDMap();
 	if (!path.isRoot() && !nodeIDMap.isEmpty()) {
 		int kind = getKind();
 		switch (kind) {
@@ -96,7 +96,6 @@ protected void fixMovesAndMarkers(NodeIDMap nodeIDMap) {
 					// This is done only for MOVED_FROM, not MOVED_TO, since a resource may be both.
 					status = (status & KIND_MASK) | (deltaInfo.getComparator().compare(oldInfo, newInfo) & ~KIND_MASK);
 					status |= MOVED_FROM;
-					movedFromPath = oldPath;
 				}
 		}
 		switch (kind) {
@@ -106,7 +105,6 @@ protected void fixMovesAndMarkers(NodeIDMap nodeIDMap) {
 				IPath newPath = (IPath) nodeIDMap.getNewPath(nodeID);
 				if (newPath != null && !newPath.equals(path)) {
 					status |= MOVED_TO;
-					movedToPath = newPath;
 				}
 		}
 	}
@@ -117,7 +115,7 @@ protected void fixMovesAndMarkers(NodeIDMap nodeIDMap) {
 	
 	//recurse on children
 	for (int i = 0; i < children.length; i++) {
-		((ResourceDelta)children[i]).fixMovesAndMarkers(nodeIDMap);
+		((ResourceDelta)children[i]).fixMovesAndMarkers();
 	}
 }
 /**
@@ -176,13 +174,19 @@ public IMarkerDelta[] getMarkerDeltas() {
  * @see IResourceDelta#getMovedFromPath
  */
 public IPath getMovedFromPath() {
-	return movedFromPath;
+	if ((status & MOVED_FROM) != 0) {
+		return deltaInfo.getNodeIDMap().getOldPath(newInfo.getNodeId());
+	}
+	return null;
 }
 /**
  * @see IResourceDelta#getMovedToPath
  */
 public IPath getMovedToPath() {
-	return movedToPath;
+	if ((status & MOVED_TO) != 0) {
+		return deltaInfo.getNodeIDMap().getNewPath(oldInfo.getNodeId());
+	}
+	return null;
 }
 /**
  * @see IResourceDelta#getProjectRelativePath
@@ -218,6 +222,9 @@ public IResource getResource() {
 	cachedResource = deltaInfo.getWorkspace().newResource(path, info.getType());
 	return cachedResource;
 }
+/**
+ * @see IResourceDelta#hasAffectedChildren
+ */
 public boolean hasAffectedChildren() {
 	return children.length > 0;
 }
@@ -238,7 +245,7 @@ protected void setStatus(int status) {
  * immediate structure suitable for debug purposes.
  */
 public String toDebugString() {
-	final StringBuffer buffer = new StringBuffer("");
+	final StringBuffer buffer = new StringBuffer();
 	writeDebugString(buffer);
 	return buffer.toString();
 }
@@ -261,7 +268,11 @@ public String toDeepDebugString() {
 public String toString() {
 	return "ResourceDelta(" + path + ")";
 }
-
+/**
+ * Provides a new set of markers for the delta.  This is used
+ * when the delta is reused in cases where the only changes 
+ * are marker changes.
+ */
 public void updateMarkers(Map markers) {
 	deltaInfo.setMarkerDeltas(markers);
 }
