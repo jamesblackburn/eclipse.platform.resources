@@ -23,6 +23,8 @@ import org.eclipse.core.runtime.*;
  */
 public class FileSystemResourceManager implements ICoreConstants, IManager {
 
+	private static final String CONVERT_HISTORY_STORE = ResourcesPlugin.PI_RESOURCES + ".convertHistory"; //$NON-NLS-1$
+	public static final String ENABLE_NEW_HISTORY_STORE = ResourcesPlugin.PI_RESOURCES + ".newHistory"; //$NON-NLS-1$
 	protected Workspace workspace;
 	protected IHistoryStore historyStore;
 	protected FileSystemStore localStore;
@@ -144,13 +146,23 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			monitor.done();
 		}
 	}
-	
+
 	/**
 	 * Factory method for creating history stores. 
 	 */
 	private static IHistoryStore createHistoryStore(Workspace workspace, IPath location, int limit) {
-		return new HistoryStore2(workspace, location, limit);
-	}	
+		if (Boolean.getBoolean(ENABLE_NEW_HISTORY_STORE)) {
+			HistoryStore2 newHistoryStore = new HistoryStore2(workspace, location, limit);
+			if (Boolean.getBoolean(CONVERT_HISTORY_STORE)) {
+				IStatus conversionOutcome = new HistoryStoreConverter().convertHistory(workspace, location, limit, newHistoryStore, true);
+				if (conversionOutcome.getSeverity() != IStatus.OK)
+					// if either we fail or succeed, a non-OK status is returned
+					ResourcesPlugin.getPlugin().getLog().log(conversionOutcome);
+			}
+			return newHistoryStore;
+		}
+		return new HistoryStore(workspace, location, limit);
+	}
 
 	public void delete(IResource target, boolean force, boolean convertToPhantom, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);

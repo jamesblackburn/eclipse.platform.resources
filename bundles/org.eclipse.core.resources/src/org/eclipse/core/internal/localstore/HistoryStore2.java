@@ -13,33 +13,29 @@ package org.eclipse.core.internal.localstore;
 import java.io.File;
 import java.io.InputStream;
 import java.util.*;
-import org.eclipse.core.internal.localstore.BucketTable.Entry;
-import org.eclipse.core.internal.localstore.BucketTable.Visitor;
+import org.eclipse.core.internal.localstore.BucketIndex.Entry;
+import org.eclipse.core.internal.localstore.BucketIndex.Visitor;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
 public class HistoryStore2 implements IHistoryStore {
-	private static final String BLOB_STORE = ".blobs"; //$NON-NLS-1$
-	private static final String INDEX_STORE = ".index"; //$NON-NLS-1$
+	private static final String INDEX_STORE = ".buckets"; //$NON-NLS-1$
 	private final static int SEGMENT_LENGTH = 2;
 	private final static long SEGMENT_QUOTA = (long) Math.pow(2, 4 * SEGMENT_LENGTH); // 1 char = 2 ^ 4 = 0x10
-	private File baseLocation;
 	private BlobStore blobStore;
 	private Set blobsToRemove = new HashSet();
-	private BucketTable currentBucket;
+	private BucketIndex currentBucket;
 	private File indexLocation;
 	private Workspace workspace;
 
 	public HistoryStore2(Workspace workspace, IPath location, int limit) {
 		this.workspace = workspace;
-		this.baseLocation = location.toFile();
-		IPath blobStoreLocation = location.append(BLOB_STORE);
-		blobStoreLocation.toFile().mkdirs();
-		this.blobStore = new BlobStore(blobStoreLocation, limit);
+		location.toFile().mkdirs();
+		this.blobStore = new BlobStore(location, limit);
 		this.indexLocation = location.append(INDEX_STORE).toFile();
-		this.currentBucket = new BucketTable(indexLocation);
+		this.currentBucket = createBucketTable();
 	}
 
 	public void accept(Visitor visitor, IPath root, int depth) throws CoreException {
@@ -91,7 +87,7 @@ public class HistoryStore2 implements IHistoryStore {
 			uuid = blobStore.addBlob(localFile, moveContents);
 			File bucketDir = locationFor(key.removeLastSegments(1));
 			currentBucket.load(bucketDir);
-			currentBucket.addBlob(key, uuid.toBytes(), lastModified);
+			currentBucket.addBlob(key, uuid, lastModified);
 			currentBucket.save();
 		} catch (CoreException e) {
 			ResourcesPlugin.getPlugin().getLog().log(e.getStatus());
@@ -182,7 +178,6 @@ public class HistoryStore2 implements IHistoryStore {
 		final IPath baseDestinationLocation = Path.fromOSString(locationFor(destination.removeLastSegments(file ? 1 : 0)).toString());
 
 		try {
-
 			// special case: source and origin are the same bucket (renaming a file/copying a file/folder to the same directory)
 			//TODO isn't this missing the folder case (should be recursive)? 
 			if (baseSourceLocation.equals(baseDestinationLocation)) {
@@ -194,39 +189,54 @@ public class HistoryStore2 implements IHistoryStore {
 				clean(destinationResource.getFullPath());
 				return;
 			}
-			final BucketTable sourceBucket = currentBucket;
-			final BucketTable destinationBucket = new BucketTable(indexLocation);
+			final BucketIndex sourceBucket = currentBucket;
+			final BucketIndex destinationBucket = createBucketTable();
 
-			final IPath[] sourceDir = new IPath[1];
-			final IPath[] destinationDir = new IPath[1];
-
+			// copy history by visiting the source tree
 			accept(new Visitor() {
-				public void newBucket() {
-					// figure out where we want to copy the states for this path to by:
+				private IPath lastPath;
+
+				private boolean ensureLoaded(IPath newPath) {
+					IPath tmpLastPath = lastPath;
+					lastPath = newPath;
+					if (tmpLastPath != null && tmpLastPath.removeLastSegments(1).equals(newPath.removeLastSegments(1)))
+						// still in the same source bucket, nothing to do
+						return true;
+					// need to load the destination bucket 
+					// figure out where we want to copy the states for this path with:
 					// destinationBucket = baseDestinationLocation + blob - filename - baseSourceLocation
-					sourceDir[0] = Path.fromOSString(sourceBucket.getLocation().toString());
-					destinationDir[0] = baseDestinationLocation.append(sourceDir[0].removeFirstSegments(baseSourceLocation.segmentCount()));
+					IPath sourceDir = Path.fromOSString(sourceBucket.getLocation().toString());
+					IPath destinationDir = baseDestinationLocation.append(sourceDir.removeFirstSegments(baseSourceLocation.segmentCount()));
 					try {
-						destinationBucket.load(destinationDir[0].toFile());
+						destinationBucket.load(destinationDir.toFile());
 					} catch (CoreException e) {
 						ResourcesPlugin.getPlugin().getLog().log(e.getStatus());
+						// abort traversal
+						return false;
 					}
+					return true;
 				}
 
 				public int visit(Entry sourceEntry) {
+					if (!ensureLoaded(sourceEntry.getPath()))
+						return STOP;
 					IPath destinationPath = destination.append(sourceEntry.getPath().removeFirstSegments(source.segmentCount()));
 					Entry destinationEntry = new Entry(destinationPath, sourceEntry.getData(true));
 					destinationBucket.addBlobs(destinationEntry);
 					return CONTINUE;
 				}
 			}, source, IResource.DEPTH_INFINITE);
-			// the last one may not have saved the bucket
+			// the last bucket visited will not be automatically saved
 			destinationBucket.save();
 		} catch (CoreException e) {
 			ResourcesPlugin.getPlugin().getLog().log(e.getStatus());
 		}
-		//TODO should clean when visiting instead to avoid a second traversal 
+		// clean as a separate pass, since now we will be visiting the destination
 		clean(destinationResource.getFullPath());
+	}
+
+	BucketIndex createBucketTable() {
+		return new BucketIndex(indexLocation);
 	}
 
 	public boolean exists(IFileState target) {
@@ -250,7 +260,6 @@ public class HistoryStore2 implements IHistoryStore {
 		try {
 			currentBucket.load(bucketDir);
 			final List states = new ArrayList();
-			final BlobStore tmpBlobStore = blobStore;
 			accept(new Visitor() {
 				public int visit(Entry fileEntry) {
 					for (int i = 0; i < fileEntry.getOccurrences(); i++)
@@ -320,7 +329,7 @@ public class HistoryStore2 implements IHistoryStore {
 	/**
 	 * Returns the index location corresponding to the given path. 
 	 */
-	private File locationFor(IPath resourcePath) {
+	File locationFor(IPath resourcePath) {
 		int segmentCount = resourcePath.segmentCount();
 		// the root
 		if (segmentCount == 0)
@@ -376,19 +385,16 @@ public class HistoryStore2 implements IHistoryStore {
 	}
 
 	public void shutdown(IProgressMonitor monitor) throws CoreException {
-		// TODO Auto-generated method stub
-
+		// just in case
+		currentBucket.save();
 	}
 
-	public void startup(IProgressMonitor monitor) throws CoreException {
-		// TODO Auto-generated method stub
-
+	public void startup(IProgressMonitor monitor) {
+		// nothing to be done
 	}
 
 	private String translateSegment(String segment) {
-		// TODO we have to provide a string hashcode ourselves 
-		// because it changes from VM to VM
+		// String.hashCode algorithm is API
 		return Long.toHexString(Math.abs(segment.hashCode()) % SEGMENT_QUOTA);
 	}
-
 }

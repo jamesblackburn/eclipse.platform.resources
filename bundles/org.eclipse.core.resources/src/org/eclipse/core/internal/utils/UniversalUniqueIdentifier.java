@@ -217,17 +217,16 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 			return true;
 		if (!(obj instanceof UniversalUniqueIdentifier))
 			return false;
-		return equals(fBits, ((UniversalUniqueIdentifier) obj).fBits);
-	}
-	
-	public static boolean equals(byte[] uuid1, byte[] uuid2) {
-		if (uuid1 == uuid2)
+
+		byte[] other = ((UniversalUniqueIdentifier) obj).fBits;
+		if (fBits == other)
 			return true;
-		if (uuid1.length != uuid2.length)
+		if (fBits.length != other.length)
 			return false;
-		for (int i = 0; i < uuid1.length; i++)
-			if (uuid1[i] != uuid2[i])
+		for (int i = 0; i < fBits.length; i++) {
+			if (fBits[i] != other[i])
 				return false;
+		}
 		return true;
 	}
 

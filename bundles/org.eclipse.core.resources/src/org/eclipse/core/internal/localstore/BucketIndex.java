@@ -13,10 +13,13 @@ package org.eclipse.core.internal.localstore;
 import java.io.*;
 import java.util.*;
 import org.eclipse.core.internal.resources.ResourceException;
+import org.eclipse.core.internal.resources.ResourceStatus;
+import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
+import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.*;
 
-public class BucketTable {
+public class BucketIndex {
 
 	public static final class Entry {
 		public final static int LONG_LENGTH = 8;
@@ -26,22 +29,34 @@ public class BucketTable {
 		IPath path;
 
 		public static byte[] getDataAsByteArray(byte[] uuid, long timestamp) {
-			byte[] data = new byte[DATA_LENGTH];
-			System.arraycopy(uuid, 0, data, 0, uuid.length);
+			byte[] item = new byte[DATA_LENGTH];
+			System.arraycopy(uuid, 0, item, 0, uuid.length);
 			for (int j = 0; j < LONG_LENGTH; j++)
-				data[UUID_LENGTH + j] = (byte) (timestamp >>> j * 8);
-			return data;
+				item[UUID_LENGTH + j] = (byte) (0xFF & (timestamp >>> (j * 8)));
+			return item;
+		}
+
+		public static long getTimestamp(byte[] item) {
+			long timestamp = 0;
+			for (int j = 0; j < LONG_LENGTH; j++)
+				timestamp += (item[UUID_LENGTH + j] & 0xFFL) << j * 8;
+			return timestamp;
+		}
+
+		public static UniversalUniqueIdentifier getUUID(byte[] item) {
+			return new UniversalUniqueIdentifier(item);
 		}
 
 		Entry(IPath path, byte[][] data) {
 			this.path = path;
 			this.data = data;
 		}
+
 		/**
 		 * Compacts the given array removing any null slots.
 		 */
 		void compact() {
-			if(data == null)
+			if (data == null)
 				return;
 			int occurrences = 0;
 			for (int i = 0; i < data.length; i++)
@@ -59,7 +74,7 @@ public class BucketTable {
 			System.arraycopy(data, 0, result, 0, occurrences);
 			data = result;
 		}
-		
+
 		public void deleteOccurrence(int i) {
 			data[i] = null;
 		}
@@ -77,7 +92,7 @@ public class BucketTable {
 			return newData;
 		}
 
-		int getOccurrences() {
+		public int getOccurrences() {
 			return data == null ? 0 : data.length;
 		}
 
@@ -85,15 +100,12 @@ public class BucketTable {
 			return path;
 		}
 
-		public long getTimestamp(int i) {			
-			long timestamp = 0;
-			for (int j = 0; j < LONG_LENGTH; j++)
-				timestamp += (data[i][UUID_LENGTH + j] & 0xFF) << j * 8;
-			return timestamp;
+		public long getTimestamp(int i) {
+			return getTimestamp(data[i]);
 		}
 
 		public UniversalUniqueIdentifier getUUID(int i) {
-			return new UniversalUniqueIdentifier(data[i]);
+			return getUUID(data[i]);
 		}
 
 		public boolean isEmpty() {
@@ -102,7 +114,7 @@ public class BucketTable {
 
 	}
 
-	public abstract static class Visitor {
+	public abstract static interface Visitor {
 
 		// should stop the traversal
 		public final static int CONTINUE = 0;
@@ -115,19 +127,15 @@ public class BucketTable {
 		// should update this entry (can be combined with the other constants except for DELETE)		
 		public final static int UPDATE = 0x200;
 
-		public void newBucket() {
-			// don't do anything
-		}
-
 		/** 
 		 * @return either STOP, CONTINUE or RETURN and optionally DELETE
 		 */
-		public abstract int visit(Entry entry);
+		public int visit(Entry entry);
 	}
 
 	private static final String BUCKET = ".bucket"; //$NON-NLS-1$
 
-	private final static byte VERSION = 1;
+	public final static byte VERSION = 1;
 
 	//	private static final int UUID_LENGTH = new UniversalUniqueIdentifier().toString().length();
 
@@ -140,15 +148,22 @@ public class BucketTable {
 
 	private File root;
 
-	private static int indexOf(byte[][] array, byte[] item) {
+	private static int indexOf(byte[][] array, byte[] item, int length) {
 		// look for existing occurrences
-		for (int i = 0; i < array.length; i++)
-			if (UniversalUniqueIdentifier.equals(item, array[i]))
+		for (int i = 0; i < array.length; i++) {
+			boolean same = true;
+			for (int j = 0; j < length; j++)
+				if (item[j] != array[i][j]) {
+					same = false;
+					break;
+				}
+			if (same)
 				return i;
+		}
 		return -1;
 	}
 
-	public BucketTable(File root) {
+	public BucketIndex(File root) {
 		this.root = root;
 		this.entries = new HashMap();
 	}
@@ -164,7 +179,6 @@ public class BucketTable {
 		if (entries.isEmpty())
 			return Visitor.CONTINUE;
 		try {
-			visitor.newBucket();
 			for (Iterator i = entries.entrySet().iterator(); i.hasNext();) {
 				Map.Entry entry = (Map.Entry) i.next();
 				IPath path = new Path((String) entry.getKey());
@@ -198,21 +212,22 @@ public class BucketTable {
 		}
 	}
 
-	public void addBlob(IPath path, byte[] uuid, long lastModified) {
+	public void addBlob(IPath path, UniversalUniqueIdentifier uuid, long lastModified) {
+		byte[] item = Entry.getDataAsByteArray(uuid.toBytes(), lastModified);
 		String pathAsString = path.toString();
 		byte[][] existing = (byte[][]) entries.get(pathAsString);
 		if (existing == null) {
-			entries.put(pathAsString, new byte[][] {Entry.getDataAsByteArray(uuid, lastModified)});
+			entries.put(pathAsString, new byte[][] {item});
 			needSaving = true;
 			return;
 		}
 		// look for existing occurrences
-		if (contains(existing, uuid))
+		if (contains(existing, item))
 			// already there - nothing else to be done
 			return;
 		byte[][] newValue = new byte[existing.length + 1][];
 		System.arraycopy(existing, 0, newValue, 0, existing.length);
-		newValue[newValue.length - 1] = Entry.getDataAsByteArray(uuid, lastModified);
+		newValue[newValue.length - 1] = item;
 		sortUUIDs(newValue);
 		entries.put(pathAsString, newValue);
 		needSaving = true;
@@ -244,14 +259,14 @@ public class BucketTable {
 	}
 
 	private boolean contains(byte[][] array, byte[] item) {
-		return indexOf(array, item) >= 0;
+		return indexOf(array, item, UniversalUniqueIdentifier.BYTES_SIZE) >= 0;
 	}
 
 	/**
 	 * Tries to delete as many empty levels as possible.
 	 */
 	private void delete(File toDelete) {
-		// don't try to delete the root for bucket indexes
+		// don't try to delete beyond the root for bucket indexes
 		if (toDelete.equals(root))
 			return;
 		if (toDelete.delete())
@@ -273,9 +288,12 @@ public class BucketTable {
 	}
 
 	public void load(File baseLocation) throws CoreException {
+		load(baseLocation, false);
+	}
+	public void load(File baseLocation, boolean force) throws CoreException {
 		try {
 			// avoid reloading
-			if (this.location != null && baseLocation.equals(this.location.getParentFile()))
+			if (!force && this.location != null && baseLocation.equals(this.location.getParentFile()))
 				return;
 			// previously loaded bucket may not have been saved... save before loading new one
 			save();
@@ -285,9 +303,12 @@ public class BucketTable {
 				return;
 			DataInputStream source = new DataInputStream(new BufferedInputStream(new FileInputStream(location), 8192));
 			try {
-				if (source.readByte() != VERSION)
-					// TODO proper error handling here
-					throw new IOException("Wrong version");
+				int version = source.readByte();
+				if (version != VERSION) {
+					String message = Policy.bind("resources.readMetaWrongVersion", location.getAbsolutePath(), Integer.toString(version)); //$NON-NLS-1$
+					ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_READ_METADATA, message);
+					throw new ResourceException(status);
+				}
 				int entryCount = source.readInt();
 				for (int i = 0; i < entryCount; i++) {
 					String key = source.readUTF();
@@ -301,8 +322,9 @@ public class BucketTable {
 				source.close();
 			}
 		} catch (IOException ioe) {
-			//TODO
-			throw new ResourceException(0, null, "", ioe);
+			String message = Policy.bind("resources.readMeta", location.getAbsolutePath()); //$NON-NLS-1$
+			ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_READ_METADATA, null, message, ioe);
+			throw new ResourceException(status);
 		}
 	}
 
@@ -334,7 +356,9 @@ public class BucketTable {
 			}
 			needSaving = false;
 		} catch (IOException ioe) {
-			throw new ResourceException(0, null, "", ioe);
+			String message = Policy.bind("resources.writeMeta", location.getAbsolutePath()); //$NON-NLS-1$
+			ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_WRITE_METADATA, null, message, ioe);
+			throw new ResourceException(status);
 		}
 	}
 
@@ -344,5 +368,9 @@ public class BucketTable {
 				return -UniversalUniqueIdentifier.compareTime((byte[]) o1, (byte[]) o2);
 			}
 		});
+	}
+
+	public int getEntryCount() {
+		return entries.size();		
 	}
 }
