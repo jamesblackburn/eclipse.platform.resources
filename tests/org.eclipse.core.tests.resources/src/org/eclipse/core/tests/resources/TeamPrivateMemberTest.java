@@ -365,7 +365,6 @@ public class TeamPrivateMemberTest extends EclipseWorkspaceTest {
 
 		final ResourceDeltaVerifier listener = new ResourceDeltaVerifier();
 		//make sure a notification isn't already scheduled before we add listener
-		waitForNotify();
 		getWorkspace().addResourceChangeListener(listener);
 		try {
 			IWorkspaceRunnable body = new IWorkspaceRunnable() {

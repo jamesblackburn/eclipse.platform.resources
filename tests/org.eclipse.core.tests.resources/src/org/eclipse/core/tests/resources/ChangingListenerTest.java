@@ -130,7 +130,6 @@ public class ChangingListenerTest extends EclipseWorkspaceTest {
 			}
 		}
 		Listener1 listener = new Listener1();
-		waitForNotify();
 		getWorkspace().addResourceChangeListener(listener);
 		try {
 			ensureExistsInWorkspace(project, true);

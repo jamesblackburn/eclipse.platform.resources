@@ -69,7 +69,6 @@ protected void setUp() throws Exception {
 	};
 	try {
 		getWorkspace().run(body, getMonitor());
-		waitForNotify();
 	} catch (CoreException e) {
 		fail("1.0", e);
 	}
@@ -141,7 +140,6 @@ public void testFindMarkerDeltas() {
 	};
 	try {
 		getWorkspace().run(body, getMonitor());
-		waitForNotify();
 	} catch (CoreException e) {
 		fail("Exception1", e);
 	} finally {
@@ -197,7 +195,6 @@ public void testFindMarkerDeltasInEmptyDelta() {
 	//do the work	
 	try {
 		file1.setContents(getRandomContents(), true, true, getMonitor());
-		waitForNotify();
 	} catch (CoreException e) {
 		fail("Exception2", e);
 	} finally {

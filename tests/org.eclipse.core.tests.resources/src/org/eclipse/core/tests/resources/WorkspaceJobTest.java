@@ -52,7 +52,6 @@ public class WorkspaceJobTest extends EclipseWorkspaceTest {
 			}
 		});
 		//listener to ensure only one resource change occurs.
-		waitForNotify();
 		ResourceDeltaVerifier verifier = new ResourceDeltaVerifier();
 		getWorkspace().addResourceChangeListener(verifier);
 		try {
@@ -62,7 +61,6 @@ public class WorkspaceJobTest extends EclipseWorkspaceTest {
 			verifier.addExpectedChange(file, IResourceDelta.ADDED, IResource.NONE);
 			job.schedule();
 			job.join();
-			waitForNotify();
 			assertTrue("2.1", verifier.hasBeenNotified());
 			assertTrue(verifier.getMessage(), verifier.isDeltaValid());
 		} catch (InterruptedException e) {

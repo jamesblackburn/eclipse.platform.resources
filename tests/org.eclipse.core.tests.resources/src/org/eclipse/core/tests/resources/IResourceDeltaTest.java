@@ -64,7 +64,6 @@ protected void setUp() throws Exception {
 	};
 	try {
 		getWorkspace().run(body, getMonitor());
-		waitForNotify();
 	} catch (CoreException e) {
 		fail("1.0", e);
 	}
@@ -133,7 +132,6 @@ public void testFindMember() {
 	};
 	try {
 		getWorkspace().run(body, getMonitor());
-		waitForNotify();
 	} catch (CoreException e) {
 		fail("Exception1", e);
 	} finally {

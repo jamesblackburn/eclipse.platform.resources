@@ -786,7 +786,7 @@ public void testMultiSetDescription() {
 		fail("1.0", errorPointer[0]);
 }
 /**
- * Test API method IWorkspace.setDescription.
+ * Test API method IWorkspace.save
  */
 public void testSave() {
 	//ensure save returns a warning if a project's .project file is deleted.
