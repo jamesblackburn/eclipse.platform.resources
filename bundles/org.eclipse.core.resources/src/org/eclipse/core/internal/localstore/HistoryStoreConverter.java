@@ -31,13 +31,14 @@ public class HistoryStoreConverter {
 			return Status.OK_STATUS;		
 		IPath indexFile = location.append(HistoryStore.INDEX_FILE);
 		if (!indexFile.toFile().isFile()) {
-			IPath newIndexDir = location.append(".buckets");
+			IPath newIndexDir = location.append(".buckets"); //$NON-NLS-1$
 			if (!newIndexDir.toFile().isDirectory())			
 				// nothing to be converted		
 				return Status.OK_STATUS;
-			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.INFO, Policy.bind("history.conversionTransitional"), null); //$NON-NLS-1$ 
+			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.OK, Policy.bind("history.conversionTransitional"), null); //$NON-NLS-1$ 
 			convertFromTransitionalFormat(status, newIndexDir.toFile(), destination);
 			Workspace.clear(newIndexDir.toFile());
+			status.add(new ResourceStatus(IStatus.INFO, IStatus.OK, null, Policy.bind("history.conversionSucceeded"), null));
 			return status;
 		}
 		// visit all existing entries and add them to the new history store
