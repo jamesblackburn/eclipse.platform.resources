@@ -169,7 +169,7 @@ public class BasicAliasTest extends EclipseWorkspaceTest {
 			assertTrue("2.1", linkDest.exists());
 			assertTrue("2.2", !overlapDest.exists());
 			assertTrue("2.3", !linkDest.getLocation().toFile().exists());
-			assertOverlap("2.4", linkDest, overlapDest);
+			assertEquals("2.4", linkDest.getLocation(), overlapDest.getLocation());
 
 			sourceFile.copy(overlapDest.getFullPath(), IResource.NONE, getMonitor());
 			assertTrue("2.4", linkDest.exists());
@@ -287,19 +287,25 @@ public class BasicAliasTest extends EclipseWorkspaceTest {
 		//duplicate file
 		try {
 			lOverlap.delete(IResource.NONE, getMonitor());
-			assertOverlap("2.1", lLinked, lOverlap);
+			assertEquals("2.0", lLinked.getLocation(), lOverlap.getLocation());
+			
+			assertTrue("2.1", !lOverlap.exists());
+			assertTrue("2.2", !lOverlap.getLocation().toFile().exists());
+			assertTrue("2.3", lOverlap.isSynchronized(IResource.DEPTH_INFINITE));
+
 			//now the linked resource will still exist but its local contents won't
-			assertTrue("2.2", lLinked.exists());
-			assertTrue("2.3", !lLinked.getLocation().toFile().exists());
+			assertTrue("2.4", lLinked.exists());
+			assertTrue("2.5", !lLinked.getLocation().toFile().exists());
+			assertTrue("2.6", !lLinked.isSynchronized(IResource.DEPTH_INFINITE));
 			try {
 				lLinked.setContents(getRandomContents(), IResource.NONE, getMonitor());
 				//should fail
-				fail("2.4");
+				fail("2.7");
 			} catch (CoreException e) {
 				//should fail
 			}
 			lOverlap.create(getRandomContents(), IResource.NONE, getMonitor());
-			assertOverlap("2.5", lLinked, lOverlap);
+			assertOverlap("2.8", lLinked, lOverlap);
 		} catch (CoreException e) {
 			fail("2.99", e);
 		}
@@ -493,7 +499,9 @@ public class BasicAliasTest extends EclipseWorkspaceTest {
 			assertExistsInWorkspace("3.2", lLinked);
 			assertDoesNotExistInFileSystem("3.25", lLinked);
 			assertExistsInWorkspace("3.3", destination);
-			assertOverlap("3.4", lLinked, lOverlap);
+			assertEquals("3.4", lLinked.getLocation(), lOverlap.getLocation());
+			//lLinked will be out of sync because it exists in the ws but not fs
+			assertTrue("3.4.1", !lLinked.isSynchronized(IResource.DEPTH_INFINITE));
 
 			destination.move(lOverlap.getFullPath(), IResource.NONE, getMonitor());
 			assertExistsInWorkspace("3.5", lLinked);
