@@ -614,14 +614,7 @@ public void open(IProgressMonitor monitor) throws CoreException {
 			// the M_USED flag is used to indicate the difference between opening a project
 			// for the first time and opening it from a previous close (restoring it from disk)
 			if (info.isSet(M_USED)) {
-				try {
-					workspace.getSaveManager().restore(this, Policy.subMonitorFor(monitor, Policy.opWork * 30 / 100));
-				} catch (CoreException e) {
-					//if we failed to restore the project, leave it closed
-					//need to get the info again because the node is replaced by restore
-					getResourceInfo(false, true).clear(M_OPEN);
-					throw e;
-				}
+				workspace.getSaveManager().restore(this, Policy.subMonitorFor(monitor, Policy.opWork * 30 / 100));
 			} else {
 				info.set(M_USED);
 				workspace.updateModificationStamp(info);
@@ -647,10 +640,6 @@ public void open(IProgressMonitor monitor) throws CoreException {
 // resources that are in sync with the filesystem.
 // So, we have to have the tree loaded.
 
-public void pseudoOpen() throws CoreException {
-	getResourceInfo(false, true).set(M_OPEN);
-	workspace.getSaveManager().restore(this, null);
-}
 
 /*
  * @see IProject

@@ -514,8 +514,11 @@ protected void restoreMetaInfo(Project project, IProgressMonitor monitor) throws
 		description.setName(project.getName());
 	}
 	project.internalSetDescription(description, false);
-	if (failure != null)
+	if (failure != null) {
+		//close the project
+		project.internalClose();
 		throw failure;
+	}
 }
 /**
  * Restores the state of this workspace by opening the projects
@@ -530,8 +533,6 @@ protected void restoreMetaInfo(Workspace workspace, IProgressMonitor monitor) th
 			restoreMetaInfo((Project) roots[i], monitor);
 		} catch (CoreException e) {
 			ResourcesPlugin.getPlugin().getLog().log(e.getStatus());
-			//close the project
-			((Project)roots[i]).internalClose();
 		}
 	}
 }
