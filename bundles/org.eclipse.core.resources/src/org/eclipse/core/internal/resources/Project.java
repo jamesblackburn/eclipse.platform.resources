@@ -155,14 +155,14 @@ public void close(boolean save, IProgressMonitor monitor) throws CoreException {
 				IProgressMonitor sub = Policy.subMonitorFor(monitor, Policy.opWork / 2, SubProgressMonitor.SUPPRESS_SUBTASK_LABEL);
 				workspace.getSaveManager().save(ISaveContext.PROJECT_SAVE, this, sub);
 			}
-			getMarkerManager().removeMarkers(this, IResource.DEPTH_INFINITE);
 			// If the project has never been saved at this point, delete the 
 			// project but leave its contents.
+			//FIXME: revisit this behaviour of deleting if not saved
 			if (!hasBeenSaved()) {
 				delete(false, true, Policy.subMonitorFor(monitor, Policy.opWork / 2, SubProgressMonitor.SUPPRESS_SUBTASK_LABEL));
 				return;
 			}
-			basicClose();
+			internalClose();
 			monitor.worked(Policy.opWork / 2);
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
@@ -173,22 +173,6 @@ public void close(boolean save, IProgressMonitor monitor) throws CoreException {
 	} finally {
 		monitor.done();
 	}
-}
-
-protected void basicClose() throws CoreException {
-	// remove each member from the resource tree. 
-	// DO NOT use resource.delete() as this will delete it from disk as well.
-	IResource[] members = members(IContainer.INCLUDE_PHANTOMS | IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
-	for (int i = 0; i < members.length; i++) {
-		Resource member = (Resource) members[i];
-		workspace.deleteResource(member);
-	}
-	// finally mark the project as closed.
-	ResourceInfo info = getResourceInfo(false, true);
-	info.clear(M_OPEN);
-	info.setModificationStamp(IResource.NULL_STAMP);
-	info.clearSessionProperties();
-	info.setSyncInfo(null);
 }
 /**
  * @see IProject#copy
@@ -694,7 +678,7 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 			info.incrementContentId();
 			workspace.updateModificationStamp(info);
 			if (!hadSavedDescription) {
-				String msg = Policy.bind("resources.missingProjectMeta", getName());
+				String msg = Policy.bind("resources.missingProjectMetaRepaired", getName());
 				status.merge(new ResourceStatus(IResourceStatus.FAILED_READ_METADATA, getFullPath(), msg));
 			}
 			if (!status.isOK())

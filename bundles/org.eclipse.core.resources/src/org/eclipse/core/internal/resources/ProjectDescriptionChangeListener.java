@@ -17,7 +17,7 @@ public class ProjectDescriptionChangeListener implements IResourceChangeListener
 /**
  * Creates a new ProjectDescriptionChangeListener.
  */
-public ProjectDescriptionChangeListener(Workspace workspace) {
+private ProjectDescriptionChangeListener(Workspace workspace) {
 	this.workspace = workspace;
 }
 /**

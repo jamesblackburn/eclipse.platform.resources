@@ -81,9 +81,9 @@ public void delete(IResource target, boolean force, boolean convertToPhantom, bo
 		if (!force) {
 			IProgressMonitor sub = Policy.subMonitorFor(monitor, totalWork / 2);
 			sub.beginTask("", 10000);
-			RefreshLocalWithStatusVisitor refreshVisitor = new RefreshLocalWithStatusVisitor(Policy.bind("localstore.deleteProblem"), sub);
+			CollectSyncStatusVisitor refreshVisitor = new CollectSyncStatusVisitor(Policy.bind("localstore.deleteProblem"), sub);
 			tree.accept(refreshVisitor, IResource.DEPTH_INFINITE);
-			status.merge(refreshVisitor.getStatus());
+			status.merge(refreshVisitor.getSyncStatus());
 			skipList = refreshVisitor.getAffectedResources();
 		}
 		DeleteVisitor deleteVisitor = new DeleteVisitor(skipList, force, convertToPhantom, keepHistory, Policy.subMonitorFor(monitor, force ? totalWork : (totalWork / 2)));
@@ -234,13 +234,18 @@ public InputStream read(IFile target, boolean force, IProgressMonitor monitor) t
  */
 public ProjectDescription read(IProject target, boolean creation) throws CoreException {
 	//read the project location if this project is being created
-	IPath projectLocation;
+	IPath projectLocation = null;
 	if (creation) {
 		projectLocation = getWorkspace().getMetaArea().readLocation(target);
-		if (projectLocation == null)
-			projectLocation = getProjectDefaultLocation(target);
 	} else {
-		projectLocation = locationFor(target);
+		IProjectDescription description = ((Project)target).internalGetDescription();
+		if (description != null && description.getLocation() != null) {
+			projectLocation = description.getLocation();
+		}
+	}
+	final boolean isDefaultLocation = projectLocation == null;
+	if (isDefaultLocation) {
+		projectLocation = getProjectDefaultLocation(target);
 	}
 	IPath descriptionPath = projectLocation.append(F_PROJECT);
 	ProjectDescription description = null;
@@ -264,7 +269,8 @@ public ProjectDescription read(IProject target, boolean creation) throws CoreExc
 		String msg = Policy.bind("resources.readProjectMeta", target.getName());
 		throw new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
 	}
-	description.setLocation(projectLocation);
+	if (!isDefaultLocation)
+		description.setLocation(projectLocation);
 	long lastModified = CoreFileSystemLibrary.getLastModified(descriptionPath.toOSString());
 	IFile descriptionFile = target.getFile(F_PROJECT);
 	//don't get a mutable copy because we might be in restore which isn't an operation

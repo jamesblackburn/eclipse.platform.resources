@@ -508,13 +508,8 @@ protected void restoreMetaInfo(Project project, IProgressMonitor monitor) throws
 	} catch (CoreException e) {
 		failure = e;
 	}
-	// If we had an open project and there was an error reading the description
-	// from disk, close the project and give it a default description. If the project
-	// was already closed then just set a default description.
+	//create a default description if one couldn't be read
 	if (description == null) {
-		if (project.isOpen()) {
-			project.basicClose();
-		}
 		description = new ProjectDescription();
 		description.setName(project.getName());
 	}

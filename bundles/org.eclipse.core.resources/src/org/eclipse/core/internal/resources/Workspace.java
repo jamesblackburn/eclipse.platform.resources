@@ -1262,9 +1262,9 @@ public IStatus open(IProgressMonitor monitor) throws CoreException {
 		if (crashed || refreshRequested())
 			getRoot().refreshLocal(IResource.DEPTH_INFINITE, null);
 		//add the project description change listener
-		addResourceChangeListener(
-			new ProjectDescriptionChangeListener(this), 
-			IResourceChangeEvent.PRE_AUTO_BUILD);
+//		addResourceChangeListener(
+//			new ProjectDescriptionChangeListener(this), 
+//			IResourceChangeEvent.PRE_AUTO_BUILD);
 		return null;
 	} finally {
 		description.setAutoBuilding(oldBuildFlag);
