@@ -21,18 +21,29 @@ import org.eclipse.core.runtime.*;
 
 public class BucketIndex {
 
+	/**
+	 * A entry in the bucket index. Each entry has one file path and a collection
+	 * of states, which by their turn contain a (UUID, timestamp) pair.  
+	 */
 	public static final class Entry {
-		public final static int LONG_LENGTH = 8;
-		public final static int UUID_LENGTH = UniversalUniqueIdentifier.BYTES_SIZE;
-		public final static int DATA_LENGTH = UUID_LENGTH + LONG_LENGTH;		
+		// the length of a long in bytes
+		private final static int LONG_LENGTH = 8;
+		// the length of a UUID in bytes
+		private final static int UUID_LENGTH = UniversalUniqueIdentifier.BYTES_SIZE;
+		public final static int DATA_LENGTH = UUID_LENGTH + LONG_LENGTH;
 		byte[][] data;
 		IPath path;
 
+		/**
+		 * Returns the byte array representation of a (UUID, timestamp) pair. 
+		 */
 		public static byte[] getDataAsByteArray(byte[] uuid, long timestamp) {
 			byte[] item = new byte[DATA_LENGTH];
 			System.arraycopy(uuid, 0, item, 0, uuid.length);
-			for (int j = 0; j < LONG_LENGTH; j++)
-				item[UUID_LENGTH + j] = (byte) (0xFF & (timestamp >>> (j * 8)));
+			for (int j = 0; j < LONG_LENGTH; j++) {
+				item[UUID_LENGTH + j] = (byte) (0xFF & timestamp);
+				timestamp >>>= 8;
+			}
 			return item;
 		}
 
@@ -47,7 +58,7 @@ public class BucketIndex {
 			return new UniversalUniqueIdentifier(item);
 		}
 
-		Entry(IPath path, byte[][] data) {
+		public Entry(IPath path, byte[][] data) {
 			this.path = path;
 			this.data = data;
 		}
@@ -111,29 +122,46 @@ public class BucketIndex {
 		public boolean isEmpty() {
 			return data == null || data.length == 0;
 		}
+		
+		public void sortStates() {
+			sortStates(this.data);
+		}
 
+		public static void sortStates(byte[][] data) {
+			Arrays.sort(data, new Comparator() {
+				// sort in inverse order
+				public int compare(Object o1, Object o2) {
+					byte[] state1 = (byte[]) o1;
+					byte[] state2 = (byte[]) o2;
+					long timestamp1 = getTimestamp(state1);
+					long timestamp2 = getTimestamp(state2);
+					if (timestamp1 == timestamp2)
+						return -UniversalUniqueIdentifier.compareTime(state1, state2);
+					return timestamp1 < timestamp2 ? +1 : -1;
+				}
+			});
+		}
 	}
 
 	public abstract static interface Visitor {
-
-		// should stop the traversal
+		// should continue the traversal
 		public final static int CONTINUE = 0;
 		// should delete this entry (can be combined with the other constants except for UPDATE)
 		public final static int DELETE = 0x100;
 		// should stop looking at states for files in this container (or any of its children)	
 		public final static int RETURN = 2;
-		// keep visiting, still happy	
+		// should stop the traversal	
 		public final static int STOP = 1;
 		// should update this entry (can be combined with the other constants except for DELETE)		
 		public final static int UPDATE = 0x200;
 
 		/** 
-		 * @return either STOP, CONTINUE or RETURN and optionally DELETE
+		 * @return either STOP, CONTINUE or RETURN and optionally DELETE or UPDATE
 		 */
 		public int visit(Entry entry);
 	}
 
-	private static final String BUCKET = ".bucket"; //$NON-NLS-1$
+	private static final String BUCKET = "bucket.index"; //$NON-NLS-1$
 
 	public final static byte VERSION = 1;
 
@@ -175,7 +203,7 @@ public class BucketIndex {
 	 * @return one of STOP, RETURN or CONTINUE constants
 	 * @throws CoreException
 	 */
-	public int accept(Visitor visitor, IPath filter, boolean exactMatch, boolean sorted) throws CoreException {
+	public int accept(Visitor visitor, IPath filter, boolean exactMatch) throws CoreException {
 		if (entries.isEmpty())
 			return Visitor.CONTINUE;
 		try {
@@ -187,6 +215,7 @@ public class BucketIndex {
 					continue;
 				// calls the visitor passing all uuids for the entry
 				final Entry fileEntry = new Entry(path, (byte[][]) entry.getValue());
+				fileEntry.sortStates();
 				int outcome = visitor.visit(fileEntry);
 				if ((outcome & Visitor.UPDATE) != 0) {
 					needSaving = true;
@@ -228,7 +257,6 @@ public class BucketIndex {
 		byte[][] newValue = new byte[existing.length + 1][];
 		System.arraycopy(existing, 0, newValue, 0, existing.length);
 		newValue[newValue.length - 1] = item;
-		sortUUIDs(newValue);
 		entries.put(pathAsString, newValue);
 		needSaving = true;
 	}
@@ -279,7 +307,6 @@ public class BucketIndex {
 		byte[][] existing = (byte[][]) entries.get(pathAsString);
 		if (existing == null)
 			return new Entry(path, null);
-		sortUUIDs(existing);
 		return new Entry(path, existing);
 	}
 
@@ -290,6 +317,7 @@ public class BucketIndex {
 	public void load(File baseLocation) throws CoreException {
 		load(baseLocation, false);
 	}
+
 	public void load(File baseLocation, boolean force) throws CoreException {
 		try {
 			// avoid reloading
@@ -362,15 +390,7 @@ public class BucketIndex {
 		}
 	}
 
-	private void sortUUIDs(byte[][] uuids) {
-		Arrays.sort(uuids, new Comparator() {
-			public int compare(Object o1, Object o2) {
-				return -UniversalUniqueIdentifier.compareTime((byte[]) o1, (byte[]) o2);
-			}
-		});
-	}
-
 	public int getEntryCount() {
-		return entries.size();		
+		return entries.size();
 	}
 }

@@ -100,15 +100,10 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 	 @see #BYTES_SIZE
 	 */
 	public UniversalUniqueIdentifier(byte[] byteValue) {
-		this(byteValue, 0);
-	}
-	
-	public UniversalUniqueIdentifier(byte[] byteValue, int start) {
 		fBits = new byte[BYTES_SIZE];
-		if (byteValue.length - start >= BYTES_SIZE)
-			System.arraycopy(byteValue, start, fBits, 0, fBits.length);
+		if (byteValue.length >= BYTES_SIZE)
+			System.arraycopy(byteValue, 0, fBits, 0, BYTES_SIZE);
 	}
-	
 
 	/**
 	 Construct an instance whose internal representation is defined by the given string.  
@@ -123,7 +118,7 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 		// Check to ensure it is a String of the right length.
 		// do not use Assert to avoid having to call Policy.bind ahead of time
 		if (string.length() != PrintStringSize)
-			throw new IllegalArgumentException(Policy.bind("utils.wrongLength", string)); //$NON-NLS-1$
+			Assert.isTrue(false, Policy.bind("utils.wrongLength", string)); //$NON-NLS-1$
 
 		char[] newChars = string.toCharArray();
 
@@ -172,6 +167,22 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 			return null;
 		}
 	}
+
+	/**
+	 * Compares the time component of two UUIDs.
+	 * 
+	 * @see Comparable#compareTo(java.lang.Object)
+	 */
+	public int compareTime(UniversalUniqueIdentifier other) {
+		return compareTime(this.fBits, other.fBits);
+	}
+	
+	public static int compareTime(byte[] fBits1, byte[] fBits2) {
+		for (int i = TIME_FIELD_STOP; i >= 0; i--) 
+			if (fBits1[i] != fBits2[i])
+				return (0xFF & fBits1[i]) - (0xFF & fBits2[i]);		
+		return 0;
+	}		
 
 	/**
 	 * Answers the node address attempting to mask the IP
@@ -459,65 +470,5 @@ public class UniversalUniqueIdentifier implements java.io.Serializable {
 				result += ","; //$NON-NLS-1$
 		}
 		return result + "}"; //$NON-NLS-1$
-	}
-
-//	public static void main(String[] args) throws Exception {
-//		StringWriter writer = new StringWriter(2000);
-//		PrintWriter pw = new PrintWriter(writer);		
-//		int j = 0;
-//		while (true) {
-//			j++;
-//			UniversalUniqueIdentifier uuid = new UniversalUniqueIdentifier();
-//			byte[] bytes = uuid.toBytes();
-//			for (int i = 0; i < 6; i++) {
-//				pw.print(Integer.toHexString(bytes[i] & 0xFF));
-//				pw.print(" ");
-//			}
-//			pw.print(Integer.toHexString(bytes[7] & HIGH_NIBBLE_MASK));
-//			pw.print(" -- ");
-//			pw.println(uuid);
-//			if (j % 80 == 0) {
-//				pw.flush();
-//				System.out.println(writer.getBuffer());
-//				writer.getBuffer().setLength(0);
-//			}
-//		}
-//	}
-	
-	public static void main(String[] args) throws Exception {
-		int i = 0;
-		UniversalUniqueIdentifier last = new UniversalUniqueIdentifier();
-		while (true) {
-			i++;
-			UniversalUniqueIdentifier current = new UniversalUniqueIdentifier();
-			if (compareTime(last, current) >= 0) {
-				System.out.println("Broke comparison at  " + i);
-				System.out.println(last);
-				System.out.println(current);
-				break;				
-			}
-//				
-//			if (current.toBytes()[0] == last.toBytes()[0]) {
-//				System.out.println("Collision at  " + i);
-//				System.out.println(last);
-//				System.out.println(current);
-//				break;
-//			}
-			last = current;
-		}
-	}
-
-	public static int compareTime(UniversalUniqueIdentifier uuid1, UniversalUniqueIdentifier uuid2) {
-		return compareTime(uuid1.fBits, uuid2.fBits);
-	}
-	public static int compareTime(byte[] fBits1, byte[] fBits2) {
-		for (int i = TIME_FIELD_STOP; i >= 0; i--) 
-			if (fBits1[i] != fBits2[i])
-				return (0xFF & fBits1[i]) - (0xFF & fBits2[i]);		
-		return 0;
-	}	
-	public static int compareTime(String uuid1, String uuid2) {
-		// TODO this must be more efficient
-		return compareTime(new UniversalUniqueIdentifier(uuid1), new UniversalUniqueIdentifier(uuid2));
 	}
 }

@@ -400,7 +400,7 @@ public class HistoryStore implements IHistoryStore {
 		}
 		return blobStore.getBlob(((FileState) target).getUUID());
 	}
-	
+
 	/**
 	 * @see IHistoryStore#getStates(IPath, IProgressMonitor)
 	 */

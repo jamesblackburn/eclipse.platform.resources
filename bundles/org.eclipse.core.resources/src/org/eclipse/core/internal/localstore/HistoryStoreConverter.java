@@ -18,8 +18,6 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.*;
 
 public class HistoryStoreConverter {
-	private static final String BACKUP_FILE_EXTENSION = "bak"; //$NON-NLS-1$
-
 	/**
 	 * Converts an existing history store lying on disk to the new history store.
 	 * Returns Status.OK_STATUS if nothing is done, an IStatus.INFO status if

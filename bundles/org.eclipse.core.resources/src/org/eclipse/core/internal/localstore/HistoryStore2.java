@@ -38,17 +38,13 @@ public class HistoryStore2 implements IHistoryStore {
 		this.currentBucket = createBucketTable();
 	}
 
-	public void accept(Visitor visitor, IPath root, int depth) throws CoreException {
-		accept(visitor, root, depth, false);
-	}
-
 	/**
 	 * From a starting point in the tree, visit all nodes under it. 
 	 * @param visitor
 	 * @param root
 	 * @param depth
 	 */
-	public void accept(Visitor visitor, IPath root, int depth, boolean sorted) throws CoreException {
+	public void accept(Visitor visitor, IPath root, int depth) throws CoreException {
 		// we only do anything for the root if depth == infinite
 		if (root.isRoot()) {
 			if (depth != IResource.DEPTH_INFINITE)
@@ -60,7 +56,7 @@ public class HistoryStore2 implements IHistoryStore {
 				return;
 			for (int i = 0; i < projects.length; i++)
 				if (projects[i].isDirectory())
-					if (!internalAccept(visitor, root.append(projects[i].getName()), projects[i], IResource.DEPTH_INFINITE, sorted))
+					if (!internalAccept(visitor, root.append(projects[i].getName()), projects[i], IResource.DEPTH_INFINITE))
 						break;
 			// done
 			return;
@@ -68,10 +64,10 @@ public class HistoryStore2 implements IHistoryStore {
 		// handles the case the starting point is a file path
 		if (root.segmentCount() > 1) {
 			currentBucket.load(locationFor(root.removeLastSegments(1)));
-			if (currentBucket.accept(visitor, root, true, sorted) != Visitor.CONTINUE || depth == IResource.DEPTH_ZERO)
+			if (currentBucket.accept(visitor, root, true) != Visitor.CONTINUE || depth == IResource.DEPTH_ZERO)
 				return;
 		}
-		internalAccept(visitor, root, locationFor(root), depth, sorted);
+		internalAccept(visitor, root, locationFor(root), depth);
 	}
 
 	/**
@@ -135,7 +131,7 @@ public class HistoryStore2 implements IHistoryStore {
 					}
 					return changed ? UPDATE : CONTINUE;
 				}
-			}, root, IResource.DEPTH_INFINITE, true);
+			}, root, IResource.DEPTH_INFINITE);
 			// remove unreferenced blobs
 			blobStore.deleteBlobs(blobsToRemove);
 			blobsToRemove = new HashSet();
@@ -266,19 +262,8 @@ public class HistoryStore2 implements IHistoryStore {
 						states.add(new FileState(HistoryStore2.this, fileEntry.getPath(), fileEntry.getTimestamp(i), fileEntry.getUUID(i)));
 					return CONTINUE;
 				}
-			}, filePath, IResource.DEPTH_ZERO, true);
-			IFileState[] result = (IFileState[]) states.toArray(new IFileState[states.size()]);
-			// sort states based on modification time + uuid 
-			Arrays.sort(result, new Comparator() {
-				public int compare(Object o1, Object o2) {
-					FileState fs1 = (FileState) o1;
-					FileState fs2 = (FileState) o2;
-					if (fs1.getModificationTime() == fs1.getModificationTime())
-						return -UniversalUniqueIdentifier.compareTime(fs1.getUUID(), fs2.getUUID());
-					return (fs1.getModificationTime() < fs2.getModificationTime()) ? 1 : -1;
-				}
-			});
-			return result;
+			}, filePath, IResource.DEPTH_ZERO);
+			return (IFileState[]) states.toArray(new IFileState[states.size()]);
 		} catch (CoreException ce) {
 			ResourcesPlugin.getPlugin().getLog().log(ce.getStatus());
 			return new IFileState[0];
@@ -289,9 +274,9 @@ public class HistoryStore2 implements IHistoryStore {
 	 * 
 	 * @return whether to continue visiting other branches 
 	 */
-	private boolean internalAccept(Visitor visitor, IPath root, File bucketDir, int depth, boolean sorted) throws CoreException {
+	private boolean internalAccept(Visitor visitor, IPath root, File bucketDir, int depth) throws CoreException {
 		currentBucket.load(bucketDir);
-		int outcome = currentBucket.accept(visitor, root, depth == IResource.DEPTH_ZERO, sorted);
+		int outcome = currentBucket.accept(visitor, root, depth == IResource.DEPTH_ZERO);
 		if (outcome != Visitor.CONTINUE)
 			return outcome == Visitor.RETURN;
 		// nothing else to be done
@@ -302,7 +287,7 @@ public class HistoryStore2 implements IHistoryStore {
 			return true;
 		for (int i = 0; i < subDirs.length; i++)
 			if (subDirs[i].isDirectory())
-				if (!internalAccept(visitor, root, subDirs[i], IResource.DEPTH_INFINITE, sorted))
+				if (!internalAccept(visitor, root, subDirs[i], IResource.DEPTH_INFINITE))
 					return false;
 		return true;
 	}
