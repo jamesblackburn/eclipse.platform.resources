@@ -64,7 +64,7 @@ private Object[] filterMarkers(IMarkerSetElement[] markers) {
  * RESOURCE -> RESOURCE_PATH MARKERS_SIZE MARKER+
  * RESOURCE_PATH -> String
  * MARKERS_SIZE -> int
- * MARKER -> MARKER_ID TYPE ATTRIBUTES_SIZE ATTRIBUTE*
+ * MARKER -> MARKER_ID TYPE ATTRIBUTES_SIZE ATTRIBUTE* CREATION_TIME
  * MARKER_ID -> long
  * TYPE -> INDEX | QNAME
  * INDEX -> byte int
@@ -77,6 +77,7 @@ private Object[] filterMarkers(IMarkerSetElement[] markers) {
  * BOOLEAN_VALUE -> byte boolean
  * STRING_VALUE -> byte String
  * NULL_VALUE -> byte
+ * CREATION_TIME -> long
  * 	
  */
 public void save(IResource resource, DataOutputStream output, List writtenTypes) throws IOException {
