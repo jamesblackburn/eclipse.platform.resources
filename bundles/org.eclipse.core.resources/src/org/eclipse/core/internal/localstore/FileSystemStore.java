@@ -13,6 +13,7 @@ import org.eclipse.core.internal.utils.*;
 import java.io.*;
 
 public class FileSystemStore implements ILocalStoreConstants {
+	private final byte[] buffer = new byte[8192];
 public FileSystemStore() {
 }
 public void copy(File source, File destination, int depth, IProgressMonitor monitor) throws CoreException {
@@ -194,10 +195,9 @@ public InputStream read(File target) throws CoreException {
 /**
  * This method also closes both streams.
  */
-public static void transferStreams(InputStream source, OutputStream destination, IProgressMonitor monitor) throws IOException {
+public void transferStreams(InputStream source, OutputStream destination, IProgressMonitor monitor) throws IOException {
 	monitor = Policy.monitorFor(monitor);
 	try {
-		byte[] buffer = new byte[8192];
 		while (true) {
 			int bytesRead = source.read(buffer);
 			if (bytesRead == -1)
