@@ -16,14 +16,11 @@ import org.eclipse.core.internal.indexing.*;
 
 public class BasicFieldTest extends TestCase {
 
-	protected TestEnvironment env;
-
-	public BasicFieldTest(String name, TestEnvironment env) {
+	public BasicFieldTest(String name) {
 		super(name);
-		this.env = env;
 	}
 
-	public static Test suite(TestEnvironment env) {
+	public static Test suite() {
 		List names = new Vector(10);
 		names.add("testBuffer");
 		names.add("testPointer");
@@ -31,7 +28,7 @@ public class BasicFieldTest extends TestCase {
 		names.add("testFieldArray");
 		TestSuite suite = new TestSuite();
 		for (Iterator z = names.iterator(); z.hasNext();) {
-			suite.addTest(new BasicFieldTest((String) z.next(), env));
+			suite.addTest(new BasicFieldTest((String) z.next()));
 		}
 		return suite;
 	}
@@ -40,7 +37,6 @@ public class BasicFieldTest extends TestCase {
 		byte[] b = new byte[256];
 		Buffer buf = new Buffer(b);
 		int n = buf.length();
-		buf.clear();
 		b[0] = -128;
 		b[1] = -0;
 		b[2] = -0;
@@ -88,15 +84,6 @@ public class BasicFieldTest extends TestCase {
 		b2[0] = 1;
 		assertEquals("t25", -1, Buffer.compare(buf1, buf2));
 		assertEquals("t26", 1, Buffer.compare(buf2, buf1));
-	}
-
-	public void testField() throws Exception {
-	}
-
-	public void testFieldArray() throws Exception {
-	}
-
-	public void testPointer() throws Exception {
 	}
 
 	public void testFieldDef() throws Exception {

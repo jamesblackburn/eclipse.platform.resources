@@ -381,10 +381,6 @@ public class HistoryStore {
 				cursor.close();
 				removeOldestEntries(removeEntries, maxFileStates);
 			}
-		} catch (IndexedStoreException e) {
-			String message = Policy.bind("history.problemsPurging", source.toString(), destination.toString()); //$NON-NLS-1$
-			ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_WRITE_METADATA, source, message, e);
-			ResourcesPlugin.getPlugin().getLog().log(status);
 		} catch (CoreException e) {
 			String message = Policy.bind("history.problemsPurging", source.toString(), destination.toString()); //$NON-NLS-1$
 			ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_WRITE_METADATA, source, message, e);
@@ -465,7 +461,7 @@ public class HistoryStore {
 		return result;
 	}
 
-	protected void remove(HistoryStoreEntry entry) throws IndexedStoreException {
+	protected void remove(HistoryStoreEntry entry) throws CoreException {
 		try {
 			Vector objectIds = store.getIndex().getObjectIdentifiersMatching(entry.getKey());
 			if (objectIds.size() == 1) {
@@ -555,7 +551,7 @@ public class HistoryStore {
 		}
 	}
 
-	protected void removeOldestEntries(List entries, int maxEntries) throws IndexedStoreException {
+	protected void removeOldestEntries(List entries, int maxEntries) throws CoreException {
 		// do we have more states than necessary?
 		if (entries.size() <= maxEntries)
 			return;

@@ -11,6 +11,8 @@
 package org.eclipse.core.internal.indexing;
 
 import java.util.*;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
 
 public class ObjectStore implements Observer {
 
@@ -32,11 +34,11 @@ public class ObjectStore implements Observer {
 	/**
 	 * Creates a repository for the pathname.  
 	 */
-	public static void create(String path) throws ObjectStoreException {
+	public static void create(String path) throws CoreException {
 		try {
 			PageStore.create(path);
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.StoreCreateFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.storeCreateFailure", e); //$NON-NLS-1$
 		}
 	}
 
@@ -65,12 +67,12 @@ public class ObjectStore implements Observer {
 	/**
 	 * Opens an object store.
 	 */
-	public void open(String name) throws ObjectStoreException {
+	public void open(String name) throws CoreException {
 		try {
 			pageStore = new PageStore(pagePolicy);
 			pageStore.open(name);
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.StoreOpenFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.storeOpenFailure", e); //$NON-NLS-1$
 		}
 		checkMetadata();
 		acquiredObjects = new HashMap();
@@ -83,10 +85,10 @@ public class ObjectStore implements Observer {
 	/**
 	 * Closes the object store.
 	 */
-	public void close() throws ObjectStoreException {
+	public void close() throws CoreException {
 		try {
 			commit();
-		} catch (ObjectStoreException e) {
+		} catch (CoreException e) {
 			//make sure the page store file gets closed no matter what
 			pageStore.close(false);
 			throw e;
@@ -103,19 +105,19 @@ public class ObjectStore implements Observer {
 		reservations = null;
 	}
 
-	public Buffer getMetadataArea(int i) throws ObjectStoreException {
+	public Buffer getMetadataArea(int i) throws CoreException {
 		try {
 			return new Buffer(pageStore.readMetadataArea(i));
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.MetadataRequestFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.metadataRequestFailure", e); //$NON-NLS-1$
 		}
 	}
 
-	public void putMetadataArea(int i, Buffer buffer) throws ObjectStoreException {
+	public void putMetadataArea(int i, Buffer buffer) throws CoreException {
 		try {
 			pageStore.writeMetadataArea(i, buffer.getByteArray());
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.MetadataRequestFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.metadataRequestFailure", e); //$NON-NLS-1$
 		}
 	}
 
@@ -123,7 +125,7 @@ public class ObjectStore implements Observer {
 	 * Checks to see if the metadata stored in the object store matches that expected by this
 	 * code.  If not, a conversion is necessary.
 	 */
-	protected void checkMetadata() throws ObjectStoreException {
+	protected void checkMetadata() throws CoreException {
 		Buffer metadata = getMetadataArea(ObjectStoreMetadataAreaID);
 		Field versionField = metadata.getField(0, 4);
 		int objectStoreVersion = versionField.getInt();
@@ -142,14 +144,14 @@ public class ObjectStore implements Observer {
 	 * Converts the object store from a previous to the current version.  
 	 * No conversions are yet defined.
 	 */
-	protected void convert(int fromVersion) throws ObjectStoreException {
-		throw new ObjectStoreException(ObjectStoreException.StoreConversionFailure);
+	protected void convert(int fromVersion) throws CoreException {
+		throw Policy.exception("objectStore.storeConversionFailure"); //$NON-NLS-1$
 	}
 
 	/**
 	 * Commits the modified object collection to the underlying page store.
 	 */
-	public void commit() throws ObjectStoreException {
+	public void commit() throws CoreException {
 		for (Iterator z = acquiredObjects.values().iterator(); z.hasNext();) {
 			StoredObject object = (StoredObject) z.next();
 			object.notifyObservers();
@@ -181,15 +183,15 @@ public class ObjectStore implements Observer {
 		reservations.clear();
 		try {
 			pageStore.commit();
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.PageWriteFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.pageWriteFailure", e); //$NON-NLS-1$
 		}
 	}
 
 	/**
 	 * Rollback the modified objects collection.
 	 */
-	public void rollback() throws ObjectStoreException {
+	public void rollback() {
 		modifiedObjects.clear();
 		reservations.clear();
 		phantoms.clear();
@@ -213,9 +215,9 @@ public class ObjectStore implements Observer {
 	 * Returns the StoredObject at a given address.  This registers the store as an 
 	 * observer of changes to this object.
 	 */
-	public StoredObject acquireObject(ObjectAddress address) throws ObjectStoreException {
+	public StoredObject acquireObject(ObjectAddress address) throws CoreException {
 		if (phantoms.contains(address)) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectExistenceFailure);
+			throw Policy.exception("objectStore.objectExistenceFailure"); //$NON-NLS-1$
 		}
 		StoredObject object = (StoredObject) acquiredObjects.get(address);
 		if (object == null) {
@@ -228,9 +230,9 @@ public class ObjectStore implements Observer {
 					try {
 						Field f = page.getObjectField(address.getObjectNumber());
 						if (f == null)
-							throw new ObjectStoreException(ObjectStoreException.ObjectExistenceFailure);
+							throw Policy.exception("objectStore.objectExistenceFailure"); //$NON-NLS-1$
 						object = objectPolicy.createObject(f, this, address);
-					} catch (ObjectStoreException e) {
+					} catch (CoreException e) {
 						page.release();
 						throw e;
 					}
@@ -250,7 +252,7 @@ public class ObjectStore implements Observer {
 	 * the standard cache.  Objects in the standard cache always maintain a 
 	 * reference count of 0.
 	 */
-	public void releaseObject(StoredObject object) throws ObjectStoreException {
+	public void releaseObject(StoredObject object) {
 		object.removeReference();
 		if (object.hasReferences())
 			return;
@@ -310,7 +312,7 @@ public class ObjectStore implements Observer {
 	 * Places an object into the store.  This assigns it an address.  The address
 	 * is returned. The object is not observed until it is acquired.
 	 */
-	//	public ObjectAddress insertObject(StoredObject object) throws ObjectStoreException {
+	//	public ObjectAddress insertObject(StoredObject object) throws CoreException {
 	//		int bytesNeeded = object.length() + ObjectHeader.SIZE;
 	//		ObjectPage page = acquireObjectPageForSize(bytesNeeded);
 	//		int objectNumber = page.insertObject(object);
@@ -328,7 +330,7 @@ public class ObjectStore implements Observer {
 	 * records the address and the amount of space used.  The object is not
 	 * actually added to the underlying store until a commit operation is executed.
 	 */
-	public ObjectAddress insertObject(StoredObject object) throws ObjectStoreException {
+	public ObjectAddress insertObject(StoredObject object) throws CoreException {
 		int bytesNeeded = object.length() + ObjectHeader.SIZE;
 		ObjectPage page = acquireObjectPageForSize(bytesNeeded);
 		int pageNumber = page.getPageNumber();
@@ -344,12 +346,12 @@ public class ObjectStore implements Observer {
 	/**
 	 * Removes an object from the object store.  In doing so, it must remove it from the cache as well.
 	 */
-	public void removeObject(ObjectAddress address) throws ObjectStoreException {
+	public void removeObject(ObjectAddress address) throws CoreException {
 		if (phantoms.contains(address)) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectExistenceFailure);
+			throw Policy.exception("objectStore.objectExistenceFailure"); //$NON-NLS-1$
 		}
 		if (acquiredObjects.containsKey(address)) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectIsLocked);
+			throw Policy.exception("objectStore.objectIsLocked"); //$NON-NLS-1$
 		}
 		StoredObject object = (StoredObject) modifiedObjects.get(address);
 		boolean inStore = !reservations.contains(address);
@@ -378,7 +380,7 @@ public class ObjectStore implements Observer {
 	//		}
 	//	}
 
-	protected void updateSpaceMapPage(int objectPageNumber, int freeSpace) throws ObjectStoreException {
+	protected void updateSpaceMapPage(int objectPageNumber, int freeSpace) throws CoreException {
 		SpaceMapPage p = acquireSpaceMapPage(objectPageNumber);
 		p.setFreeSpace(objectPageNumber, freeSpace);
 		p.release();
@@ -387,12 +389,12 @@ public class ObjectStore implements Observer {
 	/** 
 	 * Acquires an object page.  This is a convenience method to translate exceptions.
 	 */
-	protected ObjectPage acquireObjectPage(int pageNumber) throws ObjectStoreException {
+	protected ObjectPage acquireObjectPage(int pageNumber) throws CoreException {
 		ObjectPage page;
 		try {
 			page = (ObjectPage) pageStore.acquire(pageNumber);
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.PageReadFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.pageReadFailure", e); //$NON-NLS-1$
 		}
 		return page;
 	}
@@ -407,7 +409,7 @@ public class ObjectStore implements Observer {
 	 * Since databases are expected to be quite small (<200Mb) we might be able to live with
 	 * this simple algorithm.
 	 */
-	protected ObjectPage acquireObjectPageForSize(int bytesNeeded) throws ObjectStoreException {
+	protected ObjectPage acquireObjectPageForSize(int bytesNeeded) throws CoreException {
 		int oPageNumber = 0;
 		int numberOfSpans = ((pageStore.numberOfPages() - 1) / ObjectStorePage.SIZE) + 1;
 		for (int i = 0; i <= numberOfSpans; i++) {
@@ -424,33 +426,33 @@ public class ObjectStore implements Observer {
 					}
 				}
 				sPage.release();
-			} catch (PageStoreException e) {
-				throw new ObjectStoreException(ObjectStoreException.PageReadFailure, e);
+			} catch (CoreException e) {
+				throw Policy.exception("objectStore.pageReadFailure", e); //$NON-NLS-1$
 			}
 			if (oPageNumber != 0)
 				break;
 		}
 		if (oPageNumber == 0) {
-			throw new ObjectStoreException(ObjectStoreException.PageReadFailure);
+			throw Policy.exception("objectStore.pageReadFailure"); //$NON-NLS-1$
 		}
 		try {
 			ObjectPage oPage = (ObjectPage) pageStore.acquire(oPageNumber);
 			return oPage;
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.PageReadFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.pageReadFailure", e); //$NON-NLS-1$
 		}
 	}
 
 	/** 
 	 * Acquires a space map page.  This is a convenience method to translate exceptions.
 	 */
-	protected SpaceMapPage acquireSpaceMapPage(int objectPageNumber) throws ObjectStoreException {
+	protected SpaceMapPage acquireSpaceMapPage(int objectPageNumber) throws CoreException {
 		int pageNumber = objectPageNumber & 0xFFFFE000;
 		SpaceMapPage p = null;
 		try {
 			p = (SpaceMapPage) pageStore.acquire(pageNumber);
-		} catch (PageStoreException e) {
-			throw new ObjectStoreException(ObjectStoreException.PageReadFailure, e);
+		} catch (CoreException e) {
+			throw Policy.exception("objectStore.pageReadFailure", e); //$NON-NLS-1$
 		}
 		return p;
 	}

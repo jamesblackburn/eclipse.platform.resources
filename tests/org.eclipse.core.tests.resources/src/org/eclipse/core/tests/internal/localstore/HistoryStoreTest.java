@@ -2312,7 +2312,7 @@ public class HistoryStoreTest extends EclipseWorkspaceTest {
 		assertTrue("1.3", myListener.hasBeenTriggered());
 	}
 
-	private void removeHistoryStoreEntry(IndexedStoreWrapper store, HistoryStoreEntry entry) throws IndexedStoreException {
+	private void removeHistoryStoreEntry(IndexedStoreWrapper store, HistoryStoreEntry entry) throws CoreException {
 		// This method provided as a convenience for removing a HistoryStoreEntry.
 		// It is pirated directly from HistoryStore.remove(HistoryStoreEntry)
 		// which is a protected method.

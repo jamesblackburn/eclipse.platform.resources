@@ -36,6 +36,7 @@ public class ReservationTable {
 	public boolean contains(ObjectAddress address) {
 		int pageNumber = address.getPageNumber();
 		int objectNumber = address.getObjectNumber();
+		//todo can be optimized
 		if (contains(pageNumber)) {
 			if (get(pageNumber).contains(objectNumber))
 				return true;

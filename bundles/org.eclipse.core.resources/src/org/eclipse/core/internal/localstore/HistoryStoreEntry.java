@@ -74,7 +74,7 @@ public class HistoryStoreEntry implements ILocalStoreConstants {
 	 * @param store Indexed history store from which data is to be read.
 	 * @param cursor Position from which data is to be read.
 	 */
-	public static HistoryStoreEntry create(IndexedStoreWrapper store, IndexCursor cursor) throws CoreException, IndexedStoreException {
+	public static HistoryStoreEntry create(IndexedStoreWrapper store, IndexCursor cursor) throws CoreException {
 		byte[] key = cursor.getKey();
 		ObjectID valueID = cursor.getValueAsObjectID();
 		byte[] value = store.getObject(valueID);
@@ -151,7 +151,7 @@ public class HistoryStoreEntry implements ILocalStoreConstants {
 	/**
 	 * Removes this entry from the store.
 	 */
-	public void remove() throws IndexedStoreException {
+	public void remove() throws CoreException {
 		if (cursor == null)
 			return;
 		reposition();
@@ -160,7 +160,7 @@ public class HistoryStoreEntry implements ILocalStoreConstants {
 		cursor.remove();
 	}
 
-	protected void reposition() throws IndexedStoreException {
+	protected void reposition() throws CoreException {
 		if (cursor.isSet())
 			if (compare(cursor.getKey(), key))
 				return;

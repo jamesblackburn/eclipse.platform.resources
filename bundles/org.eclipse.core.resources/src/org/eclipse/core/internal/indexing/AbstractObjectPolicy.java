@@ -10,12 +10,14 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.runtime.CoreException;
+
 public abstract class AbstractObjectPolicy {
 
 	/**
 	 * Creates a new instance of an object for this object store.  Uses
 	 * the contents of the field to decide what type of object to create.
 	 */
-	public abstract StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws ObjectStoreException;
+	public abstract StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws CoreException;
 
 }

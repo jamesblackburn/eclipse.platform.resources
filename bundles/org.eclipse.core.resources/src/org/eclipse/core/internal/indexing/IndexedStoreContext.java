@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.runtime.CoreException;
+
 class IndexedStoreContext extends IndexedStoreObject {
 
 	public static final int SIZE = 32;
@@ -53,7 +55,7 @@ class IndexedStoreContext extends IndexedStoreObject {
 	/** 
 	 * Constructs a context from a field read from the store.
 	 */
-	IndexedStoreContext(Field f, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	IndexedStoreContext(Field f, ObjectStore store, ObjectAddress address) throws CoreException {
 		super(f, store, address);
 	}
 
@@ -71,7 +73,7 @@ class IndexedStoreContext extends IndexedStoreObject {
 	 * Places the contents of the buffer into the fields.
 	 * Subclasses should implement and call super.
 	 */
-	protected void extractValues(Field contents) throws ObjectStoreException {
+	protected void extractValues(Field contents) throws CoreException {
 		super.extractValues(contents);
 		setFields(contents);
 		openNumber = openNumberField.getInt();

@@ -11,6 +11,9 @@
 package org.eclipse.core.internal.indexing;
 
 import java.io.*;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.*;
 
 class Log {
 
@@ -19,11 +22,11 @@ class Log {
 	 * argument is the name of the page store for which this log will
 	 * be created.
 	 */
-	static void create(String storeName) throws PageStoreException {
+	static void create(String storeName) throws CoreException {
 		try {
 			new RandomAccessFile(name(storeName), "rw").close(); //$NON-NLS-1$
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogCreateFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logCreateFailure"), e));//$NON-NLS-1$
 		}
 	}
 

@@ -10,6 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 public class IndexCursor {
 
 	private IndexedStore store;
@@ -41,7 +44,7 @@ public class IndexCursor {
 	 * entry if it is pointing outside of the entries of a node.
 	 * If there are no more entries then unset the cursor.
 	 */
-	private void adjust() throws IndexedStoreException {
+	private void adjust() throws CoreException {
 		if (leafNode == null)
 			return;
 		if (entryNumber >= leafNode.getNumberOfEntries()) {
@@ -52,7 +55,6 @@ public class IndexCursor {
 			ObjectAddress previous = leafNode.getPreviousAddress();
 			int n = entryNumber;
 			set(previous, n);
-		} else {
 		}
 	}
 
@@ -60,7 +62,7 @@ public class IndexCursor {
 	 * Closes the cursor.  This unsets the cursor and deregisters it from all the
 	 * interested parties.
 	 */
-	public void close() throws IndexedStoreException {
+	public void close() {
 		reset();
 	}
 
@@ -68,7 +70,7 @@ public class IndexCursor {
 	 * Adjusts a cursor if there is a need after an entry is inserted.
 	 * If not, it just returns.
 	 */
-	void entryInserted(int i) throws IndexedStoreException {
+	void entryInserted(int i) throws CoreException {
 		if (entryNumber >= i)
 			entryNumber++;
 		adjust();
@@ -77,7 +79,7 @@ public class IndexCursor {
 	/**
 	 * Adjusts a cursor if there is a need after an entry is removed.
 	 */
-	void entryRemoved(int i) throws IndexedStoreException {
+	void entryRemoved(int i) throws CoreException {
 		entryRemoved = (entryNumber == i);
 		if (entryNumber > i)
 			entryNumber--;
@@ -89,7 +91,7 @@ public class IndexCursor {
 	 * greater than or equal to that of the argument.  Returns the cursor itself
 	 * for convenience in chaining method invocations.
 	 */
-	public synchronized IndexCursor find(byte[] b) throws IndexedStoreException {
+	public synchronized IndexCursor find(byte[] b) throws CoreException {
 		IndexAnchor anchor = store.acquireAnchor(anchorAddress);
 		anchor.find(b, this);
 		anchor.release();
@@ -102,7 +104,7 @@ public class IndexCursor {
 	 * greater than or equal to that of the argument.  Returns the cursor itself
 	 * for convenience in chaining method invocations.
 	 */
-	public synchronized IndexCursor find(String s) throws IndexedStoreException {
+	public synchronized IndexCursor find(String s) throws CoreException {
 		return find(Convert.toUTF8(s));
 	}
 
@@ -111,14 +113,14 @@ public class IndexCursor {
 	 * greater than or equal to that of the argument.  Returns the cursor itself
 	 * for convenience in chaining method invocations.
 	 */
-	public synchronized IndexCursor find(Insertable i) throws IndexedStoreException {
+	public synchronized IndexCursor find(Insertable i) throws CoreException {
 		return find(i.toByteArray());
 	}
 
 	/**
 	 * Sets the cursor at the first entry of an index.
 	 */
-	public synchronized IndexCursor findFirstEntry() throws IndexedStoreException {
+	public synchronized IndexCursor findFirstEntry() throws CoreException {
 		IndexAnchor anchor = store.acquireAnchor(anchorAddress);
 		anchor.findFirstEntry(this);
 		anchor.release();
@@ -129,7 +131,7 @@ public class IndexCursor {
 	/**
 	 * Sets the cursor at the last entry of an index.
 	 */
-	public synchronized IndexCursor findLastEntry() throws IndexedStoreException {
+	public synchronized IndexCursor findLastEntry() throws CoreException {
 		IndexAnchor anchor = store.acquireAnchor(anchorAddress);
 		anchor.findLastEntry(this);
 		anchor.release();
@@ -144,9 +146,9 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized byte[] getKey() throws IndexedStoreException {
+	public synchronized byte[] getKey() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (leafNode == null)
 			return null;
 		byte[] key = leafNode.getKey(entryNumber);
@@ -157,7 +159,7 @@ public class IndexCursor {
 	 * Returns the key at the cursor as a string.
 	 * If the cursor is at the beginning or end of the index then return null.
 	 */
-	public synchronized String getKeyAsString() throws IndexedStoreException {
+	public synchronized String getKeyAsString() throws CoreException {
 		byte[] key = getKey();
 		if (key == null)
 			return null;
@@ -175,9 +177,9 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized byte[] getValue() throws IndexedStoreException {
+	public synchronized byte[] getValue() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (leafNode == null)
 			return null;
 		byte[] value = leafNode.getValue(entryNumber);
@@ -188,7 +190,7 @@ public class IndexCursor {
 	 * Returns the value as an object address.  May return null if the cursor is at the beginning
 	 * or end of the index.
 	 */
-	ObjectAddress getValueAsObjectAddress() throws IndexedStoreException {
+	ObjectAddress getValueAsObjectAddress() throws CoreException {
 		byte[] value = getValue();
 		if (value == null)
 			return null;
@@ -199,7 +201,7 @@ public class IndexCursor {
 	 * Returns the ObjectID from the value for the current cursor location.  
 	 * If the cursor is at the beginning or end of the index then return null.
 	 */
-	public synchronized ObjectID getValueAsObjectID() throws IndexedStoreException {
+	public synchronized ObjectID getValueAsObjectID() throws CoreException {
 		byte[] value = getValue();
 		if (value == null)
 			return null;
@@ -210,7 +212,7 @@ public class IndexCursor {
 	 * Returns the String from the value for the current cursor location.  
 	 * If the cursor is at the beginning or end of the index then return null.
 	 */
-	public synchronized String getValueAsString() throws IndexedStoreException {
+	public synchronized String getValueAsString() throws CoreException {
 		byte[] value = getValue();
 		if (value == null)
 			return null;
@@ -220,18 +222,18 @@ public class IndexCursor {
 	/**
 	 * This method returns true if the current cursor location before the first entry in the index.
 	 */
-	public synchronized boolean isAtBeginning() throws IndexedStoreException {
+	public synchronized boolean isAtBeginning() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		return (leafNode == null);
 	}
 
 	/**
 	 * This method returns true if the current cursor location after the last entry in the index.
 	 */
-	public synchronized boolean isAtEnd() throws IndexedStoreException {
+	public synchronized boolean isAtEnd() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		return (leafNode == null);
 	}
 
@@ -239,9 +241,9 @@ public class IndexCursor {
 	 * Returns true if the cursor is set to an entry.
 	 * Returns false otherwise.
 	 */
-	public synchronized boolean isSet() throws IndexedStoreException {
+	public synchronized boolean isSet() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		return !(leafNode == null);
 	}
 
@@ -252,9 +254,9 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized boolean keyEquals(byte[] b) throws IndexedStoreException {
+	public synchronized boolean keyEquals(byte[] b) throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (leafNode == null)
 			return false;
 		byte[] key = leafNode.getKey(entryNumber);
@@ -273,7 +275,7 @@ public class IndexCursor {
 	 * Compares a String to the key in the cursor and 
 	 * returns true if the String is equal to the key at the entry in the cursor.
 	 */
-	public synchronized boolean keyEquals(String s) throws IndexedStoreException {
+	public synchronized boolean keyEquals(String s) throws CoreException {
 		return keyEquals(Convert.toUTF8(s));
 	}
 
@@ -281,7 +283,7 @@ public class IndexCursor {
 	 * Compares an Insertable to the key in the cursor and 
 	 * returns true if the String is equal to the key at the entry in the cursor.
 	 */
-	public synchronized boolean keyEquals(Insertable anObject) throws IndexedStoreException {
+	public synchronized boolean keyEquals(Insertable anObject) throws CoreException {
 		return keyEquals(anObject.toByteArray());
 	}
 
@@ -293,9 +295,9 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized boolean keyMatches(byte[] b) throws IndexedStoreException {
+	public synchronized boolean keyMatches(byte[] b) throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (leafNode == null)
 			return false;
 		byte[] key = leafNode.getKey(entryNumber);
@@ -315,7 +317,7 @@ public class IndexCursor {
 	 * returns true if the byte array is a prefix
 	 * of the key at the entry in the cursor.
 	 */
-	public synchronized boolean keyMatches(String s) throws IndexedStoreException {
+	public synchronized boolean keyMatches(String s) throws CoreException {
 		return keyMatches(Convert.toUTF8(s));
 	}
 
@@ -324,7 +326,7 @@ public class IndexCursor {
 	 * returns true if the byte array is a prefix
 	 * of the key at the entry in the cursor.
 	 */
-	public synchronized boolean keyMatches(Insertable anObject) throws IndexedStoreException {
+	public synchronized boolean keyMatches(Insertable anObject) throws CoreException {
 		return keyMatches(anObject.toByteArray());
 	}
 
@@ -337,7 +339,7 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized IndexCursor next() throws IndexedStoreException {
+	public synchronized IndexCursor next() throws CoreException {
 		if (isAtBeginning()) {
 			findFirstEntry();
 		} else {
@@ -351,7 +353,7 @@ public class IndexCursor {
 	 * Adjusts a cursor if there is a need after a node has been split.
 	 * If not, it just returns.
 	 */
-	void nodeSplit() throws IndexedStoreException {
+	void nodeSplit() throws CoreException {
 		adjust();
 	}
 
@@ -364,7 +366,7 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized IndexCursor previous() throws IndexedStoreException {
+	public synchronized IndexCursor previous() throws CoreException {
 		if (isAtEnd()) {
 			findLastEntry();
 		} else {
@@ -384,7 +386,7 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized void remove() throws IndexedStoreException {
+	public synchronized void remove() throws CoreException {
 		removeEntry();
 	}
 
@@ -398,9 +400,9 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	void removeEntry() throws IndexedStoreException {
+	void removeEntry() throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (leafNode == null)
 			return;
 		ObjectAddress address = leafNode.getAddress();
@@ -425,7 +427,7 @@ public class IndexCursor {
 	/**
 	 * Places the cursor in the "unset" state.
 	 */
-	public synchronized void reset() throws IndexedStoreException {
+	public synchronized void reset() {
 		unset();
 		entryRemoved = false;
 	}
@@ -433,7 +435,7 @@ public class IndexCursor {
 	/**
 	 * Sets the cursor to a particular entry of an index node.
 	 */
-	void set(ObjectAddress leafNodeAddress, int entryNumber) throws IndexedStoreException {
+	void set(ObjectAddress leafNodeAddress, int entryNumber) throws CoreException {
 		unset();
 		if (leafNodeAddress.isNull())
 			return;
@@ -449,7 +451,7 @@ public class IndexCursor {
 	/**
 	 * Places the cursor in the "unset" state.
 	 */
-	private void unset() throws IndexedStoreException {
+	private void unset() {
 		if (leafNode != null) {
 			leafNode.removeCursor(this);
 			leafNode.release();
@@ -464,11 +466,11 @@ public class IndexCursor {
 	 * If the cursor is at the beginning or end of the index then do nothing.
 	 * Returns true if the value is set, false otherwise.
 	 */
-	void updateEntry(byte[] b) throws IndexedStoreException {
+	void updateEntry(byte[] b) throws CoreException {
 		if (entryRemoved)
-			throw new IndexedStoreException(IndexedStoreException.EntryRemoved);
+			throw Policy.exception("indexedStore.entryRemoved"); //$NON-NLS-1$
 		if (b.length > 2048)
-			throw new IndexedStoreException(IndexedStoreException.EntryValueLengthError);
+			throw Policy.exception("indexedStore.entryValueLengthError"); //$NON-NLS-1$
 		if (leafNode == null)
 			return;
 		leafNode.updateValueAt(entryNumber, b);
@@ -482,7 +484,7 @@ public class IndexCursor {
 	 * Throws an EntryRemoved condition if the entry at which it has
 	 * been pointing has been removed by another cursor.
 	 */
-	public synchronized void updateValue(byte[] b) throws IndexedStoreException {
+	public synchronized void updateValue(byte[] b) throws CoreException {
 		updateEntry(b);
 	}
 
@@ -490,7 +492,7 @@ public class IndexCursor {
 	 * Updates the value of the index entry at the cursor.
 	 * If the cursor is at the beginning or end of the index then do nothing.
 	 */
-	public synchronized void updateValue(String s) throws IndexedStoreException {
+	public synchronized void updateValue(String s) throws CoreException {
 		updateValue(Convert.toUTF8(s));
 	}
 
@@ -498,7 +500,7 @@ public class IndexCursor {
 	 * Updates the value of the index entry at the cursor.
 	 * If the cursor is at the beginning or end of the index then do nothing.
 	 */
-	public synchronized void updateValue(Insertable anObject) throws IndexedStoreException {
+	public synchronized void updateValue(Insertable anObject) throws CoreException {
 		updateValue(anObject.toByteArray());
 	}
 }

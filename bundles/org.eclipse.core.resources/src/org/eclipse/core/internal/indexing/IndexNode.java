@@ -11,6 +11,8 @@
 package org.eclipse.core.internal.indexing;
 
 import java.util.HashSet;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
 
 class IndexNode extends IndexedStoreObject {
 
@@ -56,7 +58,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Reconstructs a node from a field.
 	 */
-	IndexNode(Field f, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	IndexNode(Field f, ObjectStore store, ObjectAddress address) throws CoreException {
 		super(f, store, address);
 	}
 
@@ -105,7 +107,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Compares the key at a particular entry to a byte array. 
 	 */
-	private int compareEntryToKey(int entryNumber, byte[] key) throws IndexedStoreException {
+	private int compareEntryToKey(int entryNumber, byte[] key) {
 		Field keyField = new Field(key);
 		Field entryKeyField = getKeyField(entryNumber);
 		return entryKeyField.compareTo(keyField);
@@ -114,7 +116,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Compresses the space in the entries area of the node.
 	 */
-	private void compress() throws IndexedStoreException {
+	private void compress() {
 
 		/* some preliminaries */
 		int entriesLength = entriesField.length();
@@ -139,7 +141,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Compresses the space in the entries area of the node if the free space block
 	 * is smaller than the given threshold.
 	 */
-	private void compress(int threshold) throws IndexedStoreException {
+	private void compress(int threshold) {
 		int entriesLength = entriesField.length();
 		int descriptorBlockSize = numberOfEntries * DescriptorLength;
 		int freeBlockSize = entriesLength - (descriptorBlockSize + usedSpaceMax);
@@ -205,7 +207,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Causes the node to remove its children from the store.
 	 */
-	void destroyChildren() throws IndexedStoreException {
+	void destroyChildren() throws CoreException {
 		if (!isLeaf()) {
 			for (int i = 0; i < numberOfEntries; i++) {
 				ObjectAddress childNodeAddress = new ObjectAddress(getValue(i));
@@ -220,7 +222,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Places a cursor and the first entry greater than or equal to a key.
 	 */
-	void find(byte[] key, IndexCursor cursor) throws IndexedStoreException {
+	void find(byte[] key, IndexCursor cursor) throws CoreException {
 		int i;
 		i = findLastEntryLT(key);
 		if (isLeaf()) {
@@ -241,7 +243,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Places a cursor at the first entry of a node.
 	 */
-	void findFirstEntry(IndexCursor cursor) throws IndexedStoreException {
+	void findFirstEntry(IndexCursor cursor) throws CoreException {
 		if (numberOfEntries == 0) {
 			cursor.reset();
 		} else if (!isLeaf()) {
@@ -256,7 +258,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Returns the index of the first entry greater than a key.
 	 */
-	private int findFirstEntryGT(byte[] key) throws IndexedStoreException {
+	private int findFirstEntryGT(byte[] key) {
 		int lo = 0;
 		int hi = numberOfEntries - 1;
 		while (lo <= hi) {
@@ -274,7 +276,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Places a cursor at the last entry of a node.
 	 */
-	void findLastEntry(IndexCursor cursor) throws IndexedStoreException {
+	void findLastEntry(IndexCursor cursor) throws CoreException {
 		if (numberOfEntries == 0) {
 			cursor.reset();
 			return;
@@ -292,7 +294,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Returns the index of the last entry less than a key.
 	 */
-	private int findLastEntryLT(byte[] key) throws IndexedStoreException {
+	private int findLastEntryLT(byte[] key) {
 		int lo = 0;
 		int hi = numberOfEntries - 1;
 		Field keyField = new Field(key);
@@ -392,7 +394,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Returns the number of nodes in this subtree (this one plus all descendants).
 	 */
-	int getNumberOfNodes() throws IndexedStoreException {
+	int getNumberOfNodes() throws CoreException {
 		if (isLeaf())
 			return 1;
 		int sum = 0;
@@ -452,7 +454,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Implementation Note: Cannot use an iterator over the cursor set because 
 	 * notification of an insert may remove the cursor being notified from the cursor set.
 	 */
-	void insertEntry(byte[] key, byte[] value) throws IndexedStoreException {
+	void insertEntry(byte[] key, byte[] value) throws CoreException {
 		int i = findFirstEntryGT(key);
 		if (isLeaf()) {
 			insertEntryBefore(i, key, value);
@@ -484,7 +486,7 @@ class IndexNode extends IndexedStoreObject {
 	 * non-leaf node then the value is the address of a child.  That child's parent address
 	 * will be updated if that (key, value) is to be inserted into a new node.
 	 */
-	private void insertEntryBefore(int i, byte[] key, byte[] value) throws IndexedStoreException {
+	private void insertEntryBefore(int i, byte[] key, byte[] value) throws CoreException {
 		Field entries = entriesField;
 		int entriesLength = entries.length();
 		int keyValueLength = key.length + value.length;
@@ -541,7 +543,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Inserts a child address into a non-leaf node.  This may result in this node splitting.
 	 */
-	private void insertKeyForChild(ObjectAddress childAddress, byte[] key) throws IndexedStoreException {
+	private void insertKeyForChild(ObjectAddress childAddress, byte[] key) throws CoreException {
 		int i = findFirstEntryGT(key);
 		insertEntryBefore(i, key, childAddress.toByteArray());
 		if (i == 0 && !parentAddress.isNull()) {
@@ -567,7 +569,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Places the contents of the buffer into the fields.
 	 * Subclasses should implement and call super.
 	 */
-	protected void extractValues(Field f) throws ObjectStoreException {
+	protected void extractValues(Field f) throws CoreException {
 		super.extractValues(f);
 		anchorAddress = new ObjectAddress(f.get(AnchorAddress));
 		parentAddress = new ObjectAddress(f.get(ParentAddress));
@@ -591,7 +593,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Removes the descriptor and key/value pair at the entry number given.  This may
 	 * result in the node becoming empty.  The caller will need to take steps to plan for this.
 	 */
-	void removeEntry(int i) throws IndexedStoreException {
+	void removeEntry(int i) throws CoreException {
 
 		/* remove the (key,value) entry */
 		byte[] key = getKey(i);
@@ -629,7 +631,7 @@ class IndexNode extends IndexedStoreObject {
 	/**
 	 * Removes a child node address reference from a non-leaf node.
 	 */
-	private void removeKeyForChild(ObjectAddress childAddress) throws IndexedStoreException {
+	private void removeKeyForChild(ObjectAddress childAddress) throws CoreException {
 		Field childAddressField = new Field(childAddress);
 		int i = 0;
 		while (i < numberOfEntries) {
@@ -681,12 +683,12 @@ class IndexNode extends IndexedStoreObject {
 	 * cause a parent node to split as well.  Splits eventually propagate to the root node, cause it 
 	 * to split and a new root node to be created.
 	 */
-	private ObjectAddress split() throws IndexedStoreException {
+	private ObjectAddress split() throws CoreException {
 
 		/* Nodes can only be split if there are at least 2 entries */
 		int n = numberOfEntries;
 		if (n < 2) {
-			throw new IndexedStoreException(IndexedStoreException.IndexNodeNotSplit);
+			throw Policy.exception("indexedStore.indexNodeNotSplit"); //$NON-NLS-1$
 		}
 
 		/* 
@@ -778,7 +780,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Unlinks a node from its parent and siblings.  This does not modify the current node, but
 	 * does modify all the nodes and anchors pointing to it.  
 	 */
-	void unlink() throws IndexedStoreException {
+	void unlink() throws CoreException {
 		if (isRoot()) {
 			IndexAnchor anchor = acquireAnchor(anchorAddress);
 			anchor.setRootNodeAddress(ObjectAddress.Null);
@@ -805,7 +807,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Update the key and value at this entry to a new key and value.  This may result in a node split.
 	 * The caller must be able to recognize that the node has split and compensate for that.
 	 */
-	private void updateEntry(int i, byte[] key, byte[] value) throws IndexedStoreException {
+	private void updateEntry(int i, byte[] key, byte[] value) throws CoreException {
 
 		/*
 		 If the node needs to be split, split it and then attempt the update again.  Note that if
@@ -862,7 +864,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Sets the key at this entry to a new key.  This may result in a node split.
 	 * The caller must be able to recognize that the node has split and compensate for that if necessary.
 	 */
-	private void updateKeyAt(int i, byte[] key) throws IndexedStoreException {
+	private void updateKeyAt(int i, byte[] key) throws CoreException {
 		updateEntry(i, key, getValue(i));
 	}
 
@@ -870,7 +872,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Updates the key of an (key,address) entry in a non-leaf node.  The key must still be in order with respect
 	 * to the other keys of the node.
 	 */
-	private void updateKeyForChild(byte[] key, ObjectAddress childAddress, byte[] newKey) throws IndexedStoreException {
+	private void updateKeyForChild(byte[] key, ObjectAddress childAddress, byte[] newKey) throws CoreException {
 		Field childAddressField = new Field(childAddress.toByteArray());
 		int i = findLastEntryLT(key) + 1;
 		while (i < numberOfEntries) {
@@ -892,7 +894,7 @@ class IndexNode extends IndexedStoreObject {
 	 * Sets the value at this entry to a new value.  This may result in a node split.
 	 * The caller must be able to recognize that the node has split and compensate for that.
 	 */
-	void updateValueAt(int i, byte[] value) throws IndexedStoreException {
+	void updateValueAt(int i, byte[] value) throws CoreException {
 		updateEntry(i, getKey(i), value);
 	}
 

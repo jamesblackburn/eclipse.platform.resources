@@ -14,6 +14,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.*;
 
 class LogWriter {
 
@@ -23,7 +26,7 @@ class LogWriter {
 	/**
 	 * Puts the modified pages to the log file.
 	 */
-	public static void putModifiedPages(PageStore pageStore, Map modifiedPages) throws PageStoreException {
+	public static void putModifiedPages(PageStore pageStore, Map modifiedPages) throws CoreException {
 		LogWriter writer = new LogWriter();
 		try {
 			writer.open(pageStore);
@@ -36,12 +39,12 @@ class LogWriter {
 	/**
 	 * Opens the log.
 	 */
-	protected void open(PageStore store) throws PageStoreException {
+	protected void open(PageStore store) throws CoreException {
 		this.pageStore = store;
 		try {
 			out = new FileOutputStream(Log.name(store.getName()));
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogOpenFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logOpenFailure"), e));//$NON-NLS-1$
 		}
 	}
 
@@ -61,7 +64,7 @@ class LogWriter {
 	/**
 	 * Puts the modified pages into the log.
 	 */
-	protected void putModifiedPages(Map modifiedPages) throws PageStoreException {
+	protected void putModifiedPages(Map modifiedPages) throws CoreException {
 		Buffer b4 = new Buffer(4);
 		byte[] pageBuffer = new byte[Page.SIZE];
 		int numberOfPages = modifiedPages.size();
@@ -78,7 +81,7 @@ class LogWriter {
 				write(pageBuffer);
 			}
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogWriteFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logWriteFailure"), e));//$NON-NLS-1$
 		}
 	}
 

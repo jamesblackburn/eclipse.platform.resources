@@ -10,6 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 /**
  * An IndexAnchor provides a place to hang index-wide information in a fixed spot, especially
  * since the root node may change due to a root node split.
@@ -44,7 +47,7 @@ class IndexAnchor extends IndexedStoreObject {
 	/** 
 	 * Constructs a new index anchor from a field read from the store.  Used by the factory.
 	 */
-	public IndexAnchor(Field f, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	public IndexAnchor(Field f, ObjectStore store, ObjectAddress address) throws CoreException {
 		super(f, store, address);
 	}
 
@@ -71,7 +74,7 @@ class IndexAnchor extends IndexedStoreObject {
 	 * Places the contents of the buffer into the fields.
 	 * Subclasses should implement and call super.
 	 */
-	protected void extractValues(Field f) throws ObjectStoreException {
+	protected void extractValues(Field f) throws CoreException {
 		super.extractValues(f);
 		setFields(f);
 		numberOfEntries = numberOfEntriesField.getInt();
@@ -138,7 +141,7 @@ class IndexAnchor extends IndexedStoreObject {
 	/**
 	 * This method requests the anchor to destroy its children.
 	 */
-	void destroyChildren() throws IndexedStoreException {
+	void destroyChildren() throws CoreException {
 		IndexNode rootNode = acquireNode(rootNodeAddress);
 		rootNode.destroyChildren();
 		rootNode.release();
@@ -150,7 +153,7 @@ class IndexAnchor extends IndexedStoreObject {
 	 * is greater than or equal to the key provided.  To set a cursor to the beginning 
 	 * of the index use a key of zero length.
 	 */
-	void find(byte key[], IndexCursor cursor) throws IndexedStoreException {
+	void find(byte key[], IndexCursor cursor) throws CoreException {
 		if (rootNodeAddress.isNull()) {
 			cursor.reset();
 		} else {
@@ -163,7 +166,7 @@ class IndexAnchor extends IndexedStoreObject {
 	/**
 	 * This method returns a cursor set to the first entry in the index.
 	 */
-	void findFirstEntry(IndexCursor cursor) throws IndexedStoreException {
+	void findFirstEntry(IndexCursor cursor) throws CoreException {
 		if (rootNodeAddress.isNull()) {
 			cursor.reset();
 		} else {
@@ -176,7 +179,7 @@ class IndexAnchor extends IndexedStoreObject {
 	/**
 	 * This method returns a cursor set to the last entry in the index.
 	 */
-	void findLastEntry(IndexCursor cursor) throws IndexedStoreException {
+	void findLastEntry(IndexCursor cursor) throws CoreException {
 		if (rootNodeAddress.isNull()) {
 			cursor.reset();
 		} else {
@@ -189,13 +192,13 @@ class IndexAnchor extends IndexedStoreObject {
 	/**
 	 * Insert an entry into an index.  
 	 */
-	void insert(byte[] key, byte[] value) throws IndexedStoreException {
+	void insert(byte[] key, byte[] value) throws CoreException {
 		if (rootNodeAddress.isNull()) {
 			IndexNode rootNode = new IndexNode(this.address);
 			try {
 				store.insertObject(rootNode);
-			} catch (ObjectStoreException e) {
-				throw new IndexedStoreException(IndexedStoreException.IndexNodeNotCreated, e);
+			} catch (CoreException e) {
+				Policy.exception("indexedStore.indexNodeNotCreated", e); //$NON-NLS-1$
 			}
 			rootNodeAddress = rootNode.getAddress();
 		}
@@ -214,7 +217,7 @@ class IndexAnchor extends IndexedStoreObject {
 	/**
 	 * Returns the number of nodes in the index.
 	 */
-	int getNumberOfNodes() throws IndexedStoreException {
+	int getNumberOfNodes() throws CoreException {
 		if (rootNodeAddress.isNull())
 			return 0;
 		IndexNode node = acquireNode(rootNodeAddress);

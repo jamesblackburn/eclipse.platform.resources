@@ -10,7 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
-import org.eclipse.core.internal.indexing.IndexedStoreException;
+import org.eclipse.core.runtime.CoreException;
+
 
 public interface IHistoryStoreVisitor {
 	/**
@@ -18,5 +19,5 @@ public interface IHistoryStoreVisitor {
 	 * 
 	 * @param state State to be visited in IndexedStore.
 	 */
-	public boolean visit(HistoryStoreEntry state) throws IndexedStoreException;
+	public boolean visit(HistoryStoreEntry state) throws CoreException;
 }

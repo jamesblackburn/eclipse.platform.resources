@@ -11,21 +11,13 @@
 package org.eclipse.core.tests.internal.indexing;
 
 import org.eclipse.core.internal.indexing.*;
+import org.eclipse.core.runtime.CoreException;
 
 public class TestObjectPolicy extends AbstractObjectPolicy {
-
-	/**
-	 * Constructor for TestObjectPolicy
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.internal.indexing.AbstractObjectPolicy#createObject(org.eclipse.core.internal.indexing.Field, org.eclipse.core.internal.indexing.ObjectStore, org.eclipse.core.internal.indexing.ObjectAddress)
 	 */
-	public TestObjectPolicy() {
-		super();
-	}
-
-	/**
-	 * @see ObjectPolicy#createObject(Field, ObjectStore, ObjectAddress)
-	 */
-	public StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	public StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws CoreException {
 		return new TestObject(field, store, address);
 	}
-
 }

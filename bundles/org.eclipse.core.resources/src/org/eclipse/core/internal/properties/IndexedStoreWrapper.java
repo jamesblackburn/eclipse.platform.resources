@@ -116,26 +116,16 @@ public class IndexedStoreWrapper {
 	}
 
 	public synchronized Index getIndex() throws CoreException {
-		Exception problem = null;
 		try {
-			return getStore().getIndex(INDEX_NAME);
-		} catch (IndexedStoreException e) {
-			if (e.id == IndexedStoreException.IndexNotFound)
-				return createIndex();
-			problem = e;
-			return null;
+			Index result = getStore().getIndex(INDEX_NAME);
+			return result == null ? createIndex() : result;
 		} catch (CoreException e) {
 			//just rethrow
 			throw e;
 		} catch (Exception e) {
-			problem = e;
-			return null;
-		} finally {
-			if (problem != null) {
-				String message = Policy.bind("indexed.couldNotGetIndex", location.toOSString()); //$NON-NLS-1$
-				ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_READ_LOCAL, location, message, problem);
-				throw new ResourceException(status);
-			}
+			String message = Policy.bind("indexed.couldNotGetIndex", location.toOSString()); //$NON-NLS-1$
+			ResourceStatus status = new ResourceStatus(IResourceStatus.FAILED_READ_LOCAL, location, message, e);
+			throw new ResourceException(status);
 		}
 	}
 

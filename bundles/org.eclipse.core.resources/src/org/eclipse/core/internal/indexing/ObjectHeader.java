@@ -10,25 +10,34 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 class ObjectHeader implements Insertable {
+	private static final int HeaderTagOffset = 0;
+	private static final int HeaderTagValue = 0xFFFF;
+	private static final int ObjectLengthOffset = 2;
 
 	public static final int SIZE = 4;
-	private static final int HeaderTagValue = 0xFFFF;
-	private static final int HeaderTagOffset = 0;
-	private static final int ObjectLengthOffset = 2;
 	private int objectLength;
 
 	/**
 	 * ObjectHeader constructor comment.
 	 */
-	public ObjectHeader(byte[] buffer) throws ObjectStoreException {
+	public ObjectHeader(byte[] buffer) throws CoreException {
 		if (buffer.length != SIZE)
 			throw new IllegalArgumentException();
 		Buffer buf = new Buffer(buffer);
-		if (buf.getUInt(HeaderTagOffset, 2) != HeaderTagValue) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectHeaderFailure);
-		}
+		if (buf.getUInt(HeaderTagOffset, 2) != HeaderTagValue)
+			throw Policy.exception("objectStore.objectHeaderFailure"); //$NON-NLS-1$
 		this.objectLength = buf.getUInt(ObjectLengthOffset, 2);
+	}
+
+	/**
+	 * ObjectHeader constructor comment.
+	 */
+	public ObjectHeader(Field f) throws CoreException {
+		this(f.get());
 	}
 
 	/**
@@ -36,13 +45,6 @@ class ObjectHeader implements Insertable {
 	 */
 	public ObjectHeader(int objectLength) {
 		this.objectLength = objectLength;
-	}
-
-	/**
-	 * ObjectHeader constructor comment.
-	 */
-	public ObjectHeader(Field f) throws ObjectStoreException {
-		this(f.get());
 	}
 
 	public int getObjectLength() {

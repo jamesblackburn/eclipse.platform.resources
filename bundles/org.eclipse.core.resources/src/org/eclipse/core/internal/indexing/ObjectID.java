@@ -10,15 +10,18 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 public class ObjectID implements Insertable {
 
 	private static final int Size = 8;
 	private static final int ObjectNumberOffset = 0;
 	private long objectNumber;
 
-	public ObjectID(byte[] b) throws IndexedStoreException {
+	public ObjectID(byte[] b) throws CoreException {
 		if (b.length != Size) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectIDInvalid);
+			throw Policy.exception("indexedStore.objectIDInvalid"); //$NON-NLS-1$
 		}
 		Buffer buf = new Buffer(b);
 		objectNumber = buf.getLong(ObjectNumberOffset, 8);

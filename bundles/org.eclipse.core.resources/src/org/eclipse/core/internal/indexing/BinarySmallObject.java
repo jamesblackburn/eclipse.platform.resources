@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.runtime.CoreException;
+
 class BinarySmallObject extends IndexedStoreObject {
 	public static final int TYPE = 5;
 	public static final int VALUE_OFFSET = 2;
@@ -26,25 +28,14 @@ class BinarySmallObject extends IndexedStoreObject {
 	/**
 	 * Constructs an object from bytes that came from the store.
 	 */
-	public BinarySmallObject(Field f, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	public BinarySmallObject(Field f, ObjectStore store, ObjectAddress address) throws CoreException {
 		super(f, store, address);
-	}
-
-	/**
-	 * Places the contents of the fields into the buffer.
-	 * Subclasses should implement and call super.
-	 * The value field is maintained in the contents directly and does not need
-	 * to be copied there by this method.
-	 */
-	protected void insertValues(Field f) {
-		super.insertValues(f);
-		f.subfield(VALUE_OFFSET).put(value);
 	}
 
 	/**
 	 * Extracts the values from a field into the members of this object;
 	 */
-	protected void extractValues(Field f) throws ObjectStoreException {
+	protected void extractValues(Field f) throws CoreException {
 		super.extractValues(f);
 		value = f.subfield(VALUE_OFFSET).get();
 	}
@@ -55,10 +46,6 @@ class BinarySmallObject extends IndexedStoreObject {
 	 */
 	protected int getMaximumSize() {
 		return 6000 + VALUE_OFFSET;
-	}
-
-	protected int length() {
-		return value.length + VALUE_OFFSET;
 	}
 
 	/**
@@ -82,6 +69,21 @@ class BinarySmallObject extends IndexedStoreObject {
 	 */
 	public byte[] getValue() {
 		return new Field(value).get();
+	}
+
+	/**
+	 * Places the contents of the fields into the buffer.
+	 * Subclasses should implement and call super.
+	 * The value field is maintained in the contents directly and does not need
+	 * to be copied there by this method.
+	 */
+	protected void insertValues(Field f) {
+		super.insertValues(f);
+		f.subfield(VALUE_OFFSET).put(value);
+	}
+
+	protected int length() {
+		return value.length + VALUE_OFFSET;
 	}
 
 	/** 

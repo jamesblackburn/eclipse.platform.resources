@@ -104,6 +104,7 @@ class SpaceMapPage extends ObjectStorePage {
 	}
 
 	protected void materialize() {
+		//nothing to do
 	}
 
 }

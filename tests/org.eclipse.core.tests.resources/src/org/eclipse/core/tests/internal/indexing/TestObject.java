@@ -11,6 +11,7 @@
 package org.eclipse.core.tests.internal.indexing;
 
 import org.eclipse.core.internal.indexing.*;
+import org.eclipse.core.runtime.CoreException;
 
 class TestObject extends StoredObject {
 
@@ -28,7 +29,7 @@ class TestObject extends StoredObject {
 	/**
 	 * Standard constructor -- constructs an object from bytes that came from the store.
 	 */
-	TestObject(Field buffer, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	TestObject(Field buffer, ObjectStore store, ObjectAddress address) throws CoreException {
 		super(buffer, store, address);
 	}
 
@@ -45,7 +46,7 @@ class TestObject extends StoredObject {
 	 * Places the contents of the buffer into the fields.
 	 * Subclasses should implement and call super.
 	 */
-	protected void extractValues(Field buffer) throws ObjectStoreException {
+	protected void extractValues(Field buffer) throws CoreException {
 		super.extractValues(buffer);
 		value = buffer.subfield(2).get();
 	}

@@ -10,6 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 public class IndexedStoreObjectPolicy extends AbstractObjectPolicy {
 
 	/**
@@ -24,7 +27,7 @@ public class IndexedStoreObjectPolicy extends AbstractObjectPolicy {
 	 * used to create the internal structure of the object.  The field begins with a 
 	 * two byte type code that is used to determine the type of object to create.
 	 */
-	public StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws ObjectStoreException {
+	public StoredObject createObject(Field field, ObjectStore store, ObjectAddress address) throws CoreException {
 		int offset = StoredObject.TYPE_OFFSET;
 		int length = StoredObject.TYPE_LENGTH;
 		int type = field.subfield(offset, length).getInt();
@@ -43,7 +46,7 @@ public class IndexedStoreObjectPolicy extends AbstractObjectPolicy {
 				object = new BinarySmallObject(field, store, address);
 				break;
 			default :
-				throw new ObjectStoreException(ObjectStoreException.ObjectTypeFailure);
+				throw Policy.exception("objectStore.objectTypeFailure"); //$NON-NLS-1$
 		}
 		return object;
 	}

@@ -16,26 +16,16 @@ import junit.framework.*;
 import org.eclipse.core.internal.indexing.ObjectAddress;
 import org.eclipse.core.internal.indexing.ObjectStore;
 
-public class BasicObjectStoreTest extends TestCase {
+public class BasicObjectStoreTest extends AbstractIndexedStoreTest {
 
 	protected Vector addresses;
-	protected TestEnvironment env;
 
-	public BasicObjectStoreTest(String name, TestEnvironment env) {
-		super(name);
-		this.env = env;
+	public static Test suite() {
+		return new TestSuite(BasicObjectStoreTest.class);
 	}
 
-	public static Test suite(TestEnvironment env) {
-		TestSuite suite = new TestSuite();
-		suite.addTest(new BasicObjectStoreTest("testSanity", env));
-		suite.addTest(new BasicObjectStoreTest("testInsertRemove", env));
-		suite.addTest(new BasicObjectStoreTest("testPopulate", env));
-		suite.addTest(new BasicObjectStoreTest("testUpdate", env));
-		suite.addTest(new BasicObjectStoreTest("testIdentity", env));
-		suite.addTest(new BasicObjectStoreTest("testRemove", env));
-		suite.addTest(new BasicObjectStoreTest("testLarge", env));
-		return suite;
+	public BasicObjectStoreTest(String name) {
+		super(name);
 	}
 
 	/**
@@ -53,7 +43,7 @@ public class BasicObjectStoreTest extends TestCase {
 	// populate an object store with 256 copies of a particular string
 	public void populate(String string) throws Exception {
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			addresses = new Vector();
 			for (int i = 0; i < 255; i++) {
@@ -70,11 +60,11 @@ public class BasicObjectStoreTest extends TestCase {
 
 	// test object identity
 	public void testIdentity() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		String s = "000011112222";
 		populate(s);
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			s = "aaaabbbbcccc";
 			int n = addresses.size();
@@ -101,9 +91,9 @@ public class BasicObjectStoreTest extends TestCase {
 	 */
 	public void testInsertRemove() throws Exception {
 		String string = "---*---*---*---*---*---*---*---*---*---*---*---*---*---*---*---*";
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			for (int i = 0; i < 1000; i++) {
 				TestObject object = new TestObject(string.getBytes());
@@ -119,14 +109,14 @@ public class BasicObjectStoreTest extends TestCase {
 
 	// put some big objects in
 	public void testLarge() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		StringBuffer buf = new StringBuffer(3500);
 		while (buf.length() < 3500)
 			buf.append("---*---*---*---*");
 		String s = buf.toString();
 		byte[] b1 = s.getBytes();
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			addresses = new Vector();
 			for (int i = 0; i < (16 * 1024); i++) {
@@ -151,14 +141,14 @@ public class BasicObjectStoreTest extends TestCase {
 
 	// populate and check the contents of the database
 	public void testPopulate() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
 		StringBuffer buffer = new StringBuffer(4096);
 		String fragment = "---*---*---*---*";
 		for (int j = 0; j < 64; j++) {
 			String s = buffer.toString();
 			populate(s);
-			store.open(env.getFileName());
+			store.open(getFileName());
 			try {
 				int n = addresses.size();
 				for (int i = 0; i < n; i++) {
@@ -177,11 +167,11 @@ public class BasicObjectStoreTest extends TestCase {
 
 	// remove all the objects
 	public void testRemove() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		String s = "000011112222";
 		populate(s);
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			int n = addresses.size();
 			for (int i = 0; i < n; i++) {
@@ -196,20 +186,20 @@ public class BasicObjectStoreTest extends TestCase {
 
 	// open and close
 	public void testSanity() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		store.close();
 		return;
 	}
 
 	// update the objects and check the contents again, object size does not change
 	public void testUpdate() throws Exception {
-		ObjectStore.delete(env.getFileName());
+		ObjectStore.delete(getFileName());
 		String s = "000011112222";
 		populate(s);
 		ObjectStore store = new ObjectStore(new TestObjectPolicy());
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			s = "aaaabbbbcccc";
 			int n = addresses.size();

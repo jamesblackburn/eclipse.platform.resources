@@ -11,6 +11,8 @@
 package org.eclipse.core.internal.indexing;
 
 import java.util.*;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
 
 public class IndexedStore {
 
@@ -41,7 +43,7 @@ public class IndexedStore {
 	/**
 	 * Acquires an anchor.
 	 */
-	IndexAnchor acquireAnchor(ObjectAddress address) throws IndexedStoreException {
+	IndexAnchor acquireAnchor(ObjectAddress address) throws CoreException {
 		return (IndexAnchor) acquireObject(address);
 	}
 
@@ -51,7 +53,7 @@ public class IndexedStore {
 	IndexedStoreContext acquireContext(ObjectAddress address) {
 		try {
 			return (IndexedStoreContext) acquireObject(address);
-		} catch (IndexedStoreException e) {
+		} catch (CoreException e) {
 			//context couldn't be acquired - return null
 			return null;
 		}
@@ -60,19 +62,19 @@ public class IndexedStore {
 	/**
 	 * Acquire an index node.
 	 */
-	IndexNode acquireNode(ObjectAddress address) throws IndexedStoreException {
+	IndexNode acquireNode(ObjectAddress address) throws CoreException {
 		return (IndexNode) acquireObject(address);
 	}
 
 	/**
 	 * Acquires an object.
 	 */
-	private StoredObject acquireObject(ObjectAddress address) throws IndexedStoreException {
+	private StoredObject acquireObject(ObjectAddress address) throws CoreException {
 		StoredObject object;
 		try {
 			object = objectStore.acquireObject(address);
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectNotAcquired, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.objectNotAcquired", e); //$NON-NLS-1$
 		}
 		return object;
 	}
@@ -80,7 +82,7 @@ public class IndexedStore {
 	/**
 	 * Acquires a Binary Object.
 	 */
-	BinarySmallObject acquireBinarySmallObject(ObjectAddress address) throws IndexedStoreException {
+	BinarySmallObject acquireBinarySmallObject(ObjectAddress address) throws CoreException {
 		return (BinarySmallObject) acquireObject(address);
 	}
 
@@ -88,7 +90,7 @@ public class IndexedStore {
 	 * Checks to see if the metadata stored in the object store matches that expected by this
 	 * code.  If not, a conversion is necessary.
 	 */
-	private void checkMetadata() throws IndexedStoreException {
+	private void checkMetadata() throws CoreException {
 		Buffer metadata = getMetadataArea(MetadataID);
 		Field versionField = metadata.getField(0, 4);
 		int version = versionField.getInt();
@@ -106,7 +108,7 @@ public class IndexedStore {
 	/**
 	 * Closes the store.  This is required to free the underlying file.
 	 */
-	public synchronized void close() throws IndexedStoreException {
+	public synchronized void close() throws CoreException {
 		if (name == null)
 			return;//already closed
 		try {
@@ -115,19 +117,19 @@ public class IndexedStore {
 				objectDirectoryCursor.close();
 			if (indexDirectoryCursor != null)
 				indexDirectoryCursor.close();
-		} catch (IndexedStoreException e) {
+		} catch (CoreException e) {
 			//make sure the file gets closed no matter what
 			try {
 				objectStore.close();
-			} catch (ObjectStoreException e2) {
+			} catch (CoreException e2) {
 				//ignore this and rethrow the underlying exception
 			}
 			throw e;
 		}
 		try {
 			objectStore.close();
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.StoreNotClosed, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.storeNotClosed", e); //$NON-NLS-1$
 		}
 		registry.remove(name);
 		name = null;
@@ -139,11 +141,11 @@ public class IndexedStore {
 		indexDirectoryCursor = null;
 	}
 
-	public synchronized void commit() throws IndexedStoreException {
+	public synchronized void commit() throws CoreException {
 		try {
 			objectStore.commit();
 		} catch (Exception e) {
-			throw new IndexedStoreException(IndexedStoreException.StoreNotCommitted, e);
+			throw Policy.exception("indexedStore.storeNotCommitted", e); //$NON-NLS-1$
 		}
 	}
 
@@ -151,14 +153,14 @@ public class IndexedStore {
 	 * Converts the store from a previous to the current version.  
 	 * No conversions are yet defined.
 	 */
-	private void convert(int fromVersion) throws IndexedStoreException {
-		throw new IndexedStoreException(IndexedStoreException.StoreNotConverted);
+	private void convert(int fromVersion) throws CoreException {
+		throw Policy.exception("indexedStore.storeNotConverted"); //$NON-NLS-1$
 	}
 
 	/**
 	 * Creates and initializes an IndexedStore.
 	 */
-	public static synchronized void create(String name) throws IndexedStoreException {
+	public static synchronized void create(String name) throws CoreException {
 		ObjectStore store = new ObjectStore(new IndexedStoreObjectPolicy());
 		try {
 			ObjectStore.create(name);
@@ -177,22 +179,22 @@ public class IndexedStore {
 		} catch (Exception e1) {
 			try {
 				store.close();
-			} catch (ObjectStoreException e2) {
+			} catch (CoreException e2) {
 				//real exception thrown below
 			}
 			ObjectStore.delete(name);
-			throw new IndexedStoreException(IndexedStoreException.StoreNotCreated, e1);
+			throw Policy.exception("indexedStore.storeNotCreated", e1); //$NON-NLS-1$
 		}
 	}
 
 	/**
 	 * Creates an Index with the given name.
 	 */
-	public synchronized Index createIndex(String indexName) throws IndexedStoreException {
+	public synchronized Index createIndex(String indexName) throws CoreException {
 		Index index = null;
 		indexDirectoryCursor.find(indexName);
 		if (indexDirectoryCursor.keyMatches(indexName)) {
-			throw new IndexedStoreException(IndexedStoreException.IndexExists);
+			throw Policy.exception("indexedStore.indexExists"); //$NON-NLS-1$
 		}
 		ObjectAddress address = insertObject(new IndexAnchor());
 		indexDirectory.insert(indexName, address.toByteArray());
@@ -203,7 +205,7 @@ public class IndexedStore {
 	/**
 	 * Places a byte array into the store, return a new object identifier.
 	 */
-	public synchronized ObjectID createObject(byte[] b) throws IndexedStoreException {
+	public synchronized ObjectID createObject(byte[] b) throws CoreException {
 		ObjectAddress address = insertObject(new BinarySmallObject(b));
 		ObjectID id = getNextObjectID();
 		objectDirectory.insert(id.toByteArray(), address.toByteArray());
@@ -213,14 +215,14 @@ public class IndexedStore {
 	/**
 	 * Places a String into the store.
 	 */
-	public synchronized ObjectID createObject(String s) throws IndexedStoreException {
+	public synchronized ObjectID createObject(String s) throws CoreException {
 		return createObject(Convert.toUTF8(s));
 	}
 
 	/**
 	 * Places an Insertable into the store.
 	 */
-	public synchronized ObjectID createObject(Insertable anObject) throws IndexedStoreException {
+	public synchronized ObjectID createObject(Insertable anObject) throws CoreException {
 		return createObject(anObject.toByteArray());
 	}
 
@@ -262,33 +264,33 @@ public class IndexedStore {
 	/**
 	 * @deprecated -- use commit()
 	 */
-	public synchronized void flush() throws IndexedStoreException {
+	public synchronized void flush() throws CoreException {
 		try {
 			objectStore.commit();
 		} catch (Exception e) {
-			throw new IndexedStoreException(IndexedStoreException.StoreNotFlushed, e);
+			throw Policy.exception("indexedStore.storeNotFlushed", e); //$NON-NLS-1$
 		}
 	}
 
 	/**
-	 * Returns an index given its name.
+	 * Returns an index given its name, or null if no matching index was found
 	 */
-	public synchronized Index getIndex(String indexName) throws IndexedStoreException {
+	public synchronized Index getIndex(String indexName) throws CoreException {
 		Index index;
 		byte[] key = Convert.toUTF8(indexName);
 		indexDirectoryCursor.find(key);
 		if (!indexDirectoryCursor.keyMatches(key))
-			throw new IndexedStoreException(IndexedStoreException.IndexNotFound);
+			return null;
 		ObjectAddress address = indexDirectoryCursor.getValueAsObjectAddress();
 		index = new Index(this, address);
 		return index;
 	}
 
-	private Buffer getMetadataArea(int i) throws IndexedStoreException {
+	private Buffer getMetadataArea(int i) throws CoreException {
 		try {
 			return objectStore.getMetadataArea(i);
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.MetadataRequestError, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.metadataRequestError", e); //$NON-NLS-1$
 		}
 	}
 
@@ -302,10 +304,10 @@ public class IndexedStore {
 	/**
 	 * Returns the next ObjectID
 	 */
-	private ObjectID getNextObjectID() throws IndexedStoreException {
+	private ObjectID getNextObjectID() throws CoreException {
 		IndexedStoreContext context = acquireContext(contextAddress);
 		if (context == null)
-			throw new IndexedStoreException(IndexedStoreException.ContextNotAvailable);
+			throw Policy.exception("indexedStore.contextNotAvailable"); //$NON-NLS-1$
 		long objectNumber = context.getNextObjectNumber();
 		context.release();
 		return new ObjectID(objectNumber);
@@ -314,7 +316,7 @@ public class IndexedStore {
 	/**
 	 * Returns a byte array given its object identifier.
 	 */
-	public synchronized byte[] getObject(ObjectID id) throws IndexedStoreException {
+	public synchronized byte[] getObject(ObjectID id) throws CoreException {
 		objectDirectoryCursor.find(id.toByteArray());
 		ObjectAddress address = objectDirectoryCursor.getValueAsObjectAddress();
 		BinarySmallObject object = acquireBinarySmallObject(address);
@@ -326,7 +328,7 @@ public class IndexedStore {
 	/**
 	 * Returns an object as a string, truncated at the first null.
 	 */
-	public synchronized String getObjectAsString(ObjectID id) throws IndexedStoreException {
+	public synchronized String getObjectAsString(ObjectID id) throws CoreException {
 		String s;
 		s = Convert.fromUTF8(getObject(id));
 		int i = s.indexOf(0);
@@ -345,69 +347,63 @@ public class IndexedStore {
 	/** 
 	 * Inserts a new object into my store.
 	 */
-	ObjectAddress insertObject(StoredObject object) throws IndexedStoreException {
+	ObjectAddress insertObject(StoredObject object) throws CoreException {
 		try {
 			ObjectAddress address = objectStore.insertObject(object);
 			return address;
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectNotStored, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.objectNotStored", e); //$NON-NLS-1$
 		}
 	}
 
 	/**
 	 * Opens the store.
 	 */
-	public synchronized void open(String name) throws IndexedStoreException {
+	public synchronized void open(String name) throws CoreException {
 		if (registry.get(name) != null) {
-			throw new IndexedStoreException(IndexedStoreException.StoreIsOpen);
+			throw Policy.exception("indexedStore.storeIsOpen"); //$NON-NLS-1$
 		}
 		if (!exists(name))
 			create(name);
-		try {
-			objectStore = new ObjectStore(new IndexedStoreObjectPolicy());
-			objectStore.open(name);
-			checkMetadata();
-			contextAddress = ContextAddress10;
-			IndexedStoreContext context = acquireContext(contextAddress);
-			if (context == null) {
-				contextAddress = ContextAddress11;
-				context = acquireContext(contextAddress);
-			}
-			if (context == null) {
-				throw new IndexedStoreException(IndexedStoreException.StoreFormatError);
-			}
-			indexDirectoryAddress = context.getIndexDirectoryAddress();
-			objectDirectoryAddress = context.getObjectDirectoryAddress();
-			context.release();
-			indexDirectory = new Index(this, indexDirectoryAddress);
-			indexDirectoryCursor = indexDirectory.open();
-			objectDirectory = new Index(this, objectDirectoryAddress);
-			objectDirectoryCursor = objectDirectory.open();
-			this.name = name;
-			registry.put(name, this);
-		} catch (IndexedStoreException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new IndexedStoreException(IndexedStoreException.GenericError, e);
+		objectStore = new ObjectStore(new IndexedStoreObjectPolicy());
+		objectStore.open(name);
+		checkMetadata();
+		contextAddress = ContextAddress10;
+		IndexedStoreContext context = acquireContext(contextAddress);
+		if (context == null) {
+			contextAddress = ContextAddress11;
+			context = acquireContext(contextAddress);
 		}
+		if (context == null) {
+			throw Policy.exception("indexedStore.storeFormatError"); //$NON-NLS-1$
+		}
+		indexDirectoryAddress = context.getIndexDirectoryAddress();
+		objectDirectoryAddress = context.getObjectDirectoryAddress();
+		context.release();
+		indexDirectory = new Index(this, indexDirectoryAddress);
+		indexDirectoryCursor = indexDirectory.open();
+		objectDirectory = new Index(this, objectDirectoryAddress);
+		objectDirectoryCursor = objectDirectory.open();
+		this.name = name;
+		registry.put(name, this);
 	}
 
-	private void putMetadataArea(int i, Buffer b) throws IndexedStoreException {
+	private void putMetadataArea(int i, Buffer b) throws CoreException {
 		try {
 			objectStore.putMetadataArea(i, b);
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.MetadataRequestError, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.metadataRequestError", e); //$NON-NLS-1$
 		}
 	}
 
 	/**
 	 * Destroys an Index given its name.
 	 */
-	public synchronized void removeIndex(String indexName) throws IndexedStoreException {
+	public synchronized void removeIndex(String indexName) throws CoreException {
 		byte[] key = Convert.toUTF8(indexName);
 		indexDirectoryCursor.find(key);
 		if (!indexDirectoryCursor.keyMatches(key)) {
-			throw new IndexedStoreException(IndexedStoreException.IndexNotFound);
+			throw Policy.exception("indexedStore.indexNotFound"); //$NON-NLS-1$
 		}
 		ObjectAddress address = indexDirectoryCursor.getValueAsObjectAddress();
 		IndexAnchor anchor = acquireAnchor(address);
@@ -420,44 +416,40 @@ public class IndexedStore {
 	/** 
 	 * Removes an object from my store.
 	 */
-	void removeObject(ObjectAddress address) throws IndexedStoreException {
+	void removeObject(ObjectAddress address) throws CoreException {
 		try {
 			objectStore.removeObject(address);
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectNotRemoved, e);
+		} catch (CoreException e) {
+			throw Policy.exception("indexedStore.objectNotRemoved", e); //$NON-NLS-1$
 		}
 	}
 
 	/**
 	 * Removes the object identified by id from the store.
 	 */
-	public synchronized void removeObject(ObjectID id) throws IndexedStoreException {
+	public synchronized void removeObject(ObjectID id) throws CoreException {
 		byte[] key = id.toByteArray();
 		objectDirectoryCursor.find(key);
 		if (!objectDirectoryCursor.keyMatches(key)) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectNotFound);
+			Policy.exception("indexedStore.objectNotFound"); //$NON-NLS-1$
 		}
 		ObjectAddress address = objectDirectoryCursor.getValueAsObjectAddress();
 		objectDirectoryCursor.remove();
 		removeObject(address);
 	}
 
-	public synchronized void rollback() throws IndexedStoreException {
-		try {
-			objectStore.rollback();
-		} catch (ObjectStoreException e) {
-			throw new IndexedStoreException(IndexedStoreException.StoreNotRolledBack, e);
-		}
+	public synchronized void rollback() {
+		objectStore.rollback();
 	}
 
 	/**
 	 * Replaces the contents of the object identified by "id" with the byte array "b".
 	 */
-	public synchronized void updateObject(ObjectID id, byte[] b) throws IndexedStoreException {
+	public synchronized void updateObject(ObjectID id, byte[] b) throws CoreException {
 		byte[] key = id.toByteArray();
 		objectDirectoryCursor.find(key);
 		if (!objectDirectoryCursor.keyMatches(key)) {
-			throw new IndexedStoreException(IndexedStoreException.ObjectNotFound);
+			Policy.exception("indexedStore.objectNotFound"); //$NON-NLS-1$
 		}
 		ObjectAddress oldAddress = objectDirectoryCursor.getValueAsObjectAddress();
 		ObjectAddress newAddress = insertObject(new BinarySmallObject(b));
@@ -468,14 +460,14 @@ public class IndexedStore {
 	/**
 	 * Updates an object with a String.
 	 */
-	public synchronized void updateObject(ObjectID id, String s) throws IndexedStoreException {
+	public synchronized void updateObject(ObjectID id, String s) throws CoreException {
 		updateObject(id, Convert.toUTF8(s));
 	}
 
 	/**
 	 * Updates an object with an Insertable.
 	 */
-	public synchronized void updateObject(ObjectID id, Insertable anObject) throws IndexedStoreException {
+	public synchronized void updateObject(ObjectID id, Insertable anObject) throws CoreException {
 		updateObject(id, anObject.toByteArray());
 	}
 }

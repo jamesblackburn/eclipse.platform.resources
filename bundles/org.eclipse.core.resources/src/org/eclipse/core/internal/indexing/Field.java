@@ -83,11 +83,6 @@ public class Field implements Insertable {
 		return this;
 	}
 
-	public Field clear(byte value) {
-		buffer.clear(offset, length, value);
-		return this;
-	}
-
 	public int compareTo(Field that) {
 		return Buffer.compare(this.buffer, this.offset, this.length, that.buffer, that.offset, that.length);
 	}

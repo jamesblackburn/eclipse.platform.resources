@@ -16,64 +16,64 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.*;
 
 public class Policy {
-	public static final long MAX_BUILD_DELAY = 1000;
-	public static final long MIN_BUILD_DELAY = 100;
+	private static final int autoBuildBuildWork = 1;
+
+	private static final int autoBuildOpWork = 99;
+
+	public static final boolean buildOnCancel = false;
+	public static int buildWork;
 	private static String bundleName = "org.eclipse.core.internal.utils.messages";//$NON-NLS-1$
 	private static ResourceBundle bundle = ResourceBundle.getBundle(bundleName, Locale.getDefault());
 
-	private static final int autoBuildOpWork = 99;
-	private static final int autoBuildBuildWork = 1;
-	private static final int manualBuildOpWork = 99;
-	private static final int manualBuildBuildWork = 1;
-
-	public static final boolean buildOnCancel = false;
-	public static int opWork;
-	public static int buildWork;
-	public static int totalWork;
-
-	// default workspace description values
-	public static final boolean defaultAutoBuild = true;
-	public static final boolean defaultSnapshots = true;
-	public static final int defaultOperationsPerSnapshot = 100;
-	public static final long defaultSnapshotInterval = 5 * 60 * 1000l;//5 minutes
-	public static final long defaultDeltaExpiration = 30 * 24 * 3600 * 1000l; // 30 days
-	public static final long defaultFileStateLongevity = 7 * 24 * 3600 * 1000l; // 7 days
-	public static final long defaultMaxFileStateSize = 1024 * 1024l; // 1 Mb
-	public static final int defaultMaxFileStates = 50;
-	public static final int defaultMaxBuildIterations = 10;
-	public static final long defaultMaxNotifyDelay = 10000;// 10 seconds
+	public static boolean DEBUG_AUTO_REFRESH = false;
+	public static boolean DEBUG_BUILD_DELTA = false;
 
 	//debug constants
 	public static boolean DEBUG_BUILD_FAILURE = false;
-	public static boolean DEBUG_NEEDS_BUILD = false;
 	public static boolean DEBUG_BUILD_INVOKING = false;
-	public static boolean DEBUG_BUILD_DELTA = false;
-	public static boolean DEBUG_NATURES = false;
 	public static boolean DEBUG_HISTORY = false;
+	public static boolean DEBUG_NATURES = false;
+	public static boolean DEBUG_NEEDS_BUILD = false;
 	public static boolean DEBUG_PREFERENCES = false;
-
-	public static boolean MONITOR_BUILDERS = false;
-	public static boolean MONITOR_LISTENERS = false;
 
 	// Get timing information for restoring data
 	public static boolean DEBUG_RESTORE = false;
 	public static boolean DEBUG_RESTORE_MARKERS = false;
-	public static boolean DEBUG_RESTORE_SYNCINFO = false;
-	public static boolean DEBUG_RESTORE_TREE = false;
+	public static boolean DEBUG_RESTORE_MASTERTABLE = false;
 	public static boolean DEBUG_RESTORE_METAINFO = false;
 	public static boolean DEBUG_RESTORE_SNAPSHOTS = false;
-	public static boolean DEBUG_RESTORE_MASTERTABLE = false;
+	public static boolean DEBUG_RESTORE_SYNCINFO = false;
+	public static boolean DEBUG_RESTORE_TREE = false;
 
 	// Get timing information for saving and snapshoting data
 	public static boolean DEBUG_SAVE = false;
 	public static boolean DEBUG_SAVE_MARKERS = false;
-	public static boolean DEBUG_SAVE_SYNCINFO = false;
-	public static boolean DEBUG_SAVE_TREE = false;
+	public static boolean DEBUG_SAVE_MASTERTABLE = false;
 	public static boolean DEBUG_SAVE_METAINFO = false;
 	public static boolean DEBUG_SAVE_SNAPSHOTS = false;
-	public static boolean DEBUG_SAVE_MASTERTABLE = false;
+	public static boolean DEBUG_SAVE_SYNCINFO = false;
+	public static boolean DEBUG_SAVE_TREE = false;
 
-	public static boolean DEBUG_AUTO_REFRESH = false;
+	// default workspace description values
+	public static final boolean defaultAutoBuild = true;
+	public static final long defaultDeltaExpiration = 30 * 24 * 3600 * 1000l; // 30 days
+	public static final long defaultFileStateLongevity = 7 * 24 * 3600 * 1000l; // 7 days
+	public static final int defaultMaxBuildIterations = 10;
+	public static final int defaultMaxFileStates = 50;
+	public static final long defaultMaxFileStateSize = 1024 * 1024l; // 1 Mb
+	public static final long defaultMaxNotifyDelay = 10000;// 10 seconds
+	public static final int defaultOperationsPerSnapshot = 100;
+	public static final long defaultSnapshotInterval = 5 * 60 * 1000l;//5 minutes
+	public static final boolean defaultSnapshots = true;
+	private static final int manualBuildBuildWork = 1;
+	private static final int manualBuildOpWork = 99;
+	public static final long MAX_BUILD_DELAY = 1000;
+	public static final long MIN_BUILD_DELAY = 100;
+
+	public static boolean MONITOR_BUILDERS = false;
+	public static boolean MONITOR_LISTENERS = false;
+	public static int opWork;
+	public static int totalWork;
 
 	static {
 		setupAutoBuildProgress(defaultAutoBuild);
@@ -160,6 +160,36 @@ public class Policy {
 			throw new OperationCanceledException();
 	}
 
+	/**
+	 * Print a debug message to the console. 
+	 * Pre-pend the message with the current date and the name of the current thread.
+	 */
+	public static void debug(String message) {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(new Date(System.currentTimeMillis()));
+		buffer.append(" - ["); //$NON-NLS-1$
+		buffer.append(Thread.currentThread().getName());
+		buffer.append("] "); //$NON-NLS-1$
+		buffer.append(message);
+		System.out.println(buffer.toString());
+	}
+	
+	/**
+	 * Returns a new CoreException with a translation of the provided message key,
+	 * and optionally the provided nested exception
+	 */
+	public static CoreException exception(String key, Exception e) {
+		return new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind(key), e));//$NON-NLS-1$
+	}
+
+	/**
+	 * Returns a new CoreException with a translation of the provided message key,
+	 * and optionally the provided nested exception
+	 */
+	public static CoreException exception(String key) {
+		return exception(key, null);
+	}
+	
 	public static IProgressMonitor monitorFor(IProgressMonitor monitor) {
 		if (monitor == null)
 			return new NullProgressMonitor();
@@ -186,19 +216,5 @@ public class Policy {
 		if (monitor instanceof NullProgressMonitor)
 			return monitor;
 		return new SubProgressMonitor(monitor, ticks, style);
-	}
-
-	/**
-	 * Print a debug message to the console. 
-	 * Pre-pend the message with the current date and the name of the current thread.
-	 */
-	public static void debug(String message) {
-		StringBuffer buffer = new StringBuffer();
-		buffer.append(new Date(System.currentTimeMillis()));
-		buffer.append(" - ["); //$NON-NLS-1$
-		buffer.append(Thread.currentThread().getName());
-		buffer.append("] "); //$NON-NLS-1$
-		buffer.append(message);
-		System.out.println(buffer.toString());
 	}
 }

@@ -46,10 +46,6 @@ public class Buffer {
 		this.contents = anObject.toByteArray();
 	}
 
-	public void clear() {
-		clear(contents, 0, contents.length);
-	}
-
 	private static void clear(byte[] buffer, int offset, int length) {
 		int n = length;
 		int p = offset;
@@ -61,18 +57,8 @@ public class Buffer {
 		}
 	}
 
-	private static void clear(byte[] buffer, int offset, int length, byte value) {
-		for (int i = offset; i < offset + length; i++) {
-			buffer[i] = value;
-		}
-	}
-
 	public void clear(int offset, int length) {
 		clear(contents, offset, length);
-	}
-
-	public void clear(int offset, int length, byte value) {
-		clear(contents, offset, length, value);
 	}
 
 	private static int compare(byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {

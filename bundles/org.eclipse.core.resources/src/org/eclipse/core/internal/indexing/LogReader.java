@@ -14,18 +14,21 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.*;
 
 class LogReader {
+	protected byte[] b4;
 
 	protected FileInputStream in;
-	protected PageStore store;
-	protected byte[] b4;
 	protected byte[] pageBuffer;
+	protected PageStore store;
 
 	/** 
 	 * Returns the Hashmap of the modified pages.
 	 */
-	public static Map getModifiedPages(PageStore store) throws PageStoreException {
+	public static Map getModifiedPages(PageStore store) throws CoreException {
 		LogReader reader = new LogReader(store);
 		Map modifiedPages = null;
 		try {
@@ -43,17 +46,11 @@ class LogReader {
 		this.b4 = new byte[4];
 	}
 
-	/** 
-	 * Open a log for reading.
-	 */
-	protected void open(PageStore pageStore) throws PageStoreException {
-		String name = pageStore.getName();
-		if (!Log.exists(name))
-			return;
+	protected int bytesAvailable() throws CoreException {
 		try {
-			in = new FileInputStream(Log.name(name));
+			return in.available();
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogOpenFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logReadFailure"), e));//$NON-NLS-1$
 		}
 	}
 
@@ -73,7 +70,7 @@ class LogReader {
 	/**
 	 * Returns the Hashmap of modified pages read from the log.
 	 */
-	protected Map getModifiedPages() throws PageStoreException {
+	protected Map getModifiedPages() throws CoreException {
 		Map modifiedPages = new TreeMap();
 		if (in == null)
 			return modifiedPages;
@@ -94,19 +91,25 @@ class LogReader {
 		return modifiedPages;
 	}
 
-	public void readBuffer(byte[] buffer) throws PageStoreException {
+	/** 
+	 * Open a log for reading.
+	 */
+	protected void open(PageStore pageStore) throws CoreException {
+		String name = pageStore.getName();
+		if (!Log.exists(name))
+			return;
 		try {
-			in.read(buffer);
+			in = new FileInputStream(Log.name(name));
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogReadFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logOpenFailure"), e));//$NON-NLS-1$
 		}
 	}
 
-	protected int bytesAvailable() throws PageStoreException {
+	public void readBuffer(byte[] buffer) throws CoreException {
 		try {
-			return in.available();
+			in.read(buffer);
 		} catch (IOException e) {
-			throw new PageStoreException(PageStoreException.LogReadFailure, e);
+			throw new CoreException(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, 1, Policy.bind("pageStore.logReadFailure"), e));//$NON-NLS-1$
 		}
 	}
 

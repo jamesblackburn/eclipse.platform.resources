@@ -14,43 +14,23 @@ import java.io.StringWriter;
 import java.util.*;
 import junit.framework.*;
 import org.eclipse.core.internal.indexing.*;
+import org.eclipse.core.runtime.CoreException;
 
-public class BasicIndexedStoreTest extends TestCase {
+public class BasicIndexedStoreTest extends AbstractIndexedStoreTest {
 
-	TestEnvironment env;
-
-	public BasicIndexedStoreTest(String name, TestEnvironment env) {
-		super(name);
-		this.env = env;
-	}
-
-	public static Test suite(TestEnvironment env) {
+	public static Test suite() {
+		//		return new TestSuite(BasicIndexedStoreTest.class);
 		TestSuite suite = new TestSuite();
-		suite.addTest(new BasicIndexedStoreTest("testSanity", env));
-		suite.addTest(new BasicIndexedStoreTest("testRecovery", env));
-		suite.addTest(new BasicIndexedStoreTest("testTransactions", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexInsert", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexCursorOperations", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexRemove", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexOrdering", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexReplace", env));
-		suite.addTest(new BasicIndexedStoreTest("testObjectUpdate", env));
-		suite.addTest(new BasicIndexedStoreTest("testObjectPerformance", env));
-		suite.addTest(new BasicIndexedStoreTest("testMultiCursorSearch", env));
-		suite.addTest(new BasicIndexedStoreTest("testMultiCursorUpdate", env));
-		suite.addTest(new BasicIndexedStoreTest("testMultiCursorRemove1", env));
-		suite.addTest(new BasicIndexedStoreTest("testMultiCursorRemove2", env));
-		suite.addTest(new BasicIndexedStoreTest("testIndexSplit", env));
-		suite.addTest(new BasicIndexedStoreTest("test1GCE9JD", env));
-		suite.addTest(new BasicIndexedStoreTest("testObjectLife", env));
+		suite.addTest(new BasicIndexedStoreTest("testIndexInsert"));
 		return suite;
 	}
 
-	private int random(int lo, int hi) {
-		double t0 = Math.random();
-		double t1 = (hi + 1 - lo) * t0 + lo;
-		double t2 = Math.floor(t1);
-		return (int) t2;
+	public BasicIndexedStoreTest() {
+		this("");
+	}
+
+	public BasicIndexedStoreTest(String name) {
+		super(name);
 	}
 
 	/**
@@ -65,6 +45,7 @@ public class BasicIndexedStoreTest extends TestCase {
 		return a.toString();
 	}
 
+
 	/**
 	 * Insert entries with the specified key length into the index. Compare the ordering after insertion.
 	 * Key values are 0 to numberOfEntries-1.
@@ -72,9 +53,9 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * That is, all values equivalent to 0 are inserted first, then all values equivalent to 1, ...
 	 */
 	private void insertAndCompare(int keySize, int numberOfEntries, int skipValue) throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		store.createIndex("Index");
 		Index index = store.getIndex("Index");
 		String key;
@@ -91,7 +72,7 @@ public class BasicIndexedStoreTest extends TestCase {
 		}
 		store.close();
 
-		store.open(env.getFileName());
+		store.open(getFileName());
 		index = store.getIndex("Index");
 		IndexCursor c = index.open();
 		c.findFirstEntry();
@@ -104,14 +85,21 @@ public class BasicIndexedStoreTest extends TestCase {
 		store.close();
 	}
 
+	private int random(int lo, int hi) {
+		double t0 = Math.random();
+		double t1 = (hi + 1 - lo) * t0 + lo;
+		double t2 = Math.floor(t1);
+		return (int) t2;
+	}
+
 	/**
 	 * Test for index store mess up recorded in PR 1GCE9JD
 	 */
 	public void test1GCE9JD() throws Exception {
 		IndexedStore store = null;
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			String a = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>.<classpath>.    <classpathentry kind=\"src\" path=\"\"/>.    <classpathentry kind=\"output\" path=\"\"/>.</classpath>";
 			store.createIndex("index");
@@ -127,9 +115,9 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * This tests basic cursor insertion, location, and removal operations.
 	 */
 	public void testIndexCursorOperations() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 
 			/* Create an index */
@@ -265,9 +253,9 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * Also tests many small insertions.
 	 */
 	public void testIndexOrdering() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			store.createIndex("Index");
 			Index index = store.getIndex("Index");
@@ -286,7 +274,7 @@ public class BasicIndexedStoreTest extends TestCase {
 		}
 
 		/* run the index, testing the key order */
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			Index index = store.getIndex("Index");
 			IndexCursor c = index.open();
@@ -313,9 +301,9 @@ public class BasicIndexedStoreTest extends TestCase {
 		int limit = 200;
 		int keySize = 500;
 		int valueSize = 100;
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			store.createIndex("Index");
 			Index index = store.getIndex("Index");
@@ -347,11 +335,11 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * Tests the replacement of values of items in an index.
 	 */
 	public void testIndexReplace() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 		int n = 5000;
 		int i;
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			Index index = store.createIndex("Index");
 			String key;
@@ -401,17 +389,17 @@ public class BasicIndexedStoreTest extends TestCase {
 		int i;
 		Vector key = new Vector(n);
 
-		env.println("Generating...");
+		println("Generating...");
 		for (i = 0; i < n; i++) {
 			key.addElement(generateString(l, i));
 		}
-		env.println("...Done");
+		println("...Done");
 
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 
-		env.println("Inserting...");
-		store.open(env.getFileName());
+		println("Inserting...");
+		store.open(getFileName());
 		try {
 			Index index = store.createIndex("Index");
 			for (i = 0; i < n; i++) {
@@ -423,10 +411,10 @@ public class BasicIndexedStoreTest extends TestCase {
 		} finally {
 			store.close();
 		}
-		env.println("...Done");
+		println("...Done");
 
-		env.println("Retrieving by cursor...");
-		store.open(env.getFileName());
+		println("Retrieving by cursor...");
+		store.open(getFileName());
 		try {
 			Index index = store.getIndex("Index");
 			IndexCursor c = index.open();
@@ -442,10 +430,10 @@ public class BasicIndexedStoreTest extends TestCase {
 		} finally {
 			store.close();
 		}
-		env.println("...Done");
+		println("...Done");
 
-		env.println("Retrieving by key...");
-		store.open(env.getFileName());
+		println("Retrieving by key...");
+		store.open(getFileName());
 		try {
 			Index index = store.getIndex("Index");
 			IndexCursor c = index.open();
@@ -460,7 +448,7 @@ public class BasicIndexedStoreTest extends TestCase {
 		} finally {
 			store.close();
 		}
-		env.println("...Done");
+		println("...Done");
 	}
 
 	/**
@@ -470,12 +458,12 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * Make sure that all the cursors are adjusted correctly.
 	 */
 	public void testMultiCursorRemove1() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 		int keySize = 10;
 		String key;
 		int n = 10; /* number of entries & cursors */
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			Index index = store.createIndex("Index");
 
@@ -520,13 +508,13 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * invalid until repositioned.
 	 */
 	public void testMultiCursorRemove2() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 		int keySize = 10;
 		String key;
 		int n = 10; // number of entries
 
-		store.open(env.getFileName());
+		store.open(getFileName());
 
 		try {
 			/* create and populate an index */
@@ -544,103 +532,89 @@ public class BasicIndexedStoreTest extends TestCase {
 			/* Remove the entry at the first cursor and test the second cursor for results */
 			c1.remove();
 
-			int id = 0;
 			try {
 				c2.remove();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("remove test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("remove test", IndexedStoreException.EntryRemoved, id);
-
-			id = 0;
 			try {
 				c2.getKey();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("get key test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("get key test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.getValue();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("get value test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("get value test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.updateValue("123");
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("update value test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("update value test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.isAtEnd();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("isAtEnd test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("isAtEnd test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.isAtBeginning();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("isAtBeginning test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("isAtBeginning test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.isSet();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("isSet test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("isSet test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.next();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("move next test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("move next test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.previous();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("move previous test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("move previous test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.keyEquals("");
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("key equals test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("key equals test", IndexedStoreException.EntryRemoved, id);
 
-			id = 0;
 			try {
 				c2.keyMatches("");
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("key matches test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("key matches test", IndexedStoreException.EntryRemoved, id);
 
 			c2.reset();
-			id = 0;
 			try {
 				c2.next();
-			} catch (IndexedStoreException e) {
-				id = e.id;
+				fail("reset test");
+			} catch (CoreException e) {
+				//should fail
 			}
-			assertEquals("reset test", 0, id);
-
 			assertEquals("positioning test", c1.getValueAsString(), c2.getValueAsString());
 
 		} finally {
@@ -656,9 +630,9 @@ public class BasicIndexedStoreTest extends TestCase {
 		int keySize = 5;
 		int n = 10; /* number of cursors */
 
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 
 		try {
 
@@ -736,7 +710,7 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * This tests adjustments due to node splitting.
 	 */
 	public void testMultiCursorUpdate() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 		int keySize = 1000;
 		int valueSize1 = 0;
@@ -745,7 +719,7 @@ public class BasicIndexedStoreTest extends TestCase {
 		int n = 10; /* number of cursors */
 
 		/* create and populate an index, all keys and values are unique */
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			Index index = store.createIndex("Index");
 			for (int i = 0; i < n; i++) {
@@ -786,15 +760,73 @@ public class BasicIndexedStoreTest extends TestCase {
 		}
 	}
 
+	/**
+	 * Tests the creating, updating, and deleting of objects in the store.
+	 * This test generates object names and objects, stores the names in an 
+	 * index and the objects as blobs.  Deletions and updates are done as well.
+	 */
+	public void testObjectLife() throws Exception {
+		int n = 50000;
+		IndexedStore.delete(getFileName());
+		IndexedStore store = new IndexedStore();
+		store.open(getFileName());
+		try {
+			Index index = store.createIndex("index");
+			IndexCursor cursor = index.open();
+			ObjectID id = null;
+			String name = null;
+			String value = null;
+			Random r = new Random(100); // same seed should generate the same test on the same VM
+			for (int i = 0; i < n; i++) {
+				int k = Math.abs(r.nextInt());
+				int k1 = k % 100; // used to gen name
+				int k2 = k % 2; // used to gen operation
+				name = "Object" + generateString(20, k1);
+				value = "Value" + k1;
+				cursor.find(name);
+				if (cursor.keyEquals(name)) {
+					id = cursor.getValueAsObjectID();
+					String foundValue = store.getObjectAsString(id);
+					assertEquals(value, foundValue);
+					switch (k2) {
+						case 0 :
+							// delete object named x if it exists
+							println(" Deleting  " + name);
+							store.removeObject(id);
+							cursor.remove();
+							break;
+						case 1 :
+							println(" Updating  " + name);
+							store.updateObject(id, value);
+							break;
+						default :
+							// no operation
+							println(" Nothing");
+					}
+				} else {
+					println(" Inserting " + name);
+					id = store.createObject(value);
+					index.insert(name, id);
+				}
+				if (i % 20 == 19) {
+					println(" Commit");
+					store.commit();
+				}
+			}
+		} finally {
+			store.close();
+		}
+	}
+
 	/** 
 	 * Timed test for creation and retrieval of 100000 simple objects.
 	 */
 	public void testObjectPerformance() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
 		HashSet ids = new HashSet();
 
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			int n = 100000;
 			byte[] a = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".getBytes();
@@ -805,12 +837,12 @@ public class BasicIndexedStoreTest extends TestCase {
 					store.commit();
 			}
 			long t1 = System.currentTimeMillis();
-			env.println("Time to create = " + ((t1 - t0) / 1000));
+			println("Time to create = " + ((t1 - t0) / 1000));
 		} finally {
 			store.close();
 		}
 
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			Iterator idStream = ids.iterator();
 			long t0 = System.currentTimeMillis();
@@ -818,7 +850,7 @@ public class BasicIndexedStoreTest extends TestCase {
 				store.getObject((ObjectID) idStream.next());
 			}
 			long t1 = System.currentTimeMillis();
-			env.println("Time to retrieve = " + ((t1 - t0) / 1000));
+			println("Time to retrieve = " + ((t1 - t0) / 1000));
 		} finally {
 			store.close();
 		}
@@ -831,9 +863,9 @@ public class BasicIndexedStoreTest extends TestCase {
 	 */
 	public void testObjectUpdate() throws Exception {
 		int n = 1000;
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			String s = "";
 			ObjectID id = store.createObject(s);
@@ -852,80 +884,21 @@ public class BasicIndexedStoreTest extends TestCase {
 	}
 
 	/**
-	 * Tests the creating, updating, and deleting of objects in the store.
-	 * This test generates object names and objects, stores the names in an 
-	 * index and the objects as blobs.  Deletions and updates are done as well.
-	 */
-	public void testObjectLife() throws Exception {
-		int n = 50000;
-		IndexedStore.delete(env.getFileName());
-		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
-		try {
-			Index index = store.createIndex("index");
-			IndexCursor cursor = index.open();
-			ObjectID id = null;
-			String name = null;
-			String value = null;
-			Random r = new Random(100); // same seed should generate the same test on the same VM
-			for (int i = 0; i < n; i++) {
-				env.print(i, 8);
-				int k = Math.abs(r.nextInt());
-				int k1 = k % 100; // used to gen name
-				int k2 = k % 2; // used to gen operation
-				name = "Object" + generateString(20, k1);
-				value = "Value" + k1;
-				cursor.find(name);
-				if (cursor.keyEquals(name)) {
-					id = cursor.getValueAsObjectID();
-					String foundValue = store.getObjectAsString(id);
-					assertEquals(value, foundValue);
-					switch (k2) {
-						case 0 :
-							// delete object named x if it exists
-							env.println(" Deleting  " + name);
-							store.removeObject(id);
-							cursor.remove();
-							break;
-						case 1 :
-							env.println(" Updating  " + name);
-							store.updateObject(id, value);
-							break;
-						default :
-							// no operation
-							env.println(" Nothing");
-					}
-				} else {
-					env.println(" Inserting " + name);
-					id = store.createObject(value);
-					index.insert(name, id);
-				}
-				if (i % 20 == 19) {
-					env.println(" Commit");
-					store.commit();
-				}
-			}
-		} finally {
-			store.close();
-		}
-	}
-
-	/**
 	 * Tests simple recovery APIs.
 	 */
 	public void testRecovery() throws Exception {
 		IndexedStore store = null;
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			try {
-				store.open(env.getFileName());
-			} catch (IndexedStoreException e) {
-				if (e.id != IndexedStoreException.StoreIsOpen)
-					fail("expected exception did not occur");
+				store.open(getFileName());
+				fail("expected exception did not occur");
+			} catch (CoreException e) {
+				//should fail
 			}
-			IndexedStore store2 = IndexedStore.find(env.getFileName());
+			IndexedStore store2 = IndexedStore.find(getFileName());
 			if (store2 == null)
 				fail("store looks like its not open");
 			assertSame(store, store2);
@@ -938,9 +911,9 @@ public class BasicIndexedStoreTest extends TestCase {
 	 * Tests simple creation and deletion of an IndexedStore.
 	 */
 	public void testSanity() throws Exception {
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		IndexedStore store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		store.close();
 	}
 
@@ -949,18 +922,18 @@ public class BasicIndexedStoreTest extends TestCase {
 	 */
 	public void testTransactions() throws Exception {
 		IndexedStore store = null;
-		IndexedStore.delete(env.getFileName());
+		IndexedStore.delete(getFileName());
 		store = new IndexedStore();
-		store.open(env.getFileName());
+		store.open(getFileName());
 		try {
 			store.createIndex("Index");
 			store.getIndex("Index");
 			store.rollback();
 			try {
-				store.getIndex("Index");
-			} catch (IndexedStoreException e) {
-				if (e.id != IndexedStoreException.IndexNotFound)
+				if (store.getIndex("Index") != null)
 					fail("expected exception was not thrown");
+			} catch (CoreException e) {
+				fail("expected exception was not thrown");
 			}
 			store.createIndex("Index");
 			store.getIndex("Index");

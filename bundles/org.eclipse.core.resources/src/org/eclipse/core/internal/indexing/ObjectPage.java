@@ -10,6 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.indexing;
 
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.runtime.CoreException;
+
 /**
  An ObjectPage is a page in a page file that contains objects.  Objects are byte arrays.
  An object page contains metainformation about the objects located on that page as well
@@ -90,7 +93,7 @@ class ObjectPage extends ObjectStorePage {
 	/**
 	 * This method returns the Field mapped over the object for a given object number.
 	 */
-	public Field getObjectField(int objectNumber) throws ObjectStoreException {
+	public Field getObjectField(int objectNumber) throws CoreException {
 		int entryOffset = ObjectDirectoryOffset + 2 * objectNumber;
 		int blockOffset = pageBuffer.getUInt(entryOffset, 2);
 		if (blockOffset == 0)
@@ -103,12 +106,12 @@ class ObjectPage extends ObjectStorePage {
 	/**
 	 * Places an object into a page.  The object must have a reservation.
 	 */
-	public void insertObject(StoredObject object) throws ObjectStoreException {
+	public void insertObject(StoredObject object) throws CoreException {
 
 		// ensure that there is space for this object
 		int blockLength = object.length() + ObjectHeader.SIZE;
 		if (getFreeSpace() < blockLength) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectSizeFailure);
+			throw Policy.exception("objectStore.objectSizeFailure"); //$NON-NLS-1$
 		}
 
 		// make sure the slot is still empty
@@ -116,7 +119,7 @@ class ObjectPage extends ObjectStorePage {
 		int entryOffset = ObjectDirectoryOffset + (objectNumber * 2);
 		int blockOffset = pageBuffer.getUInt(entryOffset, 2);
 		if (blockOffset != 0) {
-			throw new ObjectStoreException(ObjectStoreException.PageVacancyFailure);
+			throw Policy.exception("objectStore.pageVacancyFailure"); //$NON-NLS-1$
 		}
 
 		// place the object into the object space portion of the page
@@ -139,12 +142,12 @@ class ObjectPage extends ObjectStorePage {
 	 * Reserves space for an object on the page.  Records the reservation in the
 	 * reservation table.
 	 */
-	public int reserveObject(StoredObject object, ReservationTable reservations) throws ObjectStoreException {
+	public int reserveObject(StoredObject object, ReservationTable reservations) throws CoreException {
 
 		// ensure that there is space for this object, there should be since we check beforehand
 		int blockLength = object.length() + ObjectHeader.SIZE;
 		if (getFreeSpace() < blockLength) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectSizeFailure);
+			throw Policy.exception("objectStore.objectSizeFailure"); //$NON-NLS-1$
 		}
 
 		// get the reservation for this page from the table, create a new one if necessary
@@ -168,7 +171,7 @@ class ObjectPage extends ObjectStorePage {
 			objectNumber = (objectNumber + 1) % MaxEntries;
 		}
 		if (blockOffset != 0) {
-			throw new ObjectStoreException(ObjectStoreException.PageVacancyFailure);
+			throw Policy.exception("objectStore.pageVacancyFailure"); //$NON-NLS-1$
 		}
 
 		// begin the next search just after where we left off
@@ -179,13 +182,13 @@ class ObjectPage extends ObjectStorePage {
 		return objectNumber;
 	}
 
-	public void removeObject(int objectNumber) throws ObjectStoreException {
+	public void removeObject(int objectNumber) throws CoreException {
 
 		/* check for existence of the object to be removed */
 		int entryOffset = ObjectDirectoryOffset + 2 * objectNumber;
 		int blockOffset = pageBuffer.getUInt(entryOffset, 2);
 		if (blockOffset == 0)
-			throw new ObjectStoreException(ObjectStoreException.ObjectExistenceFailure);
+			throw Policy.exception("objectStore.objectExistenceFailure"); //$NON-NLS-1$
 
 		/* remove the object */
 		pageBuffer.put(entryOffset, 2, 0); // remove its offset from the object table
@@ -202,7 +205,7 @@ class ObjectPage extends ObjectStorePage {
 	/**
 	 * Updates an object value on the page.  An object may not change its size.  
 	 */
-	public void updateObject(StoredObject object) throws ObjectStoreException {
+	public void updateObject(StoredObject object) throws CoreException {
 
 		int objectNumber = object.getAddress().getObjectNumber();
 
@@ -210,13 +213,13 @@ class ObjectPage extends ObjectStorePage {
 		int entryOffset = ObjectDirectoryOffset + 2 * objectNumber;
 		int blockOffset = pageBuffer.getUInt(entryOffset, 2);
 		if (blockOffset == 0) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectExistenceFailure);
+			throw Policy.exception("objectStore.objectExistenceFailure"); //$NON-NLS-1$
 		}
 
 		/* retrieve the header and check the size */
 		ObjectHeader header = new ObjectHeader(pageBuffer.get(blockOffset, ObjectHeader.SIZE));
 		if (header.getObjectLength() != object.length()) {
-			throw new ObjectStoreException(ObjectStoreException.ObjectSizeFailure);
+			throw Policy.exception("objectStore.objectSizeFailure"); //$NON-NLS-1$
 		}
 
 		/* update in place */
@@ -232,7 +235,7 @@ class ObjectPage extends ObjectStorePage {
 	 * of the other parameters of the page remain the same.  Resets the number of 
 	 * used entries to fix an old bug.
 	 */
-	private void compress() throws ObjectStoreException {
+	private void compress() throws CoreException {
 		Buffer temp = new Buffer(SIZE);
 		int newBlockOffset = ObjectSpaceOffset;
 		int entryOffset = ObjectDirectoryOffset;
