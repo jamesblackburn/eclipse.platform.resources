@@ -83,7 +83,7 @@ class ResourceTree implements IResourceTree {
 	 * associated IFile under destination.
 	 */
 	private void copyLocalHistory(IResource source, IResource destination) {
-		((Resource) destination).getLocalManager().getHistoryStore().copyHistory(source, destination);
+		((Resource) destination).getLocalManager().getHistoryStore().copyHistory(source, destination, true);
 	}
 
 	/**

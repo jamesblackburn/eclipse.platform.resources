@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004 IBM Corporation and others.
+ * Copyright (c) 2004, 2005 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials 
  * are made available under the terms of the Common Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,8 +12,7 @@ package org.eclipse.core.internal.properties;
 
 import java.io.File;
 import java.util.*;
-import org.eclipse.core.internal.localstore.Bucket;
-import org.eclipse.core.internal.localstore.BucketTree;
+import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.localstore.Bucket.Entry;
 import org.eclipse.core.internal.properties.PropertyBucket.PropertyEntry;
 import org.eclipse.core.internal.resources.ResourceException;
@@ -46,7 +45,7 @@ public class PropertyManager2 implements IPropertyManager {
 			// make effective all changes collected
 			Iterator i = changes.iterator();
 			PropertyEntry entry = (PropertyEntry) i.next();
-			bucket.load(tree.locationFor(entry.getPath()));
+			tree.loadBucketFor(entry.getPath());
 			bucket.setProperties(entry);
 			while (i.hasNext())
 				bucket.setProperties((PropertyEntry) i.next());
@@ -62,14 +61,10 @@ public class PropertyManager2 implements IPropertyManager {
 		}
 	}
 
-	private File baseLocation;
-
 	private BucketTree tree;
 
 	public PropertyManager2(Workspace workspace) {
-		baseLocation = workspace.getMetaArea().getPropertyStoreLocation().toFile();
-		baseLocation.mkdirs();		
-		this.tree = new BucketTree(baseLocation, createPropertyIndex());
+		this.tree = new BucketTree(workspace, new PropertyBucket());
 	}
 
 	public void closePropertyStore(IResource target) throws CoreException {
@@ -91,10 +86,6 @@ public class PropertyManager2 implements IPropertyManager {
 		// copy history by visiting the source tree
 		PropertyCopyVisitor copyVisitor = new PropertyCopyVisitor(source, destination);
 		tree.accept(copyVisitor, source, BucketTree.DEPTH_INFINITE);
-	}
-
-	private PropertyBucket createPropertyIndex() {
-		return new PropertyBucket(baseLocation);
 	}
 
 	public synchronized void deleteProperties(IResource target, int depth) throws CoreException {
@@ -127,8 +118,7 @@ public class PropertyManager2 implements IPropertyManager {
 	public synchronized String getProperty(IResource target, QualifiedName name) throws CoreException {
 		IPath resourcePath = target.getFullPath();
 		PropertyBucket current = (PropertyBucket) tree.getCurrent();
-		File indexDir = tree.locationFor(resourcePath);
-		current.load(indexDir);
+		tree.loadBucketFor(resourcePath);
 		return current.getProperty(resourcePath, name);
 	}
 
@@ -147,9 +137,8 @@ public class PropertyManager2 implements IPropertyManager {
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, target.getFullPath(), message, null);
 		}
 		IPath resourcePath = target.getFullPath();
-		PropertyBucket current = (PropertyBucket) tree.getCurrent();
-		File indexDir = tree.locationFor(resourcePath);
-		current.load(indexDir);
+		tree.loadBucketFor(resourcePath);
+		PropertyBucket current = (PropertyBucket) tree.getCurrent();		
 		current.setProperty(resourcePath, name, value);
 		current.save();
 	}

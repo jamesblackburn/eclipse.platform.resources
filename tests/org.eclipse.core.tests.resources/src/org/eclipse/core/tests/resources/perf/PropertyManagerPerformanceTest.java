@@ -41,7 +41,7 @@ public class PropertyManagerPerformanceTest extends ResourceTest {
 	}
 
 	/**
-	 * Creates a tree of resources containing history. 
+	 * Creates a tree of resources. 
 	 */
 	private List createTree(IFolder base, int filesPerFolder) {
 		IFolder[] folders = new IFolder[5];
@@ -72,7 +72,7 @@ public class PropertyManagerPerformanceTest extends ResourceTest {
 			IResource resource = (IResource) i.next();
 			for (int j = 0; j < properties; j++)
 				try {
-					resource.setPersistentProperty(new QualifiedName("qualifier", "prop" + j), getPropertyValue(200));
+					resource.setPersistentProperty(new QualifiedName(PI_RESOURCES_TESTS, "prop" + j), getPropertyValue(200));
 				} catch (CoreException ce) {
 					fail("0.2", ce);
 				}
@@ -84,7 +84,7 @@ public class PropertyManagerPerformanceTest extends ResourceTest {
 					for (Iterator i = allResources.iterator(); i.hasNext();) {
 						IResource resource = (IResource) i.next();
 						try {
-							assertNotNull(resource.getPersistentProperty(new QualifiedName("qualifier", "prop" + j)));
+							assertNotNull(resource.getPersistentProperty(new QualifiedName(PI_RESOURCES_TESTS, "prop" + j)));
 						} catch (CoreException ce) {
 							fail("0.2", ce);
 						}
@@ -129,7 +129,7 @@ public class PropertyManagerPerformanceTest extends ResourceTest {
 				for (Iterator i = allResources.iterator(); i.hasNext();) {
 					IResource resource = (IResource) i.next();
 					try {
-						resource.setPersistentProperty(new QualifiedName("qualifier", "prop" + ((int) Math.random() * 50)), getPropertyValue(2048));
+						resource.setPersistentProperty(new QualifiedName(PI_RESOURCES_TESTS, "prop" + ((int) Math.random() * 50)), getPropertyValue(200));
 					} catch (CoreException ce) {
 						fail("0.2", ce);
 					}

@@ -32,7 +32,7 @@ public class PropertyManagerTest extends LocalStoreTest {
 
 	public static Test suite() {
 //			TestSuite suite = new TestSuite();
-//			suite.addTest(new PropertyManagerTest("testProperties"));
+//			suite.addTest(new PropertyManagerTest("testDeleteProperties"));
 //			return suite;
 		return new TestSuite(PropertyManagerTest.class);
 	}

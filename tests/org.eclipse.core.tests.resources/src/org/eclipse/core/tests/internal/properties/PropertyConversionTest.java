@@ -45,7 +45,7 @@ public class PropertyConversionTest extends ResourceTest {
 					Map otherProperties = another.getProperties(resource);
 					assertEquals(tag + ".1 - " + resource.getFullPath(), baseProperties.size(), otherProperties.size());
 					for (Iterator i = baseProperties.keySet().iterator(); i.hasNext();) {
-						String propertyKey = (String) i.next();
+						QualifiedName propertyKey = (QualifiedName) i.next();
 						assertEquals(tag + ".2 - " + resource.getFullPath(), baseProperties.get(propertyKey), otherProperties.get(propertyKey));
 					}
 					return true;

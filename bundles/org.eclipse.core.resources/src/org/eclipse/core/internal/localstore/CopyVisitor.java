@@ -90,7 +90,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 			getWorkspace().getAliasManager().updateAliases(destination, destinationLocation, IResource.DEPTH_ZERO, monitor);
 			// update file attributes
 			CoreFileSystemLibrary.copyAttributes(node.getLocalLocation(), destinationLocation.toOSString(), false);
-			destination.getLocalManager().getHistoryStore().copyHistory(source, destination);
+			destination.getLocalManager().getHistoryStore().copyHistory(source, destination, false);
 		} catch (CoreException e) {
 			status.add(e.getStatus());
 		}

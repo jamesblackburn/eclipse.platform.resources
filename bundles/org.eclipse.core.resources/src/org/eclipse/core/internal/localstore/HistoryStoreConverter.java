@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
+import java.io.*;
+import org.eclipse.core.internal.resources.ResourceStatus;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.IResourceStatus;
@@ -23,11 +25,21 @@ public class HistoryStoreConverter {
 	 * the conversion happens successfully or an IStatus.ERROR status if an error
 	 * happened during the conversion process.
 	 */
-	public IStatus convertHistory(Workspace workspace, IPath location, int limit, final HistoryStore2 destination, boolean rename) {
-		IPath indexFile = location.append(HistoryStore.INDEX_FILE);
-		if (!indexFile.toFile().isFile())
+	public IStatus convertHistory(Workspace workspace, IPath location, int limit, final HistoryStore2 destination, boolean rename) {		
+		if (!location.toFile().isDirectory())
 			// nothing to be converted
-			return Status.OK_STATUS;
+			return Status.OK_STATUS;		
+		IPath indexFile = location.append(HistoryStore.INDEX_FILE);
+		if (!indexFile.toFile().isFile()) {
+			IPath newIndexDir = location.append(".buckets");
+			if (!newIndexDir.toFile().isDirectory())			
+				// nothing to be converted		
+				return Status.OK_STATUS;
+			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.INFO, Policy.bind("history.conversionTransitional"), null); //$NON-NLS-1$ 
+			convertFromTransitionalFormat(status, newIndexDir.toFile(), destination);
+			Workspace.clear(newIndexDir.toFile());
+			return status;
+		}
 		// visit all existing entries and add them to the new history store
 		long start = System.currentTimeMillis();
 		final CoreException[] exception = new CoreException[1];
@@ -73,5 +85,56 @@ public class HistoryStoreConverter {
 		String conversionOk = Policy.bind("history.conversionSucceeded"); //$NON-NLS-1$
 		// leave a note to the user so this does not happen silently
 		return new Status(IStatus.INFO, ResourcesPlugin.PI_RESOURCES, IStatus.OK, conversionOk, null);
+	}
+
+	/** 
+	 * Converts from the format used during the M4 cycle.
+	 * TODO remove this before 3.1 release
+	 * @param destination 
+	 */
+	private void convertFromTransitionalFormat(MultiStatus status, java.io.File root, HistoryStore2 destination) {		
+		File[] subdirs = root.listFiles();
+		if (subdirs == null)
+			return;		
+		for (int i = 0; i < subdirs.length; i++)
+			if (subdirs[i].isDirectory())
+				convertFromTransitionalFormat(status, subdirs[i], destination);
+		File bucketFile = new File(root, "bucket.index");
+		if (!bucketFile.isFile())
+			return;
+		final BucketTree tree = destination.getTree();
+		final HistoryBucket currentBucket = (HistoryBucket) tree.getCurrent();		
+		DataInputStream source = null;
+		try {
+			source = new DataInputStream(new BufferedInputStream(new FileInputStream(bucketFile), 8192));
+			// don't do any checking
+			source.readByte();
+			int entryCount = source.readInt();
+			for (int i = 0; i < entryCount; i++) {
+				String path = source.readUTF();
+				tree.loadBucketFor(new Path(path));				
+				int numberOfStates = source.readUnsignedShort();
+				byte[][] states = new byte[numberOfStates][HistoryBucket.HistoryEntry.DATA_LENGTH];				
+				for (int j = 0; j < numberOfStates; j++) 
+					source.read(states[j]);
+				HistoryBucket.HistoryEntry entry = new HistoryBucket.HistoryEntry(new Path(path), states);
+				for (int j = 0; j < entry.getOccurrences(); j++)
+					currentBucket.addBlob(entry.getPath(), entry.getUUID(j), entry.getTimestamp(j));					
+			}			
+			tree.getCurrent().save();
+		} catch (IOException ioe) {
+			String msg = ioe.getLocalizedMessage();
+			Throwable exception = Platform.inDebugMode() ? ioe : null;
+			status.add(new ResourceStatus(IStatus.WARNING, IResourceStatus.FAILED_READ_METADATA, new Path(bucketFile.getAbsolutePath()), msg, exception));
+		} catch (CoreException ce) {
+			status.add(ce.getStatus());
+		} finally {
+			if (source != null)
+				try {
+					source.close(); 
+				} catch (IOException ioe) {
+					// we are just closing a stream opened for read, no data can be lost...
+				}
+		}
 	}
 }

@@ -295,7 +295,7 @@ public class PropertyManager implements IManager, ILifecycleListener, IPropertyM
 		Map properties = new HashMap();
 		for (int i = 0; i < listSize; i++) {
 			StoredProperty prop = (StoredProperty) projectProperties.get(i);
-			properties.put(prop.getName().toString(), prop.getStringValue());
+			properties.put(prop.getName(), prop.getStringValue());
 		}
 		return properties;
 	}

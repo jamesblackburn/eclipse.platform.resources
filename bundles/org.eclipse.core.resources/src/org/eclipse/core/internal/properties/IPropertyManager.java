@@ -50,7 +50,7 @@ public interface IPropertyManager extends IManager {
 	public void setProperty(IResource target, QualifiedName key, String value) throws CoreException;
 
 	/**
-	 * Returns a map (<propertyKey: Strting -> value: String>) containing 
+	 * Returns a map (<propertyKey: QualifiedName -> value: String>) containing 
 	 * all properties defined for the given resource. In case no properties can 
 	 * be found, returns an empty map. 
 	 */

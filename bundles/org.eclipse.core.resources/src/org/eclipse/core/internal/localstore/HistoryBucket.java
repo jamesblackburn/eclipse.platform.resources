@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004 IBM Corporation and others.
+ * Copyright (c) 2004, 2005 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials 
  * are made available under the terms of the Common Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,7 @@ import org.eclipse.core.runtime.IPath;
 
 public class HistoryBucket extends Bucket {
 
+	private static final String HISTORY_FILE_NAME = "history"; //$NON-NLS-1$
 	/**
 	 * A entry in the bucket index. Each entry has one path and a collection
 	 * of states, which by their turn contain a (UUID, timestamp) pair.
@@ -233,8 +234,8 @@ public class HistoryBucket extends Bucket {
 	 */
 	public final static byte VERSION = 1;
 
-	public HistoryBucket(File root) {
-		super(root);
+	public HistoryBucket() {
+		super();
 	}
 
 	public void addBlob(IPath path, UniversalUniqueIdentifier uuid, long lastModified) {
@@ -273,6 +274,10 @@ public class HistoryBucket extends Bucket {
 		if (existing == null)
 			return null;
 		return new HistoryEntry(path, existing);
+	}
+	
+	protected String getFileName() {
+		return HISTORY_FILE_NAME;
 	}
 
 	protected byte getVersion() {

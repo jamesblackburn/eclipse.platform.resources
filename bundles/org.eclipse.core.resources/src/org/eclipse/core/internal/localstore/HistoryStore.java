@@ -283,7 +283,7 @@ public class HistoryStore implements IHistoryStore {
 	 * @see IHistoryStore#copyHistory(IPath, IPath)
 	 * @since  2.1
 	 */
-	public void copyHistory(final IResource sourceResource, final IResource destinationResource) {
+	public void copyHistory(final IResource sourceResource, final IResource destinationResource, boolean moving) {
 		// Note that if any states in the local history for destination
 		// have the same timestamp as a state for the local history
 		// for source, the local history for destination will appear 

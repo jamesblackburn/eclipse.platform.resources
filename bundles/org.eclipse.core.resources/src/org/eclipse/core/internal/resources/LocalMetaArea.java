@@ -208,6 +208,16 @@ public class LocalMetaArea implements ICoreConstants {
 	public boolean hasSavedWorkspace() {
 		return getLocation().toFile().exists() || getBackupLocationFor(getLocation()).toFile().exists();
 	}
+	
+	/**
+	 * Returns the local filesystem location in which the meta data for the
+	 * resource with the given path is stored.
+	 */
+	public IPath locationFor(IPath resourcePath) {
+		if (Path.ROOT.equals(resourcePath))
+			return getLocation().append(F_ROOT);
+		return getLocation().append(F_PROJECTS).append(resourcePath.segment(0));
+	}	
 
 	/**
 	 * Returns the local filesystem location in which the meta data for the

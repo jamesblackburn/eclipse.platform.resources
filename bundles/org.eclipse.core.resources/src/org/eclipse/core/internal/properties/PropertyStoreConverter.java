@@ -56,7 +56,7 @@ public class PropertyStoreConverter {
 	 */
 	public IStatus convertProperties(Workspace workspace, final PropertyManager2 destination) {
 		// Quickly check whether should try converting persistent properties
-		// We cannot pay the cost of checking very project so, instead, we try to find 
+		// We cannot pay the cost of checking every project so, instead, we try to find 
 		// a single file used by the new implementation  
 		File versionFile = destination.getVersionFile();
 		if (versionFile.isFile())
