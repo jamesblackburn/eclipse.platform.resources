@@ -197,22 +197,6 @@ protected void changedMarkers(IResource resource, IMarkerDelta[] changes) {
 		info.incrementMarkerGenerationCount();
 }
 /**
- * Internal workspace lifecycle event
- */
-public void changing(IProject project) {
-}
-/**
- * Internal workspace lifecycle event
- */
-public void closing(IProject project) {
-}
-/**
- * Internal workspace lifecycle event
- */
-public void deleting(IProject project) {
-}
-
-/**
  * Returns the marker with the given id or <code>null</code> if none is found.
  */
 public IMarker findMarker(IResource resource, long id) {
@@ -330,11 +314,6 @@ public void moved(final IResource source, final IResource destination, int depth
 		}
 	};
 	destination.accept(visitor, depth, false);
-}
-/**
- * Internal workspace lifecycle event
- */
-public void opening(IProject project) {
 }
 /**
  * Adds the markers for a subtree of resources to the list.
@@ -483,4 +462,6 @@ public void shutdown(IProgressMonitor monitor) {
  */
 public void startup(IProgressMonitor monitor) throws CoreException {
 }
+
+
 }

@@ -475,7 +475,8 @@ public void createLink(IPath localLocation, int updateFlags, IProgressMonitor mo
 				new LinkDescription(this,localLocation));
 			project.writeDescription(IResource.NONE);
 			monitor.worked(Policy.opWork * 5 / 100);
-			
+			//notify internal infrastructure that link has been created
+			workspace.creating(this);
 			//refresh to discover any new resources below this linked location
 			if (getType() != IResource.FILE)
 				refreshLocal(DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 90 / 100));
@@ -625,6 +626,8 @@ public void deleteResource(boolean convertToPhantom, MultiStatus status) throws 
 		getMarkerManager().removeMarkers(this, IResource.DEPTH_INFINITE);
 	// if this is a linked resource, remove the entry from the project description
 	if (isLinked()) {
+		//pre-delete notification to internal infrastructure
+		workspace.deleting(this);
 		Project project = (Project)getProject();
 		ProjectDescription description = project.internalGetDescription();
 		description.setLinkLocation(getName(), null);
@@ -681,6 +684,13 @@ public IMarker[] findMarkers(String type, boolean includeSubtypes, int depth) th
 }
 protected void fixupAfterMoveSource() throws CoreException {
 	ResourceInfo info = getResourceInfo(true, true);
+	//if a linked resource is moved, we need to remove the location info from the .project 
+	if (isLinked()) {
+		Project project = (Project)getProject();
+		project.internalGetDescription().setLinkLocation(getName(), null);
+		project.writeDescription(IResource.NONE);
+	}
+		
 	if (!synchronizing(info)) {
 		workspace.deleteResource(this);
 		return;
@@ -984,19 +994,18 @@ public void move(IProjectDescription description, int updateFlags, IProgressMoni
 }
 
 /**
- * @see IResource#move
- */
-public void move(IPath destination, boolean force, IProgressMonitor monitor) throws CoreException {
-	move(destination, force ? IResource.FORCE : IResource.NONE, monitor);
-}
-
-/**
- * @see IResource#move
+ * @see IFolder#move and IFile#move
  */
 public void move(IPath destination, boolean force, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
 	int updateFlags = force ? IResource.FORCE : IResource.NONE;
 	updateFlags |= keepHistory ? IResource.KEEP_HISTORY : IResource.NONE;
 	move(destination, updateFlags, monitor);
+}
+/**
+ * @see IResource#move
+ */
+public void move(IPath destination, boolean force, IProgressMonitor monitor) throws CoreException {
+	move(destination, force ? IResource.FORCE : IResource.NONE, monitor);
 }
 
 /**
@@ -1031,14 +1040,13 @@ public void move(IPath path, int updateFlags, IProgressMonitor monitor) throws C
 					break;
 				case IResource.PROJECT:
 					IProject project = (IProject) this;
-					// if there is a change in name, then we are deleting the source project so notify.
-					// else there is nothing to do so return.
+					// if there is no change in name, there is nothing to do so return.
 					if (getName().equals(path.lastSegment())) {
 						return;
-					} else {
-						workspace.changing(project);
-						workspace.deleting(project);
 					}
+					//we are deleting the source project so notify.
+					workspace.changing(project);
+					workspace.deleting(project);
 					IProjectDescription description = project.getDescription();
 					description.setName(path.lastSegment());
 					if (!hook.moveProject(tree, project, description, updateFlags, Policy.subMonitorFor(monitor, Policy.opWork/2)))

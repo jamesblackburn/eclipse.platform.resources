@@ -26,6 +26,7 @@ import org.eclipse.core.runtime.*;
 
 
 public class Workspace extends PlatformObject implements IWorkspace, ICoreConstants {
+
 	protected WorkspaceDescription description;
 	protected LocalMetaArea localMetaArea;
 	protected boolean openFlag = false;
@@ -39,13 +40,16 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected PathVariableManager pathVariableManager;
 	protected PropertyManager propertyManager;
 	protected MarkerManager markerManager;
+	protected WorkManager workManager;
+	protected AliasManager aliasManager;
 	protected long nextNodeId = 0;
 	protected long nextModificationStamp = 0;
 	protected long nextMarkerId = 0;
 	protected Synchronizer synchronizer;
-	protected WorkManager workManager;
 	protected IProject[] buildOrder = null;
 	protected IWorkspaceRoot defaultRoot = new WorkspaceRoot(Path.ROOT, this);
+	
+	protected final ArrayList lifecycleListeners = new ArrayList(10);
 
 	protected static final String REFRESH_ON_STARTUP = "-refresh"; //$NON-NLS-1$
 	
@@ -95,6 +99,13 @@ public Workspace() {
 	tree.setTreeData(newElement(IResource.ROOT));
 }
 /**
+ * Adds a listener for internal workspace lifecycle events.  There is no way to
+ * remove lifecycle listeners.
+ */
+public void addLifecycleListener(ILifecycleListener listener) {
+	lifecycleListeners.add(listener);
+}
+/**
  * @see IWorkspace
  */
 public void addResourceChangeListener(IResourceChangeListener listener) {
@@ -140,6 +151,14 @@ private void broadcastChanges(ElementTree currentTree, int type, boolean lockTre
 	monitor.subTask(Policy.bind("resources.updating")); //$NON-NLS-1$
 	notificationManager.broadcastChanges(currentTree, type, lockTree, updateState);
 }
+/**
+ * Broadcasts an internal workspace lifecycle event to interested
+ * internal listeners.
+ */
+protected void broadcastEvent(LifecycleEvent event) throws CoreException {
+	
+}
+
 public void build(int trigger, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
@@ -168,6 +187,7 @@ public void changing(IProject project) throws CoreException {
 	notificationManager.changing(project);
 	propertyManager.changing(project);
 	markerManager.changing(project);
+	aliasManager.changing(project);
 }
 /**
  * @see IWorkspace#checkpoint
@@ -281,6 +301,7 @@ protected void closing(IProject project) throws CoreException {
 	notificationManager.closing(project);
 	propertyManager.closing(project);
 	markerManager.closing(project);
+	aliasManager.closing(project);
 }
 
 /**
@@ -690,6 +711,15 @@ public ResourceInfo createResource(IResource resource, ResourceInfo info, boolea
 	}
 	return info;
 }
+/**
+ * Notify relevant infrastructure pieces that a linked resource is being
+ * created.
+ */
+public void creating(IResource linkedResource) {
+	aliasManager.creating(linkedResource);
+}
+
+
 /*
  * Creates the given resource in the tree and returns the new resource info object.  
  * If phantom is true, the created element is marked as a phantom.
@@ -814,7 +844,17 @@ protected void deleting(IProject project) throws CoreException {
 	notificationManager.deleting(project);
 	propertyManager.deleting(project);
 	markerManager.deleting(project);
+	aliasManager.deleting(project);
 }
+/**
+ * Notify relevant infrastructure pieces that a linked resources is being
+ * deleted.  This is needed because the linked resource location is no longer
+ * available after the operation is completed.
+ */
+protected void deleting(IResource linkedResource) throws CoreException {
+	aliasManager.deleting(linkedResource);
+}
+	
 /**
  * For debugging purposes only.  Dumps plugin stats to console
  */
@@ -1388,6 +1428,23 @@ public IStatus move(IResource[] resources, IPath destination, boolean force, IPr
 	source.fixupAfterMoveSource();
 }
 /**
+ * Notify the relevant infrastructure pieces that the given project or linked
+ * resource is being moved.
+ */
+protected void moving(IResource source, IResource destination, int updateFlags) {
+	//most infrastructure only cares about project deletion
+	if (source.getType() == IResource.PROJECT) {
+		IProject project = (IProject)source;
+		buildManager.deleting(project);
+		natureManager.deleting(project);
+		notificationManager.deleting(project);
+		propertyManager.deleting(project);
+		markerManager.deleting(project);
+	}
+	aliasManager.moving(source, destination, updateFlags);
+}
+
+/**
  * Create and return a new tree element of the given type.
  */
 protected ResourceInfo newElement(int type) {
@@ -1533,6 +1590,7 @@ protected void opening(IProject project) throws CoreException {
 	notificationManager.opening(project);
 	propertyManager.opening(project);
 	markerManager.opening(project);
+	aliasManager.opening(project);
 }
 /**
  * Called before checking the pre-conditions of an operation.
@@ -1696,6 +1754,7 @@ protected void startup(IProgressMonitor monitor) throws CoreException {
 	pathVariableManager = new PathVariableManager(this);
 	pathVariableManager.startup(null);
 	natureManager = new NatureManager();
+	natureManager.startup(null);
 	buildManager = new BuildManager(this);
 	buildManager.startup(null);
 	notificationManager = new NotificationManager(this);
@@ -1705,6 +1764,10 @@ protected void startup(IProgressMonitor monitor) throws CoreException {
 	synchronizer = new Synchronizer(this);
 	saveManager = new SaveManager(this);
 	saveManager.startup(null);
+	//must start after save manager, because (read) access to tree is needed
+	aliasManager = new AliasManager(this);
+	aliasManager.startup(null);
+	
 	treeLocked = false; // unlock the tree.
 }
 /** 

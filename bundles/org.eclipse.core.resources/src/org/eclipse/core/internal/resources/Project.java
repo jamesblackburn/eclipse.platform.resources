@@ -272,6 +272,9 @@ public void delete(boolean force, IProgressMonitor monitor) throws CoreException
 	int updateFlags = force ? IResource.FORCE : IResource.NONE;
 	delete(updateFlags, monitor);
 }
+protected void fixupAfterMoveSource() throws CoreException {
+	workspace.deleteResource(this);
+}
 
 /**
  * @see IProject#delete(boolean, boolean, IProgressMonitor)
@@ -836,4 +839,6 @@ public void writeDescription(IProjectDescription description, int updateFlags) t
 		isWritingDescription = false;
 	}
 }
+
+
 }

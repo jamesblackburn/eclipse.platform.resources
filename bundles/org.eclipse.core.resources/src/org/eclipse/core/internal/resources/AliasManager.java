@@ -12,7 +12,8 @@ package org.eclipse.core.internal.resources;
 
 import java.util.*;
 
-import org.eclipse.core.internal.utils.Assert;
+import org.eclipse.core.internal.events.ILifecycleListener;
+import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -38,10 +39,10 @@ import org.eclipse.core.runtime.*;
  * that it's better to incur this cost on startup than on the first attempt to
  * modify a resource.  After startup, the state is updated incrementally on the
  * following occasions: 
- *  - when projects are created, deleted, opened, closed, or moved 
+ *  -  when projects are deleted, opened, closed, or moved 
  *  - when linked resources are created, deleted, or moved.
  */
-public class AliasManager implements IManager {
+public class AliasManager implements IManager, ILifecycleListener {
 	/**
 	 * Maintains a mapping of IPath->IResource, such that multiple resources
 	 * mapped from the same path are tolerated.
@@ -176,23 +177,22 @@ public class AliasManager implements IManager {
 		IPath location = project.getLocation();
 		if (location != null)
 			locationsMap.add(location, project);
-		IResource[] members = null;
 		try {
-			members = project.members();
+			IResource[] members = project.members();
+			if (members != null)
+				//look for linked resources
+				for (int i = 0; i < members.length; i++)
+					if (members[i].isLinked())
+						addToLocationsMap(members[i]);
 		} catch (CoreException e) {
 			//skip inaccessible projects
 		}
-		if (members != null) {
-			//look for linked resources
-			for (int j = 0; j < members.length; j++) {
-				if (members[j].isLinked()) {
-					location = members[j].getLocation();
-					if (location != null)
-						if (locationsMap.add(location, members[j]))
-							linkedResourceCount++;
-				}
-			}
-		}
+	}
+	private void addToLocationsMap(IResource linkedResource) {
+		IPath location = linkedResource.getLocation();
+		if (location != null)
+			if (locationsMap.add(location, linkedResource))
+				linkedResourceCount++;
 	}
 
 	/**
@@ -203,7 +203,7 @@ public class AliasManager implements IManager {
 		//if there are no linked resources then there can't be any aliased projects
 		if (linkedResourceCount <= 0) {
 			//paranoid check -- count should never be below zero
-			Assert.isTrue(linkedResourceCount == 0, "Linked resource count below zero");//$NON-NLS-1$
+//			Assert.isTrue(linkedResourceCount == 0, "Linked resource count below zero");//$NON-NLS-1$
 			return;
 		}
 		//for every resource that overlaps another, marked its project as aliased
@@ -226,13 +226,7 @@ public class AliasManager implements IManager {
 			addToLocationsMap(projects[i]);
 		}
 	}
-	public void changing(IProject project) {
-	}
-	public void closing(IProject project) {
-		//same as deleting for purposes of alias data
-		deleting(project);
-	}
-	public void deleting(IProject project) {
+	public void removeFromLocationsMap(IProject project) {
 		//remove this project and all linked children from the location table
 		IPath location = project.getLocation();
 		if (location != null)
@@ -246,14 +240,12 @@ public class AliasManager implements IManager {
 		if (children != null) {
 			for (int i = 0; i < children.length; i++) {
 				if (children[i].isLinked()) {
-					deleting(children[i]);
+					removeFromLocationsMap(children[i]);
 				}
 			}
 		}
-		//rebuild the set of aliased projects from scratch
-		buildAliasedProjectsSet();
 	}
-	public void deleting(IResource linkedResource) {
+	public void removeFromLocationsMap(IResource linkedResource) {
 		//this linked resource is being deleted
 		IPath location = linkedResource.getLocation();
 		if (location != null)
@@ -286,9 +278,32 @@ public class AliasManager implements IManager {
 			}
 		};
 	}
-	public void opening(IProject project) {
-		addToLocationsMap(project);
+	public void handleEvent(LifecycleEvent event) throws CoreException {
+		switch (event.kind) {
+			case LifecycleEvent.PRE_PROJECT_CLOSE:
+			case LifecycleEvent.PRE_PROJECT_DELETE:
+				removeFromLocationsMap((IProject)event.resource);
+				break;
+			case LifecycleEvent.PRE_PROJECT_MOVE:
+			case LifecycleEvent.PRE_PROJECT_OPEN:
+				addToLocationsMap((IProject)event.resource);
+				buildAliasedProjectsSet();
+				break;
+			case LifecycleEvent.PRE_LINK_DELETE:
+			case LifecycleEvent.PRE_LINK_MOVE:
+			case LifecycleEvent.POST_LINK_CREATE:
+		}
+		//rebuild the set of aliased projects from scratch
 		buildAliasedProjectsSet();
+	}
+	/**
+	 * Method moving.
+	 * @param source
+	 * @param destination
+	 * @param updateFlags
+	 */
+	public void moving(IResource source, IResource destination, int updateFlags) {
+		// todo
 	}
 
 	/**
@@ -301,9 +316,11 @@ public class AliasManager implements IManager {
 	 * @see IManager#startup
 	 */
 	public void startup(IProgressMonitor monitor) throws CoreException {
+		workspace.addLifecycleListener(this);
 		buildLocationsMap();
 		buildAliasedProjectsSet();
 	}
+
 	/**
 	 * The file underlying the given resource has changed on disk.  Compute all
 	 * aliases for this resource and update them.  This method will not attempt
@@ -329,5 +346,12 @@ public class AliasManager implements IManager {
 	private IResource[] computeAliases(IResource resource) {
 		// todo
 		return null;
+	}
+	/**
+	 * Notification of creation of a linked reousr.cds
+	 */
+	public void creating(IResource linkedResource) {
+		addToLocationsMap(linkedResource);
+		buildAliasedProjectsSet();
 	}
 }
