@@ -494,6 +494,27 @@ protected void copyTree(IResource source, IPath destination, int depth, boolean 
 		copyTree(child, childPath, depth, phantom);
 	}
 }
+/**
+ * Returns the number of resources in a subtree of the resource tree.
+ * @param path The subtree to count resources for
+ * @param depth The depth of the subtree to count
+ * @param phantom If true, phantoms are included, otherwise they are ignored.
+ */
+public int countResources(IPath root, int depth, boolean phantom) {
+	ResourceInfo info = getResourceInfo(root, phantom, false);
+	if (info == null)
+		return 0;
+	int total = 1;
+	if (info.getType() == IResource.FILE || depth == IResource.DEPTH_ZERO)
+		return total;
+	if (depth == IResource.DEPTH_ONE)
+		depth = IResource.DEPTH_ZERO;
+	IPath[] children = tree.getChildren(root);
+	for (int i = 0; i < children.length; i++) {
+		total += countResources(children[i], depth, phantom);
+	}
+	return total;
+}
 /*
  * Creates the given resource in the tree and returns the new resource info object.  
  * If phantom is true, the created element is marked as a phantom.
