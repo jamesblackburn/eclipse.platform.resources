@@ -687,12 +687,12 @@ public void standardDeleteProject(IProject project, int updateFlags, IProgressMo
 				success = true;
 				String[] list = root.list();
 				// for some unknown reason, list() can return null.  
-				// Just skip the children If it does.
+				// Just skip the children if it does.
 				if (list != null)
 					for (int i = 0; i < list.length; i++)
 						success &= Workspace.clear(new java.io.File(root, list[i]));
 			}
-			//delete all mapped locations
+			//delete all mapped locations (regardless of whether a member exists for that mapping)
 			if (description != null) {
 				Map mappings = ((ProjectDescription)description).getMappings(false);
 				for (Iterator it = mappings.values().iterator(); it.hasNext();) {
