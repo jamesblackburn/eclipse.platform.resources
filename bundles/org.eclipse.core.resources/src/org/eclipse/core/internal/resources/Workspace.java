@@ -1421,11 +1421,10 @@ public IStatus validatePath(String path, int type) {
 			if (!status.isOK())
 				return status;
 			int fileFolderType = type &= ~IResource.PROJECT;
-			String[] segments = testPath.segments();
+			int segmentCount = testPath.segmentCount();
 			// ignore first segment (the project)
-			for (int i = 1; i < segments.length; i++) {
-				String segment = segments[i];
-				status = validateName(segment, fileFolderType);
+			for (int i = 1; i < segmentCount; i++) {
+				status = validateName(testPath.segment(i), fileFolderType);
 				if (!status.isOK())
 					return status;
 			}
