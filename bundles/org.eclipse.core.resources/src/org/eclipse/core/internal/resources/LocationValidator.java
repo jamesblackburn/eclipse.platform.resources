@@ -40,7 +40,7 @@ protected static boolean isOverlapping(IPath one, IPath two) {
 	}
 	return one.isPrefixOf(two) || two.isPrefixOf(one);
 }
-public static IStatus validateLocation(IPath location, IProject projectContext, String mappingContext, boolean ignoreSameProject) {
+public static IStatus validateLocation(IPath location, IProject projectContext, boolean ignoreSameProject) {
 	//a null location is always valid
 	if (location == null)
 		return ResourceStatus.OK_STATUS;
@@ -65,7 +65,8 @@ public static IStatus validateLocation(IPath location, IProject projectContext, 
 			//can only happen if this project is in the middle of being created.
 			continue;
 		//don't compare project location if it's the one being validated
-		if (!sameProject || mappingContext != null) {
+//		if (!sameProject || mappingContext != null) {
+		if (!sameProject) {
 			//compare the location with the default location for this project
 			IPath projectLocation = description.getLocation();
 			if (isOverlapping(projectLocation, location))
@@ -76,11 +77,11 @@ public static IStatus validateLocation(IPath location, IProject projectContext, 
 		while (mappings.hasNext()) {
 			IResourceMapping mapping = (IResourceMapping)mappings.next();
 			//don't compare mapping if it's the one being validated
-			if (!sameProject || !mapping.getName().equals(mappingContext)) {
+//			if (!sameProject || !mapping.getName().equals(mappingContext)) {
 				IPath mappingLocation = mapping.getLocation();
 				if (isOverlapping(mappingLocation, location))
 					return createStatus(mappingLocation, location);
-			}
+//			}
 		}
 	}
 	return ResourceStatus.OK_STATUS;
@@ -100,12 +101,12 @@ public static IStatus validateProjectDescription(IProject project, IProjectDescr
 	if (!result.isOK())
 		return result;
 	//now validate against other projects
-	result = validateLocation(location, project, null, true);
+	result = validateLocation(location, project, true);
 	if (!result.isOK())
 		return result;
 	for (Iterator it = mappingMap.values().iterator(); it.hasNext();) {
 		location = ((IResourceMapping)it.next()).getLocation();
-		result = validateLocation(location, project, null, true);
+		result = validateLocation(location, project, true);
 		if (!result.isOK())
 			return result;
 	}

@@ -326,6 +326,48 @@ public IFile getFile(String name);
  * @see #getFile
  */
 public IFolder getFolder(String name);
+/**
+ * Returns this project's mapping for the resource with the given name, or
+ * <code>null</code> if it does not have one. 
+ * <p>
+ * To change a mapping, it must be re-installed using the  <code>
+ * setMapping</code> method.
+ * </p>
+ *
+ * @param name the name of the resource to be mapped
+ * @return the mapping for the named resource, or <code>null</code> 
+ *     if it does not have one. 
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This project does not exist.</li>
+ * <li> This project is not open.</li>
+ * </ul>
+ * @see #getMappings
+ * @see #setMapping
+ */
+public IPath getMapping(String name) throws CoreException;
+/**
+ * Returns a map of all the mappings defined for this project.
+ * <p>
+ * The keys are names (<code>String</code>s); the values are
+ * local file system paths (<code>IPath</code>s).
+ * The mappings returned are copies which may be edited.
+ * Editing the returned value does not change the mappings for this project.
+ * To change a mapping, it must be re-installed using the <code>
+ * setMapping</code> method.
+ * </p>
+ *
+ * @return the table of resource mappings, keyed by name
+ *  (key type: <code>String</code>, value type: <code>IPath</code>) 
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This project does not exist.</li>
+ * <li> This project is not open.</li>
+ * </ul>
+ * @see #getMapping
+ * @see #setMapping
+ */
+public Map getMappings() throws CoreException;
 
 
 /** 
@@ -461,6 +503,8 @@ public boolean isOpen();
  * @param description the description for the destination project
  * @param force a flag controlling whether resources that are not
  *    in sync with the local file system will be tolerated
+ * @param updateFlags bit-wise or of update flag constants
+ *   (<code>FORCE</code> and <code>KEEP_HISTORY</code>)
  * @param monitor a progress monitor, or <code>null</code> if progress
  *    reporting and cancellation are not desired
  * @exception CoreException if this resource could not be moved. Reasons include:
@@ -551,6 +595,85 @@ public void open(IProgressMonitor monitor) throws CoreException;
  */
 public void setDescription(IProjectDescription description, IProgressMonitor monitor) throws CoreException;
 /**
+ * Adds the given resource mapping to this project, replacing any existing 
+ * mapping of the same name.  If a resource exists with the given name,
+ * it will be moved on disk to the new mapped location.  Setting a mapping 
+ * location to null will remove the mapping for that name, and move any 
+ * existing resource with that name back to the default location for the project.
+ * <p>
+ * Resource mappings are a way of mounting resources in a project that do
+ * not reside in the default local content area.  Once a mapping is added, any 
+ * new resource created with the given name will be stored in the corresponding
+ * file system location established by the mapping.
+ * </p>
+ * There are two general ways in which this method can be used.  First,
+ * if a resource already exists, it can be moved to a new location on disk
+ * by setting a new mapping for that resource name.  In this case, the 
+ * destination location must not be already occupied.  The second use
+ * is when a resource does not exist yet.  A mapping can be established to
+ * a location on disk that is occupied by files, and then a refreshLocal will
+ * cause those files to be discovered and added to the workspace.
+ * </p>
+ * <p>
+ * The <code>FORCE</code> update flag controls how this method deals with
+ * cases where the workspace is not completely in sync with the local file 
+ * system. If <code>FORCE</code> is not specified, the method will only attempt
+ * to move resources that are in sync with the corresponding files and
+ * directories in the local file system; it will fail if it encounters a resource that 
+ * is out of sync with the file system.  However, if <code>FORCE</code> is 
+ * specified, the method moves all corresponding files and directories from the 
+ * local file system, including ones that have been recently updated or created.
+ * Note that in both settings of the <code>FORCE</code> flag, the operation 
+ * fails if the resource already exists and the destination file system location is 
+ * already occupied.  This ensures files in the file system cannot be accidentally 
+ * overwritten.
+ * </p>
+ * <p>
+ * Update flags other than <code>FORCE</code> are ignored.
+ * </p>
+ * <p>
+ *** OPEN ISSUE: do we report a delta for changing mappings? ***
+ * This method changes resources; these changes will be reported
+ * in a subsequent resource change event that will include 
+ * an indication that the resource has been removed from its parent
+ * and that a corresponding resource has been added to its new parent.
+ * Additional information provided with resource delta shows that these
+ * additions and removals are related.
+ * </p>
+ * <p>
+ * This method is long-running; progress and cancellation are provided
+ * by the given progress monitor. 
+ * </p>
+ *
+ * @param name the name of the resource to be mapped.
+ * @param local an absolute local file system path, or <code>null</code>
+ * @param updateFlags bit-wise or of update flag constants
+ *   (only <code>FORCE</code> is relevant here)
+ * @param monitor a progress monitor, or <code>null</code> if progress
+ *    reporting and cancellation are not desired
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This project does not exist in the workspace.</li>
+ * <li> This project is not open.</li>
+ * <li> The resource with the given name or one of its descendents is not local.</li>
+ * <li> The supplied location overlaps with an existing mapping, an existing 
+ * 		project location, or the default project location</li>
+ * <li> The resource with the given name already exists, and the specified
+ * 		local location is occupied</li>
+ * <li> The resource with the given name or one of its descendents is out of 
+ * 		sync with the local file system and <code>force</code> is <code>
+ * 		false</code>.</li>
+ * <li> Resource changes are disallowed during certain types of resource change 
+ *   event notification. See IResourceChangeEvent for more details.</li>
+ * </ul>
+ * @see #getMappings
+ * @see #getMapping
+ * @see #validateMapping
+ * @see IResource#FORCE
+ * @since 2.1
+ */
+public void setMapping(String name, IPath local, int updateFlags, IProgressMonitor monitor) throws CoreException;
+/**
  * Returns whether the given mapping can be added to this project.  To be
  * valid, the mapping must not specify locations in the local file system
  * which overlap with mappings for any projects in the workspace.
@@ -558,7 +681,7 @@ public void setDescription(IProjectDescription description, IProgressMonitor mon
  * @param mapping the mapping to validate
  * @return a status object
  */
-public IStatus validateMapping(IResourceMapping mapping);
+public IStatus validateMapping(IPath local);
 
 /**
  * Changes this project resource to match the given project

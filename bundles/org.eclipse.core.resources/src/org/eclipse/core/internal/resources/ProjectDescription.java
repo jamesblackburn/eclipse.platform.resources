@@ -25,6 +25,9 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected IProject[] projects;
 	protected String[] natures;
 	protected ICommand[] buildSpec;
+	/**
+	 * Map of name (String) -> localLocation (IPath)
+	 */
 	protected Map mappings;
 	protected String comment =""; //$NON-NLS-1$
 
@@ -38,10 +41,6 @@ public ProjectDescription() {
 	projects = EMPTY_PROJECT_ARRAY;
 	natures = EMPTY_STRING_ARRAY;
 	mappings = new HashMap(3);
-}
-public void addMapping(IResourceMapping mapping) {
-	Assert.isLegal(mapping != null);
-	mappings.put(mapping.getName(), mapping);
 }
 /**
  * Returns a copy of this project description that only contains shared
@@ -90,8 +89,8 @@ public String getComment() {
 public IPath getLocation() {
 	return location;
 }
-public IResourceMapping getMapping(String name) {
-	return (IResourceMapping) mappings.get(name);
+public IPath getMapping(String name) {
+	return (IPath) mappings.get(name);
 }
 /**
  * Returns a copy of the project mappings, or null if there are none.
@@ -150,15 +149,6 @@ public ICommand newCommand() {
 	return new BuildCommand();
 }
 /**
- * @see IProjectDescription#newMapping
- */
-public IResourceMapping newMapping(String name, IPath local) {
-	return new ResourceMapping(name, local);
-}
-public void removeMapping(String name) {
-	mappings.remove(name);
-}
-/**
  * @see IProjectDescription
  */
 public void setBuildSpec(ICommand[] value) {
@@ -176,6 +166,13 @@ public void setComment(String value) {
  */
 public void setLocation(IPath location) {
 	this.location = location;
+}
+public void setMapping(String name, IPath localLocation) {
+	Assert.isLegal(name != null);
+	if (localLocation == null)
+		mappings.remove(name);
+	else
+		mappings.put(name, localLocation);
 }
 public void setMappings(Map mappings) {
 	Assert.isLegal(mappings != null);

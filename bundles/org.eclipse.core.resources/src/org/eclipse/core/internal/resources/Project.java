@@ -26,6 +26,27 @@ public class Project extends Container implements IProject {
 protected Project(IPath path, Workspace container) {
 	super(path, container);
 }
+/**
+ * Checks preconditions for changing a project's mappings.
+ */
+protected void assertMappingRequirements(String name, IPath local) throws CoreException {
+	//always ok to remap back to default area
+	if (local == null)
+		return;
+	//if local overlaps any project location, mapping, or the platform content area, fail
+	IStatus result= validateMapping(local);
+	if (!result.isOK()) {
+		int code = 1;//TBD
+		throw new ResourceException(code, getFullPath(), result.getMessage(), null);
+	}
+	
+	//if resource with that name exists and location is occupied, then fail
+	if ((findMember(name) != null) && local.toFile().exists()) {
+		String msg = "TBD";
+		int code = 1;//TBD
+		throw new ResourceException(code, getFullPath(), msg, null);
+	}
+}
 /*
  * If the creation boolean is true then this method is being called on project creation.
  * Otherwise it is being called via #setDescription. The difference is that we don't allow
@@ -305,6 +326,23 @@ public IProjectDescription getDescription() throws CoreException {
 	checkAccessible(getFlags(info));
 	return (IProjectDescription) ((ProjectInfo) info).getDescription().clone();
 }
+/**
+ * @see org.eclipse.core.resources.IProject#getMapping(String)
+ */
+public IPath getMapping(String name) throws CoreException {
+	ResourceInfo info = getResourceInfo(false, false);
+	checkAccessible(getFlags(info));
+	return ((ProjectInfo)info).getDescription().getMapping(name);
+}
+/**
+ * @see org.eclipse.core.resources.IProject#getMappings()
+ */
+public Map getMappings() throws CoreException {
+	ResourceInfo info = getResourceInfo(false, false);
+	checkAccessible(getFlags(info));
+	return ((ProjectInfo)info).getDescription().getMappings();
+}
+
 /**
  * @see IProject#getNature
  */
@@ -724,6 +762,33 @@ public void setDescription(IProjectDescription description, IProgressMonitor mon
 	setDescription(description, IResource.KEEP_HISTORY, monitor);
 }
 /**
+ * @see IProject#setMapping(String, IPath, int, IProgressMonitor)
+ */
+public void setMapping(String name, IPath local, int updateFlags, IProgressMonitor monitor) throws CoreException {
+	monitor = Policy.monitorFor(monitor);
+	try {
+		monitor.beginTask(Policy.bind("resources.setDesc"), Policy.totalWork); //$NON-NLS-1$
+		try {
+			workspace.prepareOperation();
+			ResourceInfo info = getResourceInfo(false, false);
+			checkAccessible(getFlags(info));
+			assertMappingRequirements(name, local);
+			workspace.beginOperation(true);
+			
+			//install mapping in project description
+			
+			//if resource exists and location empty
+				//move contents to new location on disk (forward to move/delete hook)
+			
+			
+		} finally {
+			workspace.endOperation(true, Policy.subMonitorFor(monitor, Policy.buildWork));
+		}
+	} finally {
+		monitor.done();
+	}
+}
+/**
  * Restore the non-persisted state for the project.  For example, read and set 
  * the description from the local meta area.  Also, open the property store etc.
  * This method is used when an open project is restored and so emulates
@@ -771,12 +836,11 @@ protected void updateDescription() throws CoreException {
 	internalSetDescription(description, true);
 }
 /**
- * @see IProject#validateMapping
+ * @see org.eclipse.core.resources.IProject#validateMapping(IPath)
  */
-public IStatus validateMapping(IResourceMapping mapping) {
-	return LocationValidator.validateLocation(mapping.getLocation(), this, mapping.getName(), false);
+public IStatus validateMapping(IPath local) {
+	return LocationValidator.validateLocation(local, this, false);
 }
-
 /**
  * Writes the project description file to disk.  This is the only method
  * that should ever be writing the description, because it ensures that
@@ -800,5 +864,4 @@ public void writeDescription(IProjectDescription description, int updateFlags) t
 		isWritingDescription = false;
 	}
 }
-
 }
