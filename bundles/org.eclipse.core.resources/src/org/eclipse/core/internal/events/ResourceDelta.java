@@ -78,35 +78,47 @@ protected void checkForMarkerDeltas() {
 	}
 }
 /**
- * Do the analysis to recover MOVED operations from ADDED/REMOVED/CHANGED operations.
+ * Delta information on moves and on marker deltas can only be computed after
+ * the delta has been built.  This method fixes up the delta to accurately
+ * reflect moves (setting MOVED_FROM and MOVED_TO), and marker changes on
+ * added and removed resources.
  */
-protected void checkForMove() {
-	if (path.isRoot())
-		return;
-	int kind = getKind();
-	switch (kind) {
-		case ADDED :
-		case CHANGED :
-			long nodeID = newInfo.getNodeId();
-			IPath oldPath = (IPath) deltaInfo.getOldNodeIDMap().get(new Long(nodeID));
-			if (oldPath != null && !oldPath.equals(path)) {
-				// Replace change flags by comparing old info with new info,
-				// Note that we want to retain the kind flag, but replace all other flags
-				// This is done only for MOVED_FROM, not MOVED_TO, since a resource may be both.
-				status = (status & KIND_MASK) | (deltaInfo.getComparator().compare(oldInfo, newInfo) & ~KIND_MASK);
-				status |= MOVED_FROM;
-				movedFromPath = oldPath;
-			}
+protected void fixMovesAndMarkers(NodeIDMap nodeIDMap) {
+	if (!path.isRoot() && !nodeIDMap.isEmpty()) {
+		int kind = getKind();
+		switch (kind) {
+			case ADDED :
+			case CHANGED :
+				long nodeID = newInfo.getNodeId();
+				IPath oldPath = (IPath) nodeIDMap.getOldPath(nodeID);
+				if (oldPath != null && !oldPath.equals(path)) {
+					// Replace change flags by comparing old info with new info,
+					// Note that we want to retain the kind flag, but replace all other flags
+					// This is done only for MOVED_FROM, not MOVED_TO, since a resource may be both.
+					status = (status & KIND_MASK) | (deltaInfo.getComparator().compare(oldInfo, newInfo) & ~KIND_MASK);
+					status |= MOVED_FROM;
+					movedFromPath = oldPath;
+				}
+		}
+		switch (kind) {
+			case CHANGED :
+			case REMOVED :
+				long nodeID = oldInfo.getNodeId();
+				IPath newPath = (IPath) nodeIDMap.getNewPath(nodeID);
+				if (newPath != null && !newPath.equals(path)) {
+					status |= MOVED_TO;
+					movedToPath = newPath;
+				}
+		}
 	}
-	switch (kind) {
-		case CHANGED :
-		case REMOVED :
-			long nodeID = oldInfo.getNodeId();
-			IPath newPath = (IPath) deltaInfo.getNewNodeIDMap().get(new Long(nodeID));
-			if (newPath != null && !newPath.equals(path)) {
-				status |= MOVED_TO;
-				movedToPath = newPath;
-			}
+	
+	//check for marker deltas -- this is affected by move computation
+	//so must happen afterwards
+	checkForMarkerDeltas();
+	
+	//recurse on children
+	for (int i = 0; i < children.length; i++) {
+		((ResourceDelta)children[i]).fixMovesAndMarkers(nodeIDMap);
 	}
 }
 /**
