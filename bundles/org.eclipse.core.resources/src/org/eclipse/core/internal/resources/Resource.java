@@ -17,9 +17,6 @@ import org.eclipse.core.resources.IResourceVisitor;
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.properties.PropertyManager;
 import org.eclipse.core.internal.utils.*;
-import org.eclipse.core.internal.watson.*;
-import java.io.*;
-import java.util.*;
 import java.net.URL;
 import java.net.MalformedURLException;
 import org.eclipse.core.resources.team.*;
@@ -393,6 +390,7 @@ public IMarker createMarker(String type) throws CoreException {
 		workspace.beginOperation(true);
 		MarkerInfo info = new MarkerInfo();
 		info.setType(type);
+		info.setCreationTime(System.currentTimeMillis());
 		workspace.getMarkerManager().add(this, new MarkerInfo[] { info });
 		return new Marker(this, info.getId());
 	} finally {

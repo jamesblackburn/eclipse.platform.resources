@@ -20,8 +20,8 @@ public class MarkerWriter {
 	protected MarkerManager manager;
 	
 	// version numbers
-	public static final int MARKERS_SAVE_VERSION = 2;
-	public static final int MARKERS_SNAP_VERSION = 1;
+	public static final int MARKERS_SAVE_VERSION = 3;
+	public static final int MARKERS_SNAP_VERSION = 2;
 
 	// type constants
 	public static final byte INDEX = 1;
@@ -111,7 +111,7 @@ public void save(IResource resource, DataOutputStream output, List writtenTypes)
  * RESOURCE -> RESOURCE_PATH MARKER_SIZE MARKER+
  * RESOURCE_PATH -> String
  * MARKER_SIZE -> int
- * MARKER -> MARKER_ID TYPE ATTRIBUTES_SIZE ATTRIBUTE*
+ * MARKER -> MARKER_ID TYPE ATTRIBUTES_SIZE ATTRIBUTE* CREATION_TIME
  * MARKER_ID -> long
  * TYPE -> INDEX | QNAME
  * INDEX -> byte int
@@ -124,6 +124,7 @@ public void save(IResource resource, DataOutputStream output, List writtenTypes)
  * INTEGER_VALUE -> byte int
  * STRING_VALUE -> byte String
  * NULL_VALUE -> byte
+ * CREATION_TIME -> long
  */
 public void snap(IResource resource, DataOutputStream output) throws IOException {
 	ResourceInfo info = ((Resource) resource).getResourceInfo(false, false);
@@ -194,9 +195,15 @@ private void write(MarkerInfo info, DataOutputStream output, List writtenTypes) 
 		output.writeByte(INDEX);
 		output.writeInt(index);
 	}
+	
+	// write out the size of the attribute table and
+	// then each attribute.
 	if (info.getAttributes(false) == null) {
 		output.writeShort(0);
 	} else
 		write(info.getAttributes(false), output);
+	
+	// write out the creation time
+	output.writeLong(info.getCreationTime());
 }
 }
