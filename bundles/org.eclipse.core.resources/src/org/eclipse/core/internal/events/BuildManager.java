@@ -70,23 +70,23 @@ public class BuildManager implements ICoreConstants, IManager {
 	 */
 	class MissingBuilder extends IncrementalProjectBuilder {
 		private String name;
-		private IStatus status;
+		private boolean hasBeenBuilt = false;
 		MissingBuilder(String name) {
 			this.name = name;
 		}
 		/**
-		 * Throw an exception the first time this is called, and just log subsequent attempts.
+		 * Log an exception on the first build, and silently do nothing on subsequent builds.
 		 */
 		protected IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException {
-			if (status == null) {
-				String msg = Policy.bind("events.missing", new String[] {name, getProject().getName()});
-				status = new Status(IStatus.WARNING, ResourcesPlugin.PI_RESOURCES, 1, msg, null);
-				throw new CoreException(status);
+			if (!hasBeenBuilt) {
+				hasBeenBuilt = true;
+				String msg = Policy.bind("events.skippingBuilder", new String[] {name, getProject().getName()});
+				IStatus status = new Status(IStatus.WARNING, ResourcesPlugin.PI_RESOURCES, 1, msg, null);
+				ResourcesPlugin.getPlugin().getLog().log(status);
 			}
-			ResourcesPlugin.getPlugin().getLog().log(status);
 			return null;
 		}
-}
+	}
 	
 public BuildManager(Workspace workspace) {
 	this.workspace = workspace;
