@@ -18,6 +18,11 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	protected Workspace workspace;
 	protected HistoryStore historyStore;
 	protected FileSystemStore localStore;
+	
+	//single entry cache for resource location lookup
+	private IResource cachedResource;
+	private IPath cachedLocation;
+	
 public FileSystemResourceManager(Workspace workspace) {
 	this.workspace = workspace;
 	localStore = new FileSystemStore();
@@ -109,19 +114,23 @@ protected Workspace getWorkspace() {
 	return workspace;
 }
 public IPath locationFor(IResource target) {
+	if (cachedResource == target)
+		return cachedLocation;
 	switch (target.getType()) {
 		case IResource.ROOT :
 			return Platform.getLocation();
 		case IResource.PROJECT :
 			Project project = (Project) target.getProject();
 			IProjectDescription description = project.internalGetDescription();
-			if (description != null && description.getLocation() != null)
+			if (description != null && description.getLocation() != null) {
 				return description.getLocation();
+			}
 			return getProjectDefaultLocation(project);
-		default :
-			IPath location = locationFor(target.getProject());
-			location = location.append(target.getFullPath().removeFirstSegments(1));
-			return location;
+		default:
+			cachedResource = target;
+			cachedLocation = locationFor(target.getProject());
+			cachedLocation = cachedLocation.append(target.getFullPath().removeFirstSegments(1));
+			return cachedLocation;
 	}
 }
 public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
