@@ -1,5 +1,5 @@
 /**********************************************************************
- * Copyright (c) 2002 IBM Corporation and others.
+ * Copyright (c) 2002, 2003 IBM Corporation and others.
  * All rights reserved.   This program and the accompanying materials
  * are made available under the terms of the Common Public License v1.0
  * which accompanies this distribution, and is available at
@@ -133,6 +133,53 @@ public class BasicAliasTest extends EclipseWorkspaceTest {
 		super.tearDown();
 		Workspace.clear(linkOverlapLocation.toFile());
 	}
+	/**
+	 * This tests regression of bug 32785.  In this bug, moving a linked folder,
+	 * then copying a linked folder, resulted in the alias table having a stale entry
+	 */
+	public void testBug32785() {
+		IProject project = pNoOverlap;
+		IFolder link = project.getFolder("Source");
+		IFile child = link.getFile("Child.txt");
+		IPath location = getRandomLocation();
+		location.toFile().mkdirs();
+		try {
+			try {
+				link.createLink(location, IResource.NONE, getMonitor());
+				ensureExistsInWorkspace(child, getRandomContents());
+			} catch (CoreException e) {
+				fail("1.99", e);
+			}
+			//move the link (rename)
+			IFolder movedLink = project.getFolder("MovedLink");
+			try {
+				link.move(movedLink.getFullPath(), IResource.SHALLOW, getMonitor());
+			} catch (CoreException e) {
+				fail("2.99", e);
+			}
+			assertTrue("3.0", !link.exists());
+			assertTrue("3.1", movedLink.exists());
+			assertEquals("3.2", location, movedLink.getLocation());
+			
+			//now copy the moved link
+			IFolder copiedLink = project.getFolder("CopiedLink");
+			try {
+				movedLink.copy(copiedLink.getFullPath(), IResource.SHALLOW, getMonitor());
+			} catch (CoreException e) {
+				fail("3.99", e);
+			}
+			assertTrue("4.0", !link.exists());
+			assertTrue("4.1", movedLink.exists());
+			assertTrue("4.2", copiedLink.exists());
+			assertEquals("4.3", location, movedLink.getLocation());
+			assertEquals("4.4", location, copiedLink.getLocation());
+			assertTrue("4.5", movedLink.isSynchronized(IResource.DEPTH_INFINITE));
+			assertTrue("4.6", copiedLink.isSynchronized(IResource.DEPTH_INFINITE));
+		} finally {
+			Workspace.clear(location.toFile());
+		}
+	}
+
 	public void testCloseOpenProject() {
 	}
 	/**
