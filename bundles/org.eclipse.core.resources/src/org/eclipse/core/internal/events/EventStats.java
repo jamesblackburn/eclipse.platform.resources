@@ -13,7 +13,7 @@ package org.eclipse.core.internal.events;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.*;
-import org.eclipse.core.internal.plugins.PluginClassLoader;
+//import org.eclipse.core.internal.plugins.PluginClassLoader;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -163,9 +163,9 @@ public class EventStats {
 	}
 
 	private static IPluginDescriptor getPluginFor(Object target) {
-		ClassLoader loader = target.getClass().getClassLoader();
-		if (loader instanceof PluginClassLoader)
-			return ((PluginClassLoader)loader).getPluginDescriptor();
+//		ClassLoader loader = target.getClass().getClassLoader();
+//		if (loader instanceof PluginClassLoader)
+//			return ((PluginClassLoader)loader).getPluginDescriptor();
 		return null;
 	}
 	

@@ -2,7 +2,12 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="src_ant"/>
-	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="lib" path="lib/ant.jar"/>
+	<classpathentry kind="lib" path="lib/antsupport.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="/org.eclipse.core.runtime"/>
+	<classpathentry kind="src" path="/org.eclipse.osgi.util"/>
+	<classpathentry kind="src" path="/org.eclipse.osgi.services"/>
+	<classpathentry kind="src" path="/org.eclipse.osgi"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,0 +1,23 @@
+Bundle-Name: org.eclipse.core.resources
+Bundle-Version: 3.0
+Bundle-GlobalName: org.eclipse.core.resources
+Bundle-ClassPath: resources.jar
+Bundle-Activator: org.eclipse.core.resources.ResourcesPlugin
+Import-Package:
+ org.osgi.framework, 
+ org.eclipse.osgi.service.environment
+Provide-Package: 
+ org.eclipse.core.internal.resources,
+ org.eclipse.core.resources.team,
+ org.eclipse.core.resources.ant,
+ org.eclipse.core.internal.watson,
+ org.eclipse.core.internal.properties,
+ org.eclipse.core.resources,
+ org.eclipse.core.internal.indexing,
+ org.eclipse.core.internal.dtree,
+ org.eclipse.core.internal.localstore,
+ org.eclipse.core.internal.events,
+ org.eclipse.core.internal.utils
+Require-Bundle: 
+ org.eclipse.core.runtime,
+ org.eclipse.core.runtime.compatibility

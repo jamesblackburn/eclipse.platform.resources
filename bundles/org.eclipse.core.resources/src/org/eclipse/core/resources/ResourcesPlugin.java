@@ -12,6 +12,8 @@ package org.eclipse.core.resources;
 
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.runtime.*;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
 
 /**
  * The plug-in runtime class for the Resources plug-in.  This is
@@ -197,8 +199,8 @@ public final class ResourcesPlugin extends Plugin {
  * @param pluginDescriptor the plug-in descriptor for the
  *   Resources plug-in
  */
-public ResourcesPlugin(IPluginDescriptor pluginDescriptor) {
-	super(pluginDescriptor);
+public ResourcesPlugin() {
+	super();
 	plugin = this;
 }
 /**
@@ -249,6 +251,10 @@ public static String getEncoding() {
 public static ResourcesPlugin getPlugin() {
 	return plugin;
 }
+
+public static ResourcesPlugin getDefault() {
+	return plugin;
+}
 /**
  * Returns the workspace.
  *
@@ -263,12 +269,18 @@ public static IWorkspace getWorkspace() {
  * closes the workspace (without saving).
  * @see Plugin#shutdown
  */
-public void shutdown() throws CoreException {
+public void stop(BundleContext context) throws BundleException {
+	super.stop(context);
 	if (workspace == null) {
 		return;
 	}
 	getPlugin().savePluginPreferences();
-	workspace.close(null);
+	try {
+		workspace.close(null);
+	} catch (CoreException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
 	
 	/* Forget workspace only if successfully closed, to
 	 * make it easier to debug cases where close() is failing.
@@ -280,17 +292,23 @@ public void shutdown() throws CoreException {
  * opens the workspace.
  * @see Plugin#startup
  */
-public void startup() throws CoreException {
-	if (!new LocalMetaArea().hasSavedWorkspace()) {
-		constructWorkspace();
+public void start(BundleContext context) throws BundleException {
+	super.start(context);
+	try {
+		if (!new LocalMetaArea().hasSavedWorkspace()) {
+			constructWorkspace();
+		}
+		Workspace.DEBUG = ResourcesPlugin.getPlugin().isDebugging();
+		// Remember workspace before opening, to
+		// make it easier to debug cases where open() is failing.
+		workspace = new Workspace();
+		PlatformURLResourceConnection.startup(Platform.getLocation());
+		IStatus result = workspace.open(null);
+		if (!result.isOK())
+			getLog().log(result);
+	} catch(CoreException exception) {
+		new BundleException("error.starting.resources", exception); //$NON-NLS-1$
 	}
-	Workspace.DEBUG = ResourcesPlugin.getPlugin().isDebugging();
-	// Remember workspace before opening, to
-	// make it easier to debug cases where open() is failing.
-	workspace = new Workspace();
-	PlatformURLResourceConnection.startup(Platform.getLocation());
-	IStatus result = workspace.open(null);
-	if (!result.isOK())
-		getLog().log(result);
 }
+ 
 }

@@ -11,7 +11,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.Arrays;
-import org.eclipse.core.boot.BootLoader;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.osgi.service.environment.Constants;
 
 /**
@@ -29,8 +29,8 @@ static {
 	//setup the invalid names
 	char[] chars = null;
 	String[] names = null;
-	INSTALLED_PLATFORM = BootLoader.getOS();
-	if (INSTALLED_PLATFORM.equals(BootLoader.OS_WIN32)) {
+	INSTALLED_PLATFORM = ResourcesPlugin.getDefault().getEnvironmentService().getOS();
+	if (INSTALLED_PLATFORM.equals(Constants.OS_WIN32)) {
 			//list taken from http://support.microsoft.com/support/kb/articles/q177/5/06.asp
 			chars = new char[]{'\\', '/', ':', '*', '?', '"', '<', '>', '|'};
 			
@@ -58,7 +58,7 @@ public static boolean isNameValid(String name) {
 		name = dot == -1 ? name : name.substring(0, dot);
 		return Arrays.binarySearch(INVALID_RESOURCE_NAMES, name.toLowerCase()) < 0;
 	}
-	return true;
-}
+	return true;}
+
 }
 
