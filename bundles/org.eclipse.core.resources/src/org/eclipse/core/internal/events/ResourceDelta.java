@@ -45,16 +45,15 @@ public void accept(IResourceDeltaVisitor visitor) throws CoreException {
  * @see IResourceDelta#accept(IResourceDeltaVisitor, boolean)
  */
 public void accept(IResourceDeltaVisitor visitor, boolean includePhantoms) throws CoreException {
-	int mask = REMOVED | ADDED | CHANGED;
-	if (includePhantoms)
-		mask |= REMOVED_PHANTOM | ADDED_PHANTOM;
+	int mask = includePhantoms ? ALL_WITH_PHANTOMS : REMOVED | ADDED | CHANGED;
 	if ((getKind() | mask) == 0)
 		return;
 	if (!visitor.visit(this))
 		return;
-	IResourceDelta[] children = getAffectedChildren(mask);
-	for (int i = 0; i < children.length; i++)
+	//recurse over children
+	for (int i = 0; i < children.length; i++) {
 		children[i].accept(visitor, includePhantoms);
+	}
 }
 /**
  * Check for marker deltas, and set the appropriate change flag if there are any.
