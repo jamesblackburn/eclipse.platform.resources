@@ -252,9 +252,9 @@ public DataTreeLookup lookup(IPath key) {
  	DataTreeNode node = this.findNodeAt(key);
  	
  	if (node == null) {
-	 	return new DataTreeLookup(key, false, null);
+	 	return DataTreeLookup.newLookup(key, false, null);
  	} else {
-	 	return new DataTreeLookup(key, true, node.getData());
+	 	return DataTreeLookup.newLookup(key, true, node.getData());
  	}
 }
 /**
