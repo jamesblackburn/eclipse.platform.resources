@@ -11,8 +11,7 @@ package org.eclipse.core.tests.internal.resources;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.internal.resources.ResourceSchedulingRule;
-import org.eclipse.core.resources.*;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.tests.harness.EclipseWorkspaceTest;
 
 /**
@@ -34,14 +33,26 @@ public class ResourceSchedulingRuleTest extends EclipseWorkspaceTest {
 	/**
 	* Do static tests of the isConflicting method.
 	*/
-	public void testStatic() {
+	public void testIsConflicting() {
 		IResource[] resources = buildResources();
-		ResourceSchedulingRule[] rules = buildRules(resources);
 		//test all pairs of rules
 		for (int i = 0; i < resources.length; i++) {
 			for (int j = 0; j < resources.length; j++) {
 				boolean overlapping = isOverlapping(resources[i], resources[j]);
-				assertTrue("i,j=" + i + ',' + j, overlapping == rules[i].isConflicting(rules[j]));
+				assertEquals("i,j=" + i + ',' + j, overlapping, resources[i].isConflicting(resources[j]));
+			}
+		}
+	}
+	/**
+	* Do static tests of the isConflicting method.
+	*/
+	public void testContains() {
+		IResource[] resources = buildResources();
+		//test all pairs of rules
+		for (int i = 0; i < resources.length; i++) {
+			for (int j = 0; j < resources.length; j++) {
+				boolean contained = resources[i].equals(resources[j]) || resources[i].getFullPath().isPrefixOf(resources[j].getFullPath());
+				assertEquals("i,j=" + i + ',' + j, contained, resources[i].contains(resources[j]));
 			}
 		}
 	}
@@ -56,12 +67,5 @@ public class ResourceSchedulingRuleTest extends EclipseWorkspaceTest {
 			parent = parent.getParent();
 		}
 		return false;
-	}
-	private ResourceSchedulingRule[] buildRules(IResource[] resources) {
-		ResourceSchedulingRule[] rules = new ResourceSchedulingRule[resources.length];
-		for (int i = 0; i < rules.length; i++) {
-			rules[i] = (ResourceSchedulingRule) getWorkspace().newSchedulingRule(resources[i]);
-		}
-		return rules;
 	}
 }
