@@ -10,14 +10,15 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.IProjectNature;
-import org.eclipse.core.internal.properties.PropertyStore;
 import java.util.HashMap;
-import java.util.Hashtable;
+import java.util.Map;
+
+import org.eclipse.core.internal.properties.PropertyStore;
+import org.eclipse.core.resources.IProjectNature;
 
 public class ProjectInfo extends ResourceInfo {
 	/** The list of builders for this project */
-	protected Hashtable builders = null;
+	protected HashMap builders = null;
 
 	/** The property store for this resource */
 	protected PropertyStore propertyStore = null;
@@ -27,12 +28,19 @@ public class ProjectInfo extends ResourceInfo {
 
 	/** The list of natures for this project */
 	protected HashMap natures = null;
+public void clearBuilders() {
+	builders = null;
+}
 public synchronized void clearNatures() {
 	natures = null;
 }
-public Hashtable getBuilders() {
+/**
+ * Returns a map, ICommand->IncrementalProjectBuilder, of all builders
+ * that have been instantiated for this project during this session.
+ */
+public Map getBuilders() {
 	if (builders == null)
-		builders = new Hashtable(5);
+		builders = new HashMap(5);
 	return builders;
 }
 /**
@@ -53,9 +61,6 @@ public IProjectNature getNature(String natureId) {
  */
 public PropertyStore getPropertyStore() {
 	return propertyStore;
-}
-public void setBuilders(Hashtable value) {
-	builders = value;
 }
 /**
  * Sets the description associated with this info.  The value may be null.

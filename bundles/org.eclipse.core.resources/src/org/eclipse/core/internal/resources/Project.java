@@ -460,7 +460,7 @@ protected void internalCopyProjectOnly(IResource destination, IProgressMonitor m
 	
 	//clear instantiated builders and natures because they reference the project handle
 	ProjectInfo info = (ProjectInfo) ((Resource)destination).getResourceInfo(false, true);
-	info.setBuilders(null);
+	info.clearBuilders();
 	info.clearNatures();
 	
 	//clear session properties and markers for the new project, because they shouldn't be copied.

@@ -26,8 +26,7 @@ public class SaveManager implements IElementInfoFlattener, IManager {
 	protected Properties masterTable;
 	protected ElementTree lastSnap;
 	protected int operationCount = 0;
-	protected boolean snapshotRequested;
-	
+	protected boolean snapshotRequested;	
 
 	protected DelayedSnapshotRunnable snapshotRunnable;	
 	
@@ -173,9 +172,9 @@ protected void collapseTrees() throws CoreException {
 	for (int i = 0; i < projects.length; i++) {
 		IProject project = projects[i];
 		if (project.isOpen()) {
-			Map builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
+			List builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 			if (builderInfos != null) {
-				for (Iterator it = builderInfos.values().iterator(); it.hasNext();) {
+				for (Iterator it = builderInfos.iterator(); it.hasNext();) {
 					BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
 					trees.add(info.getLastBuiltTree());
 				}
@@ -765,7 +764,8 @@ protected void saveMetaInfo(Workspace workspace, IProgressMonitor monitor) throw
 		workspace.getMetaArea().write(description);
 	IProject[] roots = workspace.getRoot().getProjects();
 	for (int i = 0; i < roots.length; i++)
-		saveMetaInfo((Project) roots[i], null);
+		if (roots[i].isAccessible())
+			saveMetaInfo((Project) roots[i], null);
 }
 /**
  * Writes the current state of the entire workspace tree to disk.
@@ -779,7 +779,7 @@ protected void saveTree(Map contexts, IProgressMonitor monitor) throws CoreExcep
 		IPath tempLocation = workspace.getMetaArea().getBackupLocationFor(treeLocation);
 		DataOutputStream output = new DataOutputStream(new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString()));
 		try {
-			output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+			output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 			writeTree(computeStatesToSave(contexts, workspace.getElementTree()), output, monitor);
 		} finally {
 			output.close();
@@ -869,7 +869,7 @@ protected void snapTree(ElementTree tree, IProgressMonitor monitor) throws CoreE
 			SafeChunkyOutputStream safeStream = new SafeChunkyOutputStream(localFile);
 			DataOutputStream out = new DataOutputStream(safeStream);
 			try {
-				out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+				out.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 				writeWorkspaceFields(out, monitor);
 				writer.writeDelta(tree, lastSnap, Path.ROOT, writer.D_INFINITE, out, ResourceComparator.getComparator());
 				safeStream.succeed();
@@ -979,16 +979,16 @@ protected void writeTree(Map statesToSave, DataOutputStream output, IProgressMon
 
 			// add builders' trees
 			IProject[] projects = workspace.getRoot().getProjects();
-			List builders = new ArrayList(projects.length * 2);
+			List builderInfos = new ArrayList(projects.length * 2);
 			for (int i = 0; i < projects.length; i++) {
 				IProject project = projects[i];
 				if (project.isOpen()) {
-					Map infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
+					List infos = workspace.getBuildManager().createBuildersPersistentInfo(project);
 					if (infos != null)
-						builders.addAll(infos.values());
+						builderInfos.addAll(infos);
 				}
 			}
-			writeBuilderPersistentInfo(output, builders, trees, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
+			writeBuilderPersistentInfo(output, builderInfos, trees, Policy.subMonitorFor(monitor, Policy.totalWork * 10 / 100));
 
 			// add the current tree in the list as the last element
 			trees.add(current);
@@ -1013,7 +1013,7 @@ protected void writeTree(Project project, int depth) throws CoreException {
 		SafeFileOutputStream safe = new SafeFileOutputStream(treeLocation.toOSString(), tempLocation.toOSString());
 		try {
 			DataOutputStream output = new DataOutputStream(safe);
-			output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_2);
+			output.writeInt(ICoreConstants.WORKSPACE_TREE_VERSION_3);
 			writeTree(project, output, null);
 		} finally {
 			safe.close();
@@ -1036,13 +1036,13 @@ protected void writeTree(Project project, DataOutputStream output, IProgressMoni
 		boolean wasImmutable = false;
 		try {
 			/**
-			 * Obtain a table of String(builder name) -> BuilderPersistentInfo.
+			 * Obtain a List of BuilderPersistentInfo for this project
 			 * This includes builders that have never been instantiated
 			 * but already had a last built state.
 			 */
-			Map builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
-			List builders = builderInfos == null ? new ArrayList(5) : new ArrayList(builderInfos.values());
-			List trees = new ArrayList(builders.size() + 1);
+			List builderInfos = workspace.getBuildManager().createBuildersPersistentInfo(project);
+			int numBuilders = builderInfos == null ? 0 : builderInfos.size();
+			List trees = new ArrayList(numBuilders + 1);
 			monitor.worked(1);
 
 			/* Make sure the most recent tree is in the array */
@@ -1051,7 +1051,7 @@ protected void writeTree(Project project, DataOutputStream output, IProgressMoni
 			current.immutable();
 
 			/* add the tree for each builder to the array */
-			writeBuilderPersistentInfo(output, builders, trees, Policy.subMonitorFor(monitor, 1));
+			writeBuilderPersistentInfo(output, builderInfos, trees, Policy.subMonitorFor(monitor, 1));
 			trees.add(current);
 
 			/* save the forest! */
@@ -1425,13 +1425,14 @@ public void visitAndSnap(IResource root) throws CoreException {
 	for (int i = 0; i < projects.length; i++)
 		visitAndSnap(projects[i]);
 }
-protected void writeBuilderPersistentInfo(DataOutputStream output, List builders, List trees, IProgressMonitor monitor) throws IOException {
+protected void writeBuilderPersistentInfo(DataOutputStream output, List builderInfos, List trees, IProgressMonitor monitor) throws IOException {
 	monitor = Policy.monitorFor(monitor);
 	try {
 		// write the number of builders we are saving
-		output.writeInt(builders.size());
-		for (int i = 0; i < builders.size(); i++) {
-			BuilderPersistentInfo info = (BuilderPersistentInfo) builders.get(i);
+		int numBuilders = builderInfos == null ? 0 : builderInfos.size();
+		output.writeInt(numBuilders);
+		for (int i = 0; i < numBuilders; i++) {
+			BuilderPersistentInfo info = (BuilderPersistentInfo) builderInfos.get(i);
 			output.writeUTF(info.getProjectName());
 			output.writeUTF(info.getBuilderName());
 			// write interesting projects
@@ -1439,6 +1440,8 @@ protected void writeBuilderPersistentInfo(DataOutputStream output, List builders
 			output.writeInt(interestingProjects.length);
 			for (int j = 0; j < interestingProjects.length; j++)
 				output.writeUTF(interestingProjects[j].getName());
+			//write build spec position
+			output.writeInt(info.getBuildSpecPosition());
 			ElementTree last = info.getLastBuiltTree();
 			if (last ==null) {
 				//try to be resilient if a builder has no last built tree

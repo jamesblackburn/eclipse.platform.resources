@@ -19,18 +19,13 @@ public class BuilderPersistentInfo {
 	protected String builderName;
 	protected ElementTree lastBuildTree;
 	protected IProject[] interestingProjects = ICoreConstants.EMPTY_PROJECT_ARRAY;
-
-public void setProjectName(String name) {
-	projectName = name;
+	/** Offset of this builder in the build spec */
+	protected int buildSpecPosition = -1;
+	
+public BuilderPersistentInfo() {
 }
-public void setBuilderName(String name) {
-	builderName = name;
-}
-public void setLastBuildTree(ElementTree tree) {
-	lastBuildTree = tree;
-}
-public void setInterestingProjects(IProject[] projects) {
-	interestingProjects = projects;
+public int getBuildSpecPosition() {
+	return buildSpecPosition;
 }
 public String getProjectName() {
 	return projectName;
@@ -43,5 +38,20 @@ public ElementTree getLastBuiltTree() {
 }
 public IProject[] getInterestingProjects() {
 	return interestingProjects;
+}
+public void setProjectName(String name) {
+	projectName = name;
+}
+public void setBuilderName(String name) {
+	builderName = name;
+}
+public void setBuildSpecPosition(int buildSpecPosition) {
+	this.buildSpecPosition = buildSpecPosition;
+}
+public void setLastBuildTree(ElementTree tree) {
+	lastBuildTree = tree;
+}
+public void setInterestingProjects(IProject[] projects) {
+	interestingProjects = projects;
 }
 }

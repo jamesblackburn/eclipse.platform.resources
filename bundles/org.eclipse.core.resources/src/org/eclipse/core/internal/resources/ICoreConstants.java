@@ -16,8 +16,6 @@ import org.eclipse.core.resources.*;
 public interface ICoreConstants {
 	
 	// Standard resource SessionProperties
-	/** map of builders to their last built state. */
-	public static final QualifiedName K_BUILD_MAP = new QualifiedName(ResourcesPlugin.PI_RESOURCES, "BuildMap"); //$NON-NLS-1$
 
 	// resource info constants
 	static final long I_UNKNOWN_SYNC_INFO = -2;
@@ -63,6 +61,7 @@ public interface ICoreConstants {
 
 	public static final int WORKSPACE_TREE_VERSION_1 = 67305985;
 	public static final int WORKSPACE_TREE_VERSION_2 = 67305986;
+	public static final int WORKSPACE_TREE_VERSION_3 = 67305987;
 	
 	// helper constants for empty structures
 	public static final IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];

@@ -26,6 +26,16 @@ public class BuildManager implements ICoreConstants, IManager {
 	//used for debug/trace timing
 	private long timeStamp = -1;
 	
+	/**
+	 * Persistent information for builders that have not yet been instantiated.
+	 * For closed projects, this contains (IProject -> (List of BuilderPersistentInfo)).
+	 * For open projects: (IProject -> (Map of (ICommand -> BuilderPersistentInfo)))
+	 * This is because the build commands are not yet known for closed projects
+	 * since the project description has not been read from disk.  The
+	 * opening() method performs the conversion from one format to the other.
+	 */
+	private final Map builderPersistentInfo = new HashMap();
+	
 	//the following four fields only apply for the lifetime of 
 	//a single builder invocation.
 	protected ElementTree currentTree;
@@ -159,11 +169,11 @@ protected void basicBuild(final IProject project, final int trigger, final Multi
 	};
 	Platform.run(code);
 }
-protected void basicBuild(IProject project, int trigger, String builderName, Map args, MultiStatus status, IProgressMonitor monitor) {
+protected void basicBuild(IProject project, int trigger, ICommand command, MultiStatus status, IProgressMonitor monitor) {
 	IncrementalProjectBuilder builder = null;
 	try {
-		builder = getBuilder(builderName, project);
-		if (!validateNature(builder, builderName)) {
+		builder = getBuilder(command, project);
+		if (!validateNature(builder, command.getBuilderName())) {
 			//skip this builder and null its last built tree because it is invalid
 			//if the nature gets added or re-enabled a full build will be triggered
 			((InternalBuilder)builder).setLastBuiltTree(null);
@@ -173,7 +183,7 @@ protected void basicBuild(IProject project, int trigger, String builderName, Map
 		status.add(e.getStatus());
 		return;
 	}
-	basicBuild(trigger, builder, args, status, monitor);
+	basicBuild(trigger, builder, ((BuildCommand)command).getArguments(false), status, monitor);
 }
 protected void basicBuild(IProject project, int trigger, ICommand[] commands, MultiStatus status, IProgressMonitor monitor) {
 	monitor = Policy.monitorFor(monitor);
@@ -183,7 +193,7 @@ protected void basicBuild(IProject project, int trigger, ICommand[] commands, Mu
 		for (int i = 0; i < commands.length; i++) {
 			IProgressMonitor sub = Policy.subMonitorFor(monitor, 1);
 			BuildCommand command = (BuildCommand) commands[i];
-			basicBuild(project, trigger, command.getBuilderName(), command.getArguments(false), status, sub);
+			basicBuild(project, trigger, command, status, sub);
 			Policy.checkCanceled(monitor);
 		}
 	} finally {
@@ -247,7 +257,7 @@ public void build(IProject project, int kind, String builderName, Map args, IPro
 		try {
 			building = true;
 			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, Policy.bind("events.errors"), null); //$NON-NLS-1$
-			basicBuild(project, kind, builderName, args, status, Policy.subMonitorFor(monitor, 1));
+			basicBuild(project, kind, new BuildCommand(builderName, args), status, Policy.subMonitorFor(monitor, 1));
 			if (!status.isOK())
 				throw new ResourceException(status);
 		} finally {
@@ -266,12 +276,13 @@ public void changing(IProject project) {
 public void closing(IProject project) {
 }
 /**
- * Creates and returns a Map mapping String(builder name) -> BuilderPersistentInfo. 
- * The table includes entries for all builders that are
- * in the builder spec, and that have a last built state, even if they 
- * have not been instantiated this session.
+ * Creates and returns a List of BuilderPersistentInfo, or null if there are
+ * no builders for this project.
+ * The list includes entries for all builders that are in the builder spec, and 
+ * that have a last built state, even if they have not been instantiated this 
+ * session.
  */
-public Map createBuildersPersistentInfo(IProject project) throws CoreException {
+public List createBuildersPersistentInfo(IProject project) throws CoreException {
 	/* get the old builder map */
 	Map oldInfos = getBuildersPersistentInfo(project);
 
@@ -280,30 +291,31 @@ public Map createBuildersPersistentInfo(IProject project) throws CoreException {
 		return null;
 		
 	/* build the new map */
-	Map newInfos = new HashMap(buildCommands.length * 2);
-	Hashtable instantiatedBuilders = getBuilders(project);
+	List newInfos = new ArrayList(buildCommands.length);
+	Map instantiatedBuilders = getBuilders(project);
 	for (int i = 0; i < buildCommands.length; i++) {
-		String builderName = buildCommands[i].getBuilderName();
+		ICommand command = buildCommands[i];
 		BuilderPersistentInfo info = null;
-		IncrementalProjectBuilder builder = (IncrementalProjectBuilder) instantiatedBuilders.get(builderName);
+		InternalBuilder builder = (InternalBuilder) instantiatedBuilders.get(command);
 		if (builder == null) {
 			// if the builder was not instantiated, use the old info if any.
 			if (oldInfos != null) 
-				info = (BuilderPersistentInfo) oldInfos.get(builderName);
+				info = (BuilderPersistentInfo) oldInfos.get(command);
 		} else if (!(builder instanceof MissingBuilder)) {
-			ElementTree oldTree = ((InternalBuilder) builder).getLastBuiltTree();
-			//don't persist build state for builders that have no last built state
+			ElementTree oldTree = builder.getLastBuiltTree();
+			//don't persist build state for builders that have no last built tree
 			if (oldTree != null) {
-				// if the builder was instantiated, construct a memento with the important info
+				// construct a memento with the important info
 				info = new BuilderPersistentInfo();
 				info.setProjectName(project.getName());
-				info.setBuilderName(builderName);
+				info.setBuilderName(command.getBuilderName());
 				info.setLastBuildTree(oldTree);
-				info.setInterestingProjects(((InternalBuilder)builder).getInterestingProjects());
+				info.setInterestingProjects(builder.getInterestingProjects());
+				info.setBuildSpecPosition(i);
 			}
 		}
 		if (info != null)
-			newInfos.put(builderName, info);
+			newInfos.add(info);
 	}
 	return newInfos;
 }
@@ -316,37 +328,42 @@ protected String debugProject() {
 	return currentBuilder.getProject().getFullPath().toString();
 }
 public void deleting(IProject project) {
-	//make sure the builder persistent info is deleted for the project move case
+	//make sure the builder persistent info is deleted (move and delete cases)
 	setBuildersPersistentInfo(project, null);
 }
-protected IncrementalProjectBuilder getBuilder(String builderName, IProject project) throws CoreException {
-	Hashtable builders = getBuilders(project);
-	IncrementalProjectBuilder result = (IncrementalProjectBuilder) builders.get(builderName);
+protected IncrementalProjectBuilder getBuilder(ICommand command, IProject project) throws CoreException {
+	Map builders = getBuilders(project);
+	IncrementalProjectBuilder result = (IncrementalProjectBuilder) builders.get(command);
 	if (result != null)
 		return result;
-	result = initializeBuilder(builderName, project);
-	builders.put(builderName, result);
+	result = initializeBuilder(command, project);
+	builders.put(command, result);
 	((InternalBuilder) result).setProject(project);
 	result.startupOnInitialize();
 	return result;
 }
 /**
- * Returns a hashtable of all instantiated builders for the given project.
- * This hashtable maps String(builder name) -> Builder.
+ * Returns a map of all instantiated builders for the given project.
+ * This hashtable maps ICommand -> Builder.
  */
-protected Hashtable getBuilders(IProject project) {
+protected Map getBuilders(IProject project) {
 	ProjectInfo info = (ProjectInfo) workspace.getResourceInfo(project.getFullPath(), false, false);
 	Assert.isNotNull(info, Policy.bind("events.noProject", project.getName())); //$NON-NLS-1$
 	return info.getBuilders();
 }
 /**
- * Returns a Map mapping String(builder name) -> BuilderPersistentInfo.
+ * Returns a Map mapping ICommand -> BuilderPersistentInfo, or
+ * null if there is no persistent info for this project.
  * The map includes entries for all builders that are in the builder spec,
- * and that have a last built state, even if they have not been instantiated
+ * and that have a last built state, but have not been instantiated
  * this session.
  */
 public Map getBuildersPersistentInfo(IProject project) throws CoreException {
-	return (Map) project.getSessionProperty(K_BUILD_MAP);
+	Object result = builderPersistentInfo.get(project);
+	//for closed projects this will be a List
+	if (result instanceof Map)
+		return (Map)result;
+	return null;
 }
 protected IResourceDelta getDelta(IProject project) {
 	if (currentTree == null) {
@@ -436,8 +453,9 @@ private void hookEndBuild(IncrementalProjectBuilder builder) {
  * prevent trying to instantiate it every time a build is run.
  * This method NEVER returns null.
  */
-protected IncrementalProjectBuilder initializeBuilder(String builderName, IProject project) throws CoreException {
+protected IncrementalProjectBuilder initializeBuilder(ICommand command, IProject project) throws CoreException {
 	try {
+		String builderName = command.getBuilderName();
 		IncrementalProjectBuilder builder = instantiateBuilder(builderName);
 		if (builder == null) {
 			//unable to create the builder, so create a placeholder to fill in for it
@@ -446,7 +464,7 @@ protected IncrementalProjectBuilder initializeBuilder(String builderName, IProje
 		// get the map of builders to get the last built tree
 		Map infos = getBuildersPersistentInfo(project);
 		if (infos != null) {
-			BuilderPersistentInfo info = (BuilderPersistentInfo) infos.remove(builderName);
+			BuilderPersistentInfo info = (BuilderPersistentInfo) infos.remove(command);
 			if (info != null) {
 				ElementTree tree = info.getLastBuiltTree();
 				if (tree != null) 
@@ -455,7 +473,7 @@ protected IncrementalProjectBuilder initializeBuilder(String builderName, IProje
 			}
 			// delete the build map if it's now empty 
 			if (infos.size() == 0)
-				setBuildersPersistentInfo(project, null);
+				builderPersistentInfo.remove(project);
 		}
 		return builder;
 	} catch (CoreException e) {
@@ -540,6 +558,36 @@ protected boolean needsBuild(InternalBuilder builder) {
 	return false;	
 }
 public void opening(IProject project) {
+	//a project is being opened. link builder persistent info to appropriate
+	//command in the build spec
+	List infoList = (List)builderPersistentInfo.remove(project);
+	if (infoList == null || infoList.size() == 0)
+		return;//no builders for this project
+		
+	ProjectDescription description = ((Project)project).internalGetDescription();
+	if (description != null) {
+		ICommand[] commands = description.getBuildSpec(false);
+		//create map of ICommand->BuilderPersistentInfo
+		HashMap infoMap = new HashMap(commands.length * 2 + 1);
+		for (Iterator it = infoList.iterator(); it.hasNext();) {
+			BuilderPersistentInfo info = (BuilderPersistentInfo) it.next();
+			int position = info.getBuildSpecPosition();
+			if (position >= 0 && position < commands.length)
+				infoMap.put(commands[position], info);
+			else {
+				//backwards compatibility -- build spec position wasn't previously stored
+				//find a build command with matching builder name
+				String builderName = info.getBuilderName();
+				for (int i = 0; i < commands.length; i++) {
+					if (commands[i].getBuilderName().equals(builderName)) {
+						infoMap.put(commands[i], info);
+						break;
+					}						
+				}
+			}
+		}
+		builderPersistentInfo.put(project, infoMap);
+	}
 }
 /**
  * Removes all builders with the given ID from the build spec.
@@ -572,21 +620,14 @@ protected void removeBuilders(IProject project, String builderId) throws CoreExc
 }
 
 /**
- * Sets the builder map for the given project.  The builder map is
- * a Map mapping String(builder name) -> BuilderPersistentInfo.
- * The map includes entries for all builders that are
- * in the builder spec, and that have a last built state, even if they 
- * have not been instantiated this session.
+ * Supplies the list of BuilderPersistentInfo objects that was serialized
+ * on shutdown.  This list includes entries for all builders that are
+ * in the builder spec, have a last built state, but have not been instantiated
+ * yest this session.  Infos should only ever be supplied on startup, as this 
+ * information depends on the current ordering of the project's build spec.
  */
-public void setBuildersPersistentInfo(IProject project, Map map) {
-	try {
-		project.setSessionProperty(K_BUILD_MAP, map);
-	} catch (CoreException e) {
-		//project is missing -- build state will be lost
-		//can't throw an exception because this happens on startup
-		IStatus error = new ResourceStatus(IStatus.ERROR, 1, project.getFullPath(), "Project missing in setBuildersPersistentInfo", null);
-		ResourcesPlugin.getPlugin().getLog().log(error);
-	}
+public void setBuildersPersistentInfo(IProject project, List infoList) {
+	builderPersistentInfo.put(project, infoList);
 }
 public void shutdown(IProgressMonitor monitor) {
 }

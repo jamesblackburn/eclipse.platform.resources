@@ -17,9 +17,16 @@ import org.eclipse.core.internal.resources.ModelObject;
 import org.eclipse.core.resources.ICommand;
 public class BuildCommand extends ModelObject implements ICommand {
 	protected HashMap arguments;
+	/** Cached hash code for performance */
+	protected int hash = -1;
+	
 public BuildCommand() {
 	super(""); //$NON-NLS-1$
 	this.arguments = new HashMap(0);
+}
+public BuildCommand(String builderName, Map args) {
+	super(builderName);
+	this.arguments = args == null ? new HashMap(0) : new HashMap(args);
 }
 public Object clone() {
 	BuildCommand result = null;
@@ -34,10 +41,13 @@ public boolean equals(Object object) {
 		return true;
 	if (!(object instanceof BuildCommand))
 		return false;
+	//for performance compare the cached hash value first
+	if (hashCode() != object.hashCode())
+		return false;
 	BuildCommand command = (BuildCommand) object;
 	// equal if same builder name and equal argument tables
-	return getBuilderName().equals(command.getBuilderName()) &&
-		getArguments(false).equals(command.getArguments(false));
+	return (name == null ? command.name == null : name.equals(command.name)) &&
+		(arguments == null ? command.arguments == null : arguments.equals(command.arguments));
 }
 /**
  * @see ICommand#getArguments
@@ -55,8 +65,17 @@ public String getBuilderName() {
 	return getName();
 }
 public int hashCode() {
-	// hash on name alone
-	return getName().hashCode();
+	//lazily compute and cache hashcode
+	if (hash == -1) {
+		String name = getName();
+		hash = name == null ? 17 : name.hashCode() * 37;
+		if (arguments != null)
+			hash += arguments.hashCode();
+		//make sure it is never the same as the default value
+		if (hash == -1)
+			hash++;
+	}
+	return hash;
 }
 /**
  * @see ICommand#setArguments
@@ -64,6 +83,7 @@ public int hashCode() {
 public void setArguments(Map value) {
 	// copy parameter for safety's sake
 	arguments = value == null ? null : new HashMap(value);
+	hash = -1;
 }
 /**
  * @see ICommand#setBuilderName
@@ -71,5 +91,6 @@ public void setArguments(Map value) {
 public void setBuilderName(String value) {
 	//don't allow builder name to be null
 	setName(value == null ? "" : value); //$NON-NLS-1$
+	hash = -1;
 }
 }

@@ -81,7 +81,7 @@ protected void readPluginsSavedStates(DataInputStream input, HashMap savedStates
 		monitor.done();
 	}
 }
-protected void readBuildersPersistentInfo(DataInputStream input, List builders, IProgressMonitor monitor) throws IOException, CoreException {
+protected void readBuildersPersistentInfo(DataInputStream input, List builders, IProgressMonitor monitor) throws IOException {
 	monitor = Policy.monitorFor(monitor);
 	try {
 		int builderCount = input.readInt();
@@ -139,7 +139,7 @@ protected void linkPluginsSavedStateToTrees(List states, ElementTree[] trees, IP
 protected void linkBuildersToTrees(List buildersToBeLinked, ElementTree[] trees, int index, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
-		HashMap infos = null;
+		ArrayList infos = null;
 		String projectName = null;
 		for (int i = 0; i < buildersToBeLinked.size(); i++) {
 			BuilderPersistentInfo info = (BuilderPersistentInfo) buildersToBeLinked.get(i);
@@ -149,10 +149,10 @@ protected void linkBuildersToTrees(List buildersToBeLinked, ElementTree[] trees,
 					workspace.getBuildManager().setBuildersPersistentInfo(project, infos);
 				}
 				projectName = info.getProjectName();
-				infos = new HashMap(5);
+				infos = new ArrayList(5);
 			}
 			info.setLastBuildTree(trees[index++]);
-			infos.put(info.getBuilderName(), info);
+			infos.add(info);
 		}
 		if (infos != null) {
 			IProject project = workspace.getRoot().getProject(projectName);
@@ -195,6 +195,8 @@ public static WorkspaceTreeReader getReader(Workspace workspace, int version) {
 			return new WorkspaceTreeReader(workspace);
 		case ICoreConstants.WORKSPACE_TREE_VERSION_2:
 			return new WorkspaceTreeReader_2(workspace);
+		case ICoreConstants.WORKSPACE_TREE_VERSION_3:
+			return new WorkspaceTreeReader_3(workspace);
 		default:
 			// The following class should be
 			// removed soon. See comments in WorkspaceTreeReader_0.
@@ -226,13 +228,13 @@ public void readTree(IProject project, DataInputStream input, IProgressMonitor m
 
 		/* map builder names to trees */
 		if (numBuilders > 0) {
-			Map infos = new HashMap(trees.length * 2 + 1);
+			List infos = new ArrayList(numBuilders);
 			for (int i = 0; i < numBuilders; i++) {
 				BuilderPersistentInfo info = new BuilderPersistentInfo();
 				info.setBuilderName(builderNames[i]);
 				info.setProjectName(project.getName());
 				info.setLastBuildTree(trees[i]);
-				infos.put(builderNames[i], info);
+				infos.add(info);
 			}
 			workspace.getBuildManager().setBuildersPersistentInfo(project, infos);
 		}

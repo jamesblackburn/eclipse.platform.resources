@@ -215,7 +215,7 @@ public boolean movedProjectSubtree(IProject project, IProjectDescription destDes
 		// Clear the natures and builders on the destination project.
 		ProjectInfo info = (ProjectInfo) destination.getResourceInfo(false, true);
 		info.clearNatures();
-		info.setBuilders(null);
+		info.clearBuilders();
 
 		// Generate marker deltas.
 		try {
