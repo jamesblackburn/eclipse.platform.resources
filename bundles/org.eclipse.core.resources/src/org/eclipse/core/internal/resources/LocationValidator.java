@@ -142,5 +142,4 @@ private static IStatus validateWithinDescription(IPath location, Map mappingMap)
 	}
 	return ResourceStatus.OK_STATUS;
 }
-
 }

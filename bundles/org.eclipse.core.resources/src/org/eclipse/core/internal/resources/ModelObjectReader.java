@@ -10,18 +10,17 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
-import org.eclipse.core.internal.events.*;
-import org.eclipse.core.internal.localstore.SafeFileInputStream;
-import org.eclipse.core.internal.utils.EmptyEnumeration;
-import org.eclipse.core.internal.utils.Policy;
-
 import java.io.*;
 import java.util.*;
+
+import javax.xml.parsers.*;
+import org.eclipse.core.internal.events.BuildCommand;
+import org.eclipse.core.internal.localstore.SafeFileInputStream;
+import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.*;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
-import javax.xml.parsers.*;
 /**
  *
  */
@@ -132,7 +131,7 @@ protected Object read(Node node) {
 protected BuildCommand readBuildCommand(Node node) {
 	// get values
 	String name = getString(node, NAME);
-	Hashtable arguments = readHashtable(searchNode(node, ARGUMENTS));
+	Map arguments = readMap(searchNode(node, ARGUMENTS));
 
 	// build instance
 	BuildCommand command = new BuildCommand();
@@ -153,12 +152,12 @@ protected ICommand[] readBuildSpec(Node node) {
 	return (ICommand[]) results.toArray(new ICommand[results.size()]);
 }
 /**
- * read (String, String) hashtables
+ * read (String, String) map
  */
-protected Hashtable readHashtable(Node target) {
+protected HashMap readMap(Node target) {
 	if (target == null)
 		return null;
-	Hashtable result = new Hashtable(5);
+	HashMap result = new HashMap(5);
 	NodeList list = target.getChildNodes();
 	for (int i = 0; i < list.getLength(); i++) {
 		Node node = list.item(i);
@@ -177,22 +176,26 @@ protected ProjectDescription readProjectDescription(Node node) {
 	String name = getString(node, NAME);
 	String comment = getString(node, COMMENT);
 	IProject[] projects = getProjects(searchNode(node, PROJECTS));
-	String location = getString(node, LOCATION);
 	ICommand[] buildSpec = readBuildSpec(searchNode(node, BUILD_SPEC));
 	String[] natures = getStrings(searchNode(node, NATURES));
+	String location = getString(node, LOCATION);
+	Map mappings = readMap(searchNode(node, MAPPINGS));
+	
 	// build instance
 	ProjectDescription description = new ProjectDescription();
 	description.setName(name);
 	description.setComment(comment);
 	if (projects != null)
 		description.setReferencedProjects(projects);
-	if (location != null)
-		description.setLocation(new Path(location));
 	if (buildSpec != null)
 		description.setBuildSpec(buildSpec);
 	if (natures == null)
 		natures = EMPTY_STRING_ARRAY;
 	description.setNatureIds(natures);
+	if (location != null)
+		description.setLocation(new Path(location));
+	if (mappings != null) 
+		description.setMappings(mappings);
 	return description;
 }
 protected WorkspaceDescription readWorkspaceDescription(Node node) {

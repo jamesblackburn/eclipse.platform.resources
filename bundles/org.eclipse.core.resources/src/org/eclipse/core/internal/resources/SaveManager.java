@@ -540,23 +540,15 @@ protected void restoreMetaInfo(Project project, IProgressMonitor monitor) throws
 	try {
 		if (project.isOpen())
 			description = workspace.getFileSystemManager().read(project, true);
-		else
-			//for closed projects, just try to read the legacy .prj file, 
-			//because the project location is stored there.
-			description = workspace.getMetaArea().readOldDescription(project);
 	} catch (CoreException e) {
 		failure = e;
 	}
 	// If we had an open project and there was an error reading the description
-	// from disk, close the project and give it a default description. If the project
-	// was already closed then just set a default description.
+	// from disk, or if the project was closed, just read private metadata so
+	// we know the project location
 	if (description == null) {
-		description = new ProjectDescription();
+		description = workspace.getMetaArea().read(project);
 		description.setName(project.getName());
-		//try to read the project location and add it to the description
-		IPath location = workspace.getMetaArea().readLocation(project);
-		if (location != null)
-			description.setLocation(location);
 	}
 	project.internalSetDescription(description, false);
 	if (failure != null) {

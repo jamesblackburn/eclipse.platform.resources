@@ -10,10 +10,10 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.IOException;
 
 import org.eclipse.core.internal.localstore.SafeChunkyInputStream;
-import org.eclipse.core.internal.localstore.SafeChunkyOutputStream;
 import org.eclipse.core.internal.utils.Assert;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
@@ -26,8 +26,8 @@ public class LocalMetaArea implements ICoreConstants {
 	/* package */ static final String F_DESCRIPTION = ".workspace"; //$NON-NLS-1$
 	/* package */ static final String F_HISTORY_STORE = ".history"; //$NON-NLS-1$
 	/* package */ static final String F_MARKERS = ".markers"; //$NON-NLS-1$
-	/* package */ static final String F_OLD_PROJECT = ".prj"; //$NON-NLS-1$
-	/* package */ static final String F_PROJECT_LOCATION = ".location"; //$NON-NLS-1$
+	/* package */ static final String F_PROJECT = ".prj"; //$NON-NLS-1$
+	/* package */ static final String F_OLD_PROJECT_LOCATION = ".location"; //$NON-NLS-1$
 	/* package */ static final String F_PROJECTS = ".projects"; //$NON-NLS-1$
 	/* package */ static final String F_PROPERTIES = ".properties"; //$NON-NLS-1$
 	/* package */ static final String F_ROOT = ".root"; //$NON-NLS-1$
@@ -43,7 +43,7 @@ public LocalMetaArea() {
  * project description location, delete it.
  */
 public void clearOldDescription(IProject target) {
-	Workspace.clear(getOldDescriptionLocationFor(target).toFile());
+	Workspace.clear(getDescriptionLocationFor(target).toFile());
 }
 public void create(IProject target) {
 	java.io.File file = locationFor(target).toFile();
@@ -67,14 +67,12 @@ public IPath getBackupLocationFor(IPath file) {
 	return file.removeLastSegments(1).append(file.lastSegment() + F_BACKUP_FILE_EXTENSION);
 }
 /**
- * The project description file is the only metadata file stored
- * outside the metadata area.  It is stored as a file directly 
- * under the project location.  For backwards compatibility,
- * we also have to check for a project file at the old location
- * in the metadata area.
+ * Returns the location of the private project description file in the metadata
+ * area.  Also, in 1.0, this was the only location for the project description
+ * file.
  */
-public IPath getOldDescriptionLocationFor(IProject target) {
-	return locationFor(target).append(F_OLD_PROJECT);
+protected IPath getDescriptionLocationFor(IProject target) {
+	return locationFor(target).append(F_PROJECT);
 }
 public IPath getHistoryStoreLocation() {
 	return getLocation().append(F_HISTORY_STORE);
@@ -165,7 +163,7 @@ public IPath getWorkspaceDescriptionLocation() {
 }
 public boolean hasSavedProject(IProject project) {
 	//if there is a location file, then the project exists
-	return getOldDescriptionLocationFor(project).toFile().exists() || locationFor(project).append(F_PROJECT_LOCATION).toFile().exists();
+	return getDescriptionLocationFor(project).toFile().exists() || locationFor(project).append(F_OLD_PROJECT_LOCATION).toFile().exists();
 }
 public boolean hasSavedWorkspace() throws CoreException {
 	return getWorkspaceDescriptionLocation().toFile().exists() || getBackupLocationFor(getWorkspaceDescriptionLocation()).toFile().exists();
@@ -184,10 +182,11 @@ public IPath locationFor(IResource resource) {
  * Reads and returns the project content location for the given project.
  * Returns null if the default content location should be used.
  * In the case of failure, log the exception and return null, thus reverting to 
- * using the default location.
+ * using the default location.  This method is for backwards compatibility
+ * with 2.0 workspaces that contained a .location file.
  */
-public IPath readLocation(IProject target) {
-	IPath locationFile = locationFor(target).append(F_PROJECT_LOCATION);
+protected IPath readOldLocation(IProject target) {
+	IPath locationFile = locationFor(target).append(F_OLD_PROJECT_LOCATION);
 	java.io.File file = locationFile.toFile();
 	if (!file.exists()) {
 		locationFile = getBackupLocationFor(locationFile);
@@ -216,10 +215,14 @@ public IPath readLocation(IProject target) {
  * Returns null if there was no project description file on disk.
  * Throws an exception if there was any failure to read the project.
  */
-public ProjectDescription readOldDescription(IProject project) throws CoreException {
-	IPath path = getOldDescriptionLocationFor(project);
-	if (!path.toFile().exists())
-		return null;
+public ProjectDescription read(IProject project) throws CoreException {
+	IPath path = getDescriptionLocationFor(project);
+	if (!path.toFile().exists()) {
+		//look for an old .location file (2.0 workspaces)
+		ProjectDescription result = new ProjectDescription();
+		result.setLocation(readOldLocation(project));
+		return result;
+	}
 	IPath tempPath = getBackupLocationFor(path);
 	ProjectDescription description = null;
 	try {
@@ -244,34 +247,24 @@ public WorkspaceDescription readWorkspace() throws CoreException {
 	}
 }
 /**
- * Write the project content location file, if necessary.
+ * Write the private state from the project description.
  */
-public void writeLocation(IProject target) throws CoreException {
-	IPath location = locationFor(target).append(F_PROJECT_LOCATION);
+public void write(IProject target) throws CoreException {
+	IPath location = locationFor(target).append(F_PROJECT);
 	java.io.File file = location.toFile();
-	//delete any old location file
+	//delete any old file
 	Workspace.clear(file);
-	//don't write anything if the default location is used
-	IProjectDescription desc = ((Project)target).internalGetDescription();
-	if (desc == null)
+	IProjectDescription description = ((Project)target).internalGetDescription().copyWithPrivateState();
+	if (description == null)
 		return;
-	IPath projectLocation = desc.getLocation();
-	if (projectLocation == null)
-		return;
-	//write the location file
 	try {
-		SafeChunkyOutputStream output = new SafeChunkyOutputStream(file);
-		DataOutputStream dataOut = new DataOutputStream(output);
-		try {
-			dataOut.writeUTF(projectLocation.toOSString());
-			output.succeed();
-		} finally {
-			dataOut.close();
-		}
+		new ModelObjectWriter().write(description, location, getBackupLocationFor(location));
 	} catch (IOException e) {
 		String message = Policy.bind("resources.exSaveProjectLocation", target.getName()); //$NON-NLS-1$
 		throw new ResourceException(IResourceStatus.INTERNAL_ERROR, null, message, e);
 	}
+	//clear legacy .location file
+	Workspace.clear(locationFor(target).append(F_OLD_PROJECT_LOCATION).toFile());
 }
 /**
  * Writes the workspace description to the local meta area. This method

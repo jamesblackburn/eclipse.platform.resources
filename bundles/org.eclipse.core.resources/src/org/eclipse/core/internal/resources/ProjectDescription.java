@@ -26,9 +26,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected String[] natures;
 	protected ICommand[] buildSpec;
 	protected Map mappings;
-
 	protected String comment =""; //$NON-NLS-1$
-	protected boolean dirty = true;
 
 	// constants
 	private static IProject[] EMPTY_PROJECT_ARRAY = new IProject[0];
@@ -38,19 +36,37 @@ public ProjectDescription() {
 	super();
 	buildSpec = EMPTY_COMMAND_ARRAY;
 	projects = EMPTY_PROJECT_ARRAY;
+	natures = EMPTY_STRING_ARRAY;
 	mappings = new HashMap(3);
 }
 public void addMapping(IResourceMapping mapping) {
 	Assert.isLegal(mapping != null);
 	mappings.put(mapping.getName(), mapping);
-	dirty = true;
 }
 /**
- * Clears the dirty bit.  This should be used after saving descriptions to disk
+ * Returns a copy of this project description that only contains shared
+ * project description state.
  */
-public void clean() {
-	dirty = false;
+public ProjectDescription copyWithSharedState() {
+	ProjectDescription result = new ProjectDescription();
+	result.setBuildSpec(buildSpec);
+	result.setComment(comment);
+	result.setName(name);
+	result.setNatureIds(natures);
+	result.setReferencedProjects(projects);
+	return result;
 }
+/**
+ * Returns a copy of this project description that only contains non-shared
+ * project description state.
+ */
+public ProjectDescription copyWithPrivateState() {
+	ProjectDescription result = new ProjectDescription();
+	result.setLocation(location);
+	result.setMappings(mappings);
+	return result;
+}
+
 /**
  * @see IProjectDescription
  */
@@ -128,13 +144,6 @@ public boolean hasNature(String natureID) {
 	return false;
 }
 /**
- * Returns true if this resource has been modified since the last save
- * and false otherwise.
- */
-public boolean isDirty() {
-	return dirty;
-}
-/**
  * @see IProjectDescription
  */
 public ICommand newCommand() {
@@ -148,7 +157,6 @@ public IResourceMapping newMapping(String name, IPath local) {
 }
 public void removeMapping(String name) {
 	mappings.remove(name);
-	dirty = true;
 }
 /**
  * @see IProjectDescription
@@ -156,40 +164,35 @@ public void removeMapping(String name) {
 public void setBuildSpec(ICommand[] value) {
 	Assert.isLegal(value != null);
 	buildSpec = (ICommand[]) value.clone();
-	dirty = true;
 }
 /**
  * @see IProjectDescription
  */
 public void setComment(String value) {
 	comment = value;
-	dirty = true;
 }
 /**
  * @see IProjectDescription#setLocation
  */
 public void setLocation(IPath location) {
 	this.location = location;
-	dirty = true;
 }
-/* package */ void setMappings(Map mappings) {
+public void setMappings(Map mappings) {
 	Assert.isLegal(mappings != null);
 	this.mappings = mappings;
-	dirty = true;
 }
 /**
  * @see IProjectDescription
  */
 public void setName(String value) {
-	dirty = true;
 	super.setName(value);
 }
 /**
  * @see IProjectDescription
  */
 public void setNatureIds(String[] value) {
+	Assert.isLegal(value != null);
 	natures = (String[]) value.clone();
-	dirty = true;
 }
 /**
  * @see IProjectDescription
@@ -211,6 +214,5 @@ public void setReferencedProjects(IProject[] value) {
 	}
 	projects = new IProject[count];
 	System.arraycopy(result, 0, projects, 0, count);
-	dirty = true;
 }
 }

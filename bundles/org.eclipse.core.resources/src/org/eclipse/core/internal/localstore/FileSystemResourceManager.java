@@ -157,8 +157,8 @@ public boolean hasSavedProject(IProject project) {
 public void internalWrite(IProject target, IProjectDescription description, int updateFlags) throws CoreException {
 	IPath location = locationFor(target);
 	getStore().writeFolder(location.toFile());
-	//write the project location to the meta-data area
-	getWorkspace().getMetaArea().writeLocation(target);
+	//write private project info to the meta-data area
+	getWorkspace().getMetaArea().write(target);
 	//can't do anything if there's no description
 	if (description == null)
 		return;
@@ -166,7 +166,7 @@ public void internalWrite(IProject target, IProjectDescription description, int 
 	//write the model to a byte array
 	ByteArrayOutputStream out = new ByteArrayOutputStream();
 	try {
-		new ModelObjectWriter().write(description, out);
+		new ModelObjectWriter().write(((ProjectDescription)description).copyWithSharedState(), out);
 	} catch (IOException e) {
 		String msg = Policy.bind("resources.writeMeta", target.getFullPath().toString()); //$NON-NLS-1$
 		throw new ResourceException(IResourceStatus.FAILED_WRITE_METADATA, target.getFullPath(), msg, e);
@@ -184,9 +184,6 @@ public void internalWrite(IProject target, IProjectDescription description, int 
 	long lastModified = ((Resource)descriptionFile).getResourceInfo(false, false).getLocalSyncInfo();
 	ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
 	updateLocalSync(info, lastModified, true);
-
-	//for backwards compatibility, ensure the old .prj file is deleted
-	getWorkspace().getMetaArea().clearOldDescription(target);
 }
 /**
  * Returns true if the given project's description is synchronized with
@@ -269,7 +266,8 @@ public IPath locationFor(IResource target) {
 				return Platform.getLocation().append(target.getFullPath());
 			}
 	}
-}public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
+}
+public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
 		monitor.beginTask(Policy.bind("localstore.moving", target.getFullPath().toString()), Policy.totalWork); //$NON-NLS-1$
@@ -340,49 +338,50 @@ public InputStream read(IFile target, boolean force, IProgressMonitor monitor) t
  * description, or if the description was missing.
  */
 public ProjectDescription read(IProject target, boolean creation) throws CoreException {
-	//read the project location if this project is being created
-	IPath projectLocation = null;
+	//read the private project state f this project is being created
+	ProjectDescription privateDescription;
 	if (creation) {
-		projectLocation = getWorkspace().getMetaArea().readLocation(target);
+		privateDescription = getWorkspace().getMetaArea().read(target);
 	} else {
-		IProjectDescription description = ((Project)target).internalGetDescription();
-		if (description != null && description.getLocation() != null) {
-			projectLocation = description.getLocation();
-		}
+		privateDescription = ((Project)target).internalGetDescription();
 	}
-	final boolean isDefaultLocation = projectLocation == null;
-	if (isDefaultLocation) {
+	//get the project location from the description
+	IPath projectLocation = null;
+	if (privateDescription != null && privateDescription.getLocation() != null) {
+		projectLocation = privateDescription.getLocation();
+	}
+	if (projectLocation == null) {
 		projectLocation = getProjectDefaultLocation(target);
 	}
-	IPath descriptionPath = projectLocation.append(IProjectDescription.DESCRIPTION_FILE_NAME);
-	ProjectDescription description = null;
 
+	IPath descriptionPath = projectLocation.append(IProjectDescription.DESCRIPTION_FILE_NAME);
 	if (!descriptionPath.toFile().exists()) {
-		//try the legacy location in the meta area
-		description = getWorkspace().getMetaArea().readOldDescription(target);
-		if (description == null) {
-			String msg = Policy.bind("resources.missingProjectMeta", target.getName()); //$NON-NLS-1$
-			throw new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
-		}
-		return description;
+		//only valid case is when reading a 1.0 workspace (all info is in .prj file)
+		//we check the name because the .prj file contained the project name in 1.0 only
+		if (creation && privateDescription != null && target.getName().equals(privateDescription.getName()))
+			return privateDescription;
+		String msg = Policy.bind("resources.missingProjectMeta", target.getName()); //$NON-NLS-1$
+		throw new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
 	}
 	//hold onto any exceptions until after sync info is updated, then throw it
 	ResourceException error = null;
+	ProjectDescription description = null;
 	try {
 		description = (ProjectDescription)new ModelObjectReader().read(descriptionPath);
+		if (description == null) {
+			String msg = Policy.bind("resources.readProjectMeta", target.getName()); //$NON-NLS-1$
+			error = new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
+		}
 	} catch (IOException e) {
 		String msg = Policy.bind("resources.readProjectMeta", target.getName()); //$NON-NLS-1$
 		error = new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, e);
 	}
-	if (error == null && description == null) {
-		String msg = Policy.bind("resources.readProjectMeta", target.getName()); //$NON-NLS-1$
-		error = new ResourceException(IResourceStatus.FAILED_READ_METADATA, target.getFullPath(), msg, null);
-	}
 	if (description != null) {
 		//don't trust the project name in the description file
 		description.setName(target.getName());
-		if (!isDefaultLocation)
-			description.setLocation(projectLocation);
+		//merge private project information into public description
+		description.setLocation(privateDescription.getLocation());
+		description.setMappings(privateDescription.getMappings());
 	}
 	long lastModified = CoreFileSystemLibrary.getLastModified(descriptionPath.toOSString());
 	IFile descriptionFile = target.getFile(IProjectDescription.DESCRIPTION_FILE_NAME);
@@ -625,8 +624,8 @@ public void writeSilently(IProject target) throws CoreException {
 	IProjectDescription desc = ((Project)target).internalGetDescription();
 	if (desc == null)
 		return;
-	//write the project location to the meta-data area
-	getWorkspace().getMetaArea().writeLocation(target);
+	//write the private project description to the meta-data area
+	getWorkspace().getMetaArea().write(target);
 	
 	//write the file that represents the project description
 	java.io.File file = location.append(IProjectDescription.DESCRIPTION_FILE_NAME).toFile();

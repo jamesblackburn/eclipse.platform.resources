@@ -10,14 +10,15 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
-import org.eclipse.core.internal.events.*;
-import org.eclipse.core.internal.localstore.SafeFileOutputStream;
-import org.eclipse.core.internal.utils.ArrayEnumeration;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
+
+import org.eclipse.core.internal.events.BuildCommand;
+import org.eclipse.core.internal.localstore.SafeFileOutputStream;
+import org.eclipse.core.resources.ICommand;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IPath;
 //
 public class ModelObjectWriter implements IModelObjectConstants {
 public ModelObjectWriter() {
@@ -116,10 +117,16 @@ protected void write(ProjectDescription description, XMLWriter writer) throws IO
 	if (description != null) {
 		writer.printSimpleTag(NAME, description.getName());
 		String comment = description.getComment();
-		writer.printSimpleTag(COMMENT, comment == null ? "" : comment); //$NON-NLS-1$
+		writer.printSimpleTag(COMMENT, comment == null ? "" : comment);
 		write(PROJECTS, PROJECT, getReferencedProjects(description), writer);
 		write(BUILD_SPEC, Arrays.asList(description.getBuildSpec(false)), writer);
 		write(NATURES, NATURE, description.getNatureIds(false), writer);
+		IPath location = description.getLocation();
+		if (location != null)
+			writer.printSimpleTag(LOCATION, location.toString());
+		Map mappings = description.getMappings(false);
+		if (mappings != null && mappings.size() > 0)
+			write(MAPPINGS, mappings, writer);
 	}
 	writer.endTag(PROJECT_DESCRIPTION);
 }

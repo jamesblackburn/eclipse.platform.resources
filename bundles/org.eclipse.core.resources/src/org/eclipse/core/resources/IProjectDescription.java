@@ -41,9 +41,9 @@ public interface IProjectDescription {
  * <p>
  * Changing resource mappings does not directly modify any resources 
  * in the project; it simply changes the mapping defining where those
- * resources are stored. However, changing a project's mappings while
- * it is open should be expected to cause the workspace to become out
- * of sync with the local file system.
+ * resources are stored. However, changing a project's mappings should be 
+ * expected to cause the workspace to become out of sync with the local 
+ * file system.
  * </p>
  * <p>
  * Users must call <code>IProject.setDescription</code> before changes 

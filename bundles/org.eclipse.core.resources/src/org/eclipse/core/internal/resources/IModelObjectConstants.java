@@ -23,6 +23,7 @@ public interface IModelObjectConstants {
 	public static final String KEY = "key"; //$NON-NLS-1$
 	public static final String LOCAL = "local"; //$NON-NLS-1$
 	public static final String LOCATION = "location"; //$NON-NLS-1$
+	public static final String MAPPINGS = "mappings";//$NON-NLS-1$
 	public static final String MAX_FILE_STATE_SIZE = "maxFileStateSize"; //$NON-NLS-1$
 	public static final String MAX_FILE_STATES = "maxFileStates"; //$NON-NLS-1$
 	public static final String NAME = "name"; //$NON-NLS-1$

@@ -169,7 +169,6 @@ public boolean movedProjectSubtree(IProject project, IProjectDescription destDes
 
 	Project source = (Project) project;
 	Project destination = (Project) source.getWorkspace().getRoot().getProject(destDescription.getName());
-	IProjectDescription srcDescription = source.internalGetDescription();
 	Workspace workspace = (Workspace) source.getWorkspace();
 	int depth = IResource.DEPTH_INFINITE;
 	
@@ -241,24 +240,11 @@ public boolean movedProjectSubtree(IProject project, IProjectDescription destDes
 		failed(status);
 	}
 
-	// If the locations are the not the same then make sure the new location is written to disk.
-	// (or the old one removed)
-	if (srcDescription.getLocation() == null) {
-		if (destDescription.getLocation() != null) {
-			try {
-				workspace.getMetaArea().writeLocation(destination);
-			} catch (CoreException e) {
-				failed(e.getStatus());
-			}
-		}
-	} else {
-		if (!srcDescription.getLocation().equals(destDescription.getLocation())) {
-			try {
-				workspace.getMetaArea().writeLocation(destination);
-			} catch(CoreException e) {
-				failed(e.getStatus());
-			}
-		}
+	// write private meta-data because location or mappings may have changed
+	try {
+		workspace.getMetaArea().write(destination);
+	} catch (CoreException e) {
+		failed(e.getStatus());
 	}
 
 	// Do a refresh on the destination project to pick up any newly discovered resources

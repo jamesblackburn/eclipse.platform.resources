@@ -250,7 +250,7 @@ public void create(IProjectDescription description, IProgressMonitor monitor) th
 				if (getLocalManager().hasSavedProject(this)) {
 					updateDescription();
 					//make sure the .location file is written
-					workspace.getMetaArea().writeLocation(this);
+					workspace.getMetaArea().write(this);
 				} else {
 					//write out the project
 					writeDescription(IResource.FORCE);
