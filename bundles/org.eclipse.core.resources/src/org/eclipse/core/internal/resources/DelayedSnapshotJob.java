@@ -16,6 +16,7 @@ import org.eclipse.core.resources.ISaveContext;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.runtime.jobs.Job;
+
 /**
  * Performs periodic saving (snapshot) of the workspace.
  */
@@ -30,6 +31,7 @@ public class DelayedSnapshotJob extends Job {
 		setRule(ResourcesPlugin.getWorkspace().getRoot());
 		setSystem(true);
 	}
+
 	/*
 	 * @see Job#run()
 	 */
@@ -38,17 +40,15 @@ public class DelayedSnapshotJob extends Job {
 			return Status.CANCEL_STATUS;
 		if (ResourcesPlugin.getWorkspace() == null)
 			return Status.OK_STATUS;
-		IStatus result = Status.OK_STATUS;
 		try {
 			EventStats.startSnapshot();
-			result = saveManager.save(ISaveContext.SNAPSHOT, null, Policy.monitorFor(null));
+			return saveManager.save(ISaveContext.SNAPSHOT, null, Policy.monitorFor(null));
 		} catch (CoreException e) {
-			result = e.getStatus();
+			return e.getStatus();
 		} finally {
 			saveManager.operationCount = 0;
 			saveManager.snapshotRequested = false;
 			EventStats.endSnapshot();
 		}
-		return result;
 	}
 }

@@ -265,10 +265,11 @@ public class Project extends Container implements IProject {
 				}
 				desc.setName(getName());
 				info.setDescription(desc);
-				//look for a description on disk
-				boolean hasSavedProject = getLocalManager().hasSavedProject(this);
+				// see if there potentially are already contents on disk
+				boolean hasContent = getLocalManager().locationFor(this).toFile().exists();
 				try {
-					if (hasSavedProject) {
+					// look for a description on disk
+					if (getLocalManager().hasSavedProject(this)) {
 						updateDescription();
 						//make sure the .location file is written
 						workspace.getMetaArea().writePrivateDescription(this);
@@ -284,8 +285,8 @@ public class Project extends Container implements IProject {
 				// set this after setting the description as #setDescription
 				// updates the stamp
 				info.setModificationStamp(IResource.NULL_STAMP);
-				//if a project already existed on disk, mark the project as having unknown children
-				if (hasSavedProject)
+				//if a project already had content on disk, mark the project as having unknown children
+				if (hasContent)
 					info.set(ICoreConstants.M_CHILDREN_UNKNOWN);
 				workspace.getSaveManager().requestSnapshot();
 			} catch (OperationCanceledException e) {
@@ -314,7 +315,7 @@ public class Project extends Container implements IProject {
 		delete(updateFlags, monitor);
 	}
 
-	protected void fixupAfterMoveSource() throws CoreException {
+	protected void fixupAfterMoveSource() {
 		workspace.deleteResource(this);
 	}
 
@@ -330,7 +331,7 @@ public class Project extends Container implements IProject {
 	/* (non-Javadoc)
 	 * @see IContainer#getDefaultCharset(boolean)
 	 */
-	public String getDefaultCharset(boolean checkImplicit) throws CoreException {
+	public String getDefaultCharset(boolean checkImplicit) {
 		// non-existing resources default to parent's charset
 		if (!exists())
 			return checkImplicit ? ResourcesPlugin.getEncoding() : null;
@@ -608,7 +609,7 @@ public class Project extends Container implements IProject {
 	 * during workspace restore (i.e., when you cannot do an operation)
 	 */
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
-		ProjectInfo info = (ProjectInfo)getResourceInfo(false, true);
+		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
 		if (incrementContentId) {
 			info.incrementContentId();
@@ -770,14 +771,19 @@ public class Project extends Container implements IProject {
 				checkExists(flags, true);
 				if (isOpen(flags))
 					return;
+
 				workspace.beginOperation(true);
 				// flush the build order early in case there is a problem
 				workspace.flushBuildOrder();
 				info = (ProjectInfo) getResourceInfo(false, true);
 				info.set(M_OPEN);
+				//clear the unknown children immediately to avoid background refresh
+				boolean unknownChildren = info.isSet(M_CHILDREN_UNKNOWN);
+				if (unknownChildren)
+					info.clear(M_CHILDREN_UNKNOWN);
 				// the M_USED flag is used to indicate the difference between opening a project
 				// for the first time and opening it from a previous close (restoring it from disk)
-				final boolean used = info.isSet(M_USED);
+				boolean used = info.isSet(M_USED);
 				if (used) {
 					workspace.getSaveManager().restore(this, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 				} else {
@@ -789,8 +795,7 @@ public class Project extends Container implements IProject {
 				}
 				startup();
 				//request a refresh if the project has unknown members on disk
-				if (!used && info.isSet(M_CHILDREN_UNKNOWN)) {
-					info.clear(M_CHILDREN_UNKNOWN);
+				if (!used && unknownChildren) {
 					//refresh either in background or foreground
 					if ((updateFlags & IResource.BACKGROUND_REFRESH) != 0) {
 						workspace.refreshManager.refresh(this);
