@@ -15,6 +15,9 @@ public abstract class CoreFileSystemLibrary {
 
 	/** Indicates whether or not this FS is case sensitive */
 	private static final boolean caseSensitive = new File("a").compareTo(new File("A")) != 0;
+	
+	/** Indicates the default string encoding on this platform */
+	private static String defaultEncoding = new java.io.InputStreamReader(new java.io.ByteArrayInputStream(new byte[0])).getEncoding();
 
 	/**
 	 * The following masks are used to represent the bits
@@ -62,8 +65,19 @@ public static long getLastModified(String fileName) {
 	return new File(fileName).lastModified();
 }
 public static long getStat(String fileName) {
-	if (hasNatives)
-		return internalGetStat(fileName.getBytes());
+	if (hasNatives) {
+		//try to use the default encoding, avoids creating an encoding object instance
+		if (defaultEncoding == null) {
+			return internalGetStat(fileName.getBytes());
+		}
+		try {
+			return internalGetStat(fileName.getBytes(defaultEncoding));
+		} catch (java.io.UnsupportedEncodingException e) {
+			//null the default encoding so we don't try it again
+			defaultEncoding = null;
+			return internalGetStat(fileName.getBytes());
+		}
+	}
 
 	// inlined (no native) implementation
 	File target = new File(fileName);
