@@ -673,7 +673,7 @@ public DataTreeLookup lookup(IPath key) {
 		}
 		if (node != null) {
 			if (node.hasData()) {
-				return new DataTreeLookup(key, true, node.getData(), tree==this);
+				return DataTreeLookup.newLookup(key, true, node.getData(), tree==this);
 			} else if (node.isDeleted()) {
 				break;
 			}
@@ -683,7 +683,7 @@ public DataTreeLookup lookup(IPath key) {
 			break;
 		}
 	}
-	return new DataTreeLookup(key, false, null);
+	return DataTreeLookup.newLookup(key, false, null);
 }
 /**
  * Converts this tree's representation to be a complete tree, not a delta.
