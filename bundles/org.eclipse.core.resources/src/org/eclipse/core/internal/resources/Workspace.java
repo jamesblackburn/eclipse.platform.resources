@@ -8,7 +8,7 @@ package org.eclipse.core.internal.resources;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.internal.events.*;
-import org.eclipse.core.internal.localstore.FileSystemResourceManager;
+import org.eclipse.core.internal.localstore.FileManager;
 import org.eclipse.core.internal.properties.PropertyManager;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.internal.watson.*;
@@ -24,7 +24,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 	protected SaveManager saveManager;
 	protected BuildManager buildManager;
 	protected NotificationManager notificationManager;
-	protected FileSystemResourceManager fileSystemManager;
+	protected FileManager fileManager;
 	protected PropertyManager propertyManager;
 	protected MarkerManager markerManager;
 	protected long nextNodeId = 0;
@@ -810,8 +810,8 @@ public IWorkspaceDescription getDescription() {
 public ElementTree getElementTree() {
 	return tree;
 }
-public FileSystemResourceManager getFileSystemManager() {
-	return fileSystemManager;
+public FileManager getFileManager() {
+	return fileManager;
 }
 /**
  * Returns the marker manager for this workspace
@@ -1262,7 +1262,7 @@ private boolean shouldBuild() throws CoreException {
 protected void shutdown(IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
-		IManager[] managers = { buildManager, notificationManager, propertyManager, fileSystemManager, markerManager, saveManager, workManager };
+		IManager[] managers = { buildManager, notificationManager, propertyManager, fileManager, markerManager, saveManager, workManager };
 		monitor.beginTask(null, managers.length);
 		String message = Policy.bind("resources.shutdownProblems");
 		MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.INTERNAL_ERROR, message, null);
@@ -1283,7 +1283,7 @@ protected void shutdown(IProgressMonitor monitor) throws CoreException {
 		buildManager = null;
 		notificationManager = null;
 		propertyManager = null;
-		fileSystemManager = null;
+		fileManager = null;
 		markerManager = null;
 		synchronizer = null;
 		saveManager = null;
@@ -1298,8 +1298,8 @@ protected void startup(IProgressMonitor monitor) throws CoreException {
 	// ensure the tree is locked during the startup notification
 	workManager = new WorkManager(this);
 	workManager.startup(null);
-	fileSystemManager = new FileSystemResourceManager(this);
-	fileSystemManager.startup(monitor);
+	fileManager = new FileManager(this);
+	fileManager.startup(monitor);
 	propertyManager = new PropertyManager(this);
 	propertyManager.startup(monitor);
 	buildManager = new BuildManager(this);

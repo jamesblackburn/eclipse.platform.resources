@@ -78,12 +78,12 @@ public void create(InputStream content, boolean force, IProgressMonitor monitor)
 			parent.checkAccessible(getFlags(info));
 
 			workspace.beginOperation(true);
-			IPath location = getLocalManager().locationFor(this);
+			IPath location = getFileManager().locationFor(this);
 			java.io.File localFile = location.toFile();
 			if (force) {
 				if (!CoreFileSystemLibrary.isCaseSensitive()) {
 					if (localFile.exists()) {
-						String name = getLocalManager().getLocalName(localFile);
+						String name = getFileManager().getLocalName(localFile);
 						if (localFile.getName().equals(name)) {
 							delete(true, null);
 						} else {
@@ -140,14 +140,14 @@ public InputStream getContents(boolean force) throws CoreException {
 	int flags = getFlags(info);
 	checkAccessible(flags);
 	checkLocal(flags, DEPTH_ZERO);
-	return getLocalManager().read(this, force, null);
+	return getFileManager().read(this, force, null);
 }
 /**
  * @see IFile#getHistory
  */
 public IFileState[] getHistory(IProgressMonitor monitor) throws CoreException {
 	// FIXME: monitor is not used
-	return getLocalManager().getHistoryStore().getStates(getFullPath());
+	return getFileManager().getHistoryStore().getStates(getFullPath());
 }
 public int getType() {
 	return FILE;
@@ -155,7 +155,7 @@ public int getType() {
 protected void internalSetContents(InputStream content, boolean force, boolean keepHistory, boolean append, IProgressMonitor monitor) throws CoreException {
 	if (content == null)
 		content = new ByteArrayInputStream(new byte[0]);
-	getLocalManager().write(this, content, force, keepHistory, append, monitor);
+	getFileManager().write(this, content, force, keepHistory, append, monitor);
 	ResourceInfo info = getResourceInfo(false, true);
 	info.incrementContentId();
 	workspace.updateModificationStamp(info);

@@ -45,7 +45,7 @@ protected void createResource(UnifiedTreeNode node, Resource target) throws Core
 	/* Use the basic file creation protocol since we don't want to create any content on disk. */
 	workspace.createResource(target, false);
 	info = target.getResourceInfo(false, true);
-	target.getLocalManager().updateLocalSync(info, node.getLastModified(), target.getType() == IResource.FILE);
+	target.getFileManager().updateLocalSync(info, node.getLastModified(), target.getType() == IResource.FILE);
 }
 protected void deleteResource(UnifiedTreeNode node, Resource target) throws CoreException {
 	ResourceInfo info = target.getResourceInfo(false, false);
@@ -68,7 +68,7 @@ protected void fileToFolder(UnifiedTreeNode node, Resource target) throws CoreEx
 	}
 	node.setResource(target);
 	info = target.getResourceInfo(false, true);
-	target.getLocalManager().updateLocalSync(info, node.getLastModified(), false);
+	target.getFileManager().updateLocalSync(info, node.getLastModified(), false);
 }
 protected void folderToFile(UnifiedTreeNode node, Resource target) throws CoreException {
 	ResourceInfo info = target.getResourceInfo(false, false);
@@ -85,13 +85,13 @@ protected void folderToFile(UnifiedTreeNode node, Resource target) throws CoreEx
 	}
 	node.setResource(target);
 	info = target.getResourceInfo(false, true);
-	target.getLocalManager().updateLocalSync(info, node.getLastModified(), true);
+	target.getFileManager().updateLocalSync(info, node.getLastModified(), true);
 }
 protected void resourceChanged(Resource target, long lastModified) throws CoreException {
 	ResourceInfo info = target.getResourceInfo(false, true);
 	if (info == null)
 		return;
-	target.getLocalManager().updateLocalSync(info, lastModified, target.getType() == IResource.FILE);
+	target.getFileManager().updateLocalSync(info, lastModified, target.getType() == IResource.FILE);
 	info.incrementContentId();
 	workspace.updateModificationStamp(info);
 }
@@ -124,12 +124,12 @@ protected int synchronizeExistence(UnifiedTreeNode node, Resource target, int le
 			if (!CoreFileSystemLibrary.isCaseSensitive()) {
 				Container parent = (Container) target.getParent();
 				if (!parent.exists()) {
-					parent.getLocalManager().refresh(parent, IResource.DEPTH_ZERO, null);
+					parent.getFileManager().refresh(parent, IResource.DEPTH_ZERO, null);
 					if (!parent.exists())
 						return RL_NOT_IN_SYNC;
 				}
 				IPath location = node.getLocalLocation();
-				String name = target.getLocalManager().getLocalName(location.toFile());
+				String name = target.getFileManager().getLocalName(location.toFile());
 				if (!target.getName().equals(name))
 					return RL_IN_SYNC;
 			}

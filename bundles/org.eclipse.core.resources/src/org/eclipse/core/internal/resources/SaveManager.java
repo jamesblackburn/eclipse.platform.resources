@@ -684,7 +684,7 @@ protected void saveMasterTable(IPath location) throws CoreException {
 protected void saveMetaInfo(Project project, IProgressMonitor monitor) throws CoreException {
 	ProjectDescription description = (ProjectDescription) project.internalGetDescription();
 	if (description.isDirty()) {
-		workspace.getFileSystemManager().write(project, null);
+		workspace.getFileManager().write(project, null);
 		description.clean();
 	}
 }
@@ -1131,7 +1131,7 @@ public IStatus save(int kind, Project project, IProgressMonitor monitor) throws 
 				removeUnusedSafeTables();
 				removeUnusedTreeFiles();
 				cleanMasterTable();
-				workspace.getFileSystemManager().getHistoryStore().clean();
+				workspace.getFileManager().getHistoryStore().clean();
 			}
 			workspace.endOperation(false, null);
 		}

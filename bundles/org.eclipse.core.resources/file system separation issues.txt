@@ -1,0 +1,49 @@
+
+File System details exposed as API:
+===================================
+
+IResource.getLocation() - returns an IPath with the local location of the resource. Returns
+	null if it is not applicable to the given resource.
+
+IProjectDescription.setLocation()
+IProjectDescription.getLocation() - returns an IPath with the local location of the resource.
+	Returns null if using the default location.
+
+IResource.setReadOnly()
+IResource.isReadOnly() - some file systems may not support this feature.
+
+IWorkspaceRoot.getFileForLocation()
+IWorkspaceRoot.getContainerForLocation() - 
+
+File system separation:
+=======================
+
+1) Metadata
+	The metadata will continue being local. Only the project content will be
+able to be stored in different ways (local file system, webdav, etc...)
+
+2) History
+	The history mechanism is currently attached to the local file system
+notion. In the proposed scenario, we have the option of continue keeping
+history locally or have it in a per project basis, giving the oportunity
+to the implementor of the file store to have it or not.
+
+
+Problems raised by the file system separation:
+==============================================
+
+1) IResource.getLocation():
+	In the new scenario, the resource might not have a local location anymore.
+<null> might be returned in this case.
+
+2) File Editors:
+	Some file editors are using a parallel mechanism to detect when the file
+it has opened, has changed on the file system. Basicaly they rely on the
+java.io.File API to do so.
+	In the new scenario, this API is not guaranteed to be helpful anymore. They
+would only be able to rely on the file content stream.
+
+3) Reporting errors:
+	If this mechanism becomes API, we have to have a better story for reporting
+errors. Classes like ResourceException, ResourceStatus and Policy.bind should
+somehow be available for implementors.

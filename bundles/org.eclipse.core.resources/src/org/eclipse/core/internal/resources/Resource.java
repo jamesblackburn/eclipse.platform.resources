@@ -243,7 +243,7 @@ public void checkValidPath(IPath path, int type) throws CoreException {
  * @see IResource
  */
 public void clearHistory(IProgressMonitor monitor) throws CoreException {
-	getLocalManager().getHistoryStore().removeAll(this);
+	workspace.getFileManager().getHistoryStore().removeAll(this);
 }
 public void convertToPhantom() throws CoreException {
 	ResourceInfo info = getResourceInfo(false, true);
@@ -251,7 +251,7 @@ public void convertToPhantom() throws CoreException {
 		return;
 	info.clearSessionProperties();
 	info.set(M_PHANTOM);
-	getLocalManager().updateLocalSync(info, I_NULL_SYNC_INFO, getType() == FILE);
+	getFileManager().updateLocalSync(info, I_NULL_SYNC_INFO, getType() == FILE);
 	info.setModificationStamp(IResource.NULL_STAMP);
 	// should already be done by the #deleteResource call but left in 
 	// just to be safe and for code clarity.
@@ -321,7 +321,7 @@ public void copy(IPath destination, boolean force, IProgressMonitor monitor) thr
 
 			workspace.beginOperation(true);
 			Resource destResource = workspace.newResource(makePathAbsolute(destination), getType());
-			getLocalManager().copy(this, destResource, force, Policy.subMonitorFor(monitor, Policy.opWork));
+			getFileManager().copy(this, destResource, force, Policy.subMonitorFor(monitor, Policy.opWork));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -394,7 +394,7 @@ public void delete(boolean force, boolean keepHistory, IProgressMonitor monitor)
 				return;
 
 			workspace.beginOperation(true);
-			getLocalManager().delete(this, force, true, keepHistory, Policy.subMonitorFor(monitor, Policy.opWork));
+			getFileManager().delete(this, force, true, keepHistory, Policy.subMonitorFor(monitor, Policy.opWork));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -515,8 +515,8 @@ public int getFlags(ResourceInfo info) {
 public IPath getFullPath() {
 	return path;
 }
-public FileSystemResourceManager getLocalManager() {
-	return workspace.getFileSystemManager();
+public FileManager getFileManager() {
+	return ((Project) getProject()).getFileManager();
 }
 /**
  * @see IResource#getLocation
@@ -525,7 +525,7 @@ public IPath getLocation() {
 	IProject project = getProject();
 	if (project != null && !project.exists())
 		return null;
-	return getLocalManager().locationFor(this);
+	return getFileManager().locationFor(this);
 }
 
 /**
@@ -839,7 +839,7 @@ protected void moveInFileSystem(IPath destination, boolean force, boolean keepHi
 		if (!force)
 			if (!visitor.getStatus().isOK())
 				throw new ResourceException(visitor.getStatus());
-		getLocalManager().move(this, destination, keepHistory, Policy.subMonitorFor(monitor, 70));
+		getFileManager().move(this, destination, keepHistory, Policy.subMonitorFor(monitor, 70));
 	} finally {
 		monitor.done();
 	}
@@ -858,7 +858,7 @@ public void refreshLocal(int depth, IProgressMonitor monitor) throws CoreExcepti
 			if (getType() != ROOT && !getProject().isAccessible())
 				return;
 			workspace.beginOperation(true);
-			build = getLocalManager().refresh(this, depth, Policy.subMonitorFor(monitor, Policy.opWork));
+			build = getFileManager().refresh(this, depth, Policy.subMonitorFor(monitor, Policy.opWork));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;

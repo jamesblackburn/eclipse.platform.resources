@@ -7,6 +7,7 @@ package org.eclipse.core.internal.resources;
 
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
+import org.eclipse.core.internal.localstore.FileManager;
 import org.eclipse.core.internal.utils.Assert;
 import org.eclipse.core.internal.utils.Policy;
 
@@ -19,7 +20,7 @@ protected WorkspaceRoot(IPath path, Workspace container) {
  * @see IResource
  */
 public void clearHistory(IProgressMonitor monitor) throws CoreException {
-	getLocalManager().getHistoryStore().removeAll();
+	getFileManager().getHistoryStore().removeAll();
 }
 /**
  * @see IResource#delete
@@ -69,14 +70,19 @@ public boolean exists(int flags, boolean checkType) {
  * @see IWorkspaceRoot
  */
 public IContainer getContainerForLocation(IPath location) {
-	return getLocalManager().containerFor(location);
+	return getFileManager().containerFor(location);
 }
 /**
  * @see IWorkspaceRoot
  */
 public IFile getFileForLocation(IPath location) {
-	return getLocalManager().fileFor(location);
+	return getFileManager().fileFor(location);
 }
+
+public FileManager getFileManager() {
+	return workspace.getFileManager();
+}
+
 /**
  * @see IResource#getLocation
  */

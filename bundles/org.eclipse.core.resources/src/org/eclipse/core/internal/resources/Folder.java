@@ -48,12 +48,12 @@ public void create(boolean force, boolean local, IProgressMonitor monitor) throw
 			parent.checkAccessible(getFlags(info));
 
 			workspace.beginOperation(true);
-			IPath location = getLocalManager().locationFor(this);
+			IPath location = getFileManager().locationFor(this);
 			java.io.File localFile = location.toFile();
 			if (force) {
 				if (!CoreFileSystemLibrary.isCaseSensitive()) {
 					if (localFile.exists()) {
-						String name = getLocalManager().getLocalName(localFile);
+						String name = getFileManager().getLocalName(localFile);
 						if (localFile.getName().equals(name)) {
 							delete(true, null);
 						} else {
@@ -118,7 +118,7 @@ public void internalCreate(boolean force, boolean local, IProgressMonitor monito
 		workspace.createResource(this, false);
 		if (local) {
 			try {
-				getLocalManager().write(this, force, Policy.subMonitorFor(monitor, Policy.totalWork * 75 / 100));
+				getFileManager().write(this, force, Policy.subMonitorFor(monitor, Policy.totalWork * 75 / 100));
 			} catch (CoreException e) {
 				// a problem happened creating the folder on disk, so delete from the workspace
 				workspace.deleteResource(this);

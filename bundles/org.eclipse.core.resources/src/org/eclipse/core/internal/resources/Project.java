@@ -16,8 +16,12 @@ import java.io.*;
 import java.util.*;
 
 public class Project extends Container implements IProject {
+
+protected FileManager fileManager;
+	
 protected Project(IPath path, Workspace container) {
 	super(path, container);
+	fileManager = new FileManager(workspace);
 }
 /**
  * Deletes everything but contents. Needed for restore where we do not find
@@ -263,12 +267,12 @@ public void copy(IPath destination, boolean force, IProgressMonitor monitor) thr
 protected void copyMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
 	java.io.File oldMetaArea = workspace.getMetaArea().getLocationFor(source).toFile();
 	java.io.File newMetaArea = workspace.getMetaArea().getLocationFor(destination).toFile();
-	getLocalManager().getStore().copy(oldMetaArea, newMetaArea, IResource.DEPTH_INFINITE, monitor);
+	getFileManager().getStore().copy(oldMetaArea, newMetaArea, IResource.DEPTH_INFINITE, monitor);
 }
 protected void renameMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
 	java.io.File oldMetaArea = workspace.getMetaArea().getLocationFor(source).toFile();
 	java.io.File newMetaArea = workspace.getMetaArea().getLocationFor(destination).toFile();
-	getLocalManager().getStore().move(oldMetaArea, newMetaArea, false, monitor);
+	getFileManager().getStore().move(oldMetaArea, newMetaArea, false, monitor);
 }
 /**
  * @see IProject#create
@@ -302,7 +306,7 @@ public void create(IProjectDescription description, IProgressMonitor monitor) th
 			// updates the stamp
 			info.setModificationStamp(IResource.NULL_STAMP);
 			try {
-				getLocalManager().write(this, Policy.subMonitorFor(monitor, Policy.opWork));
+				getFileManager().write(this, Policy.subMonitorFor(monitor, Policy.opWork));
 			} catch (CoreException e) {
 				workspace.deleteResource(this);
 				throw e;
@@ -414,9 +418,9 @@ public void delete(boolean deleteContent, boolean force, IProgressMonitor monito
 					pseudoOpen();
 				try {
 					if (force)
-						getLocalManager().getStore().delete(getLocation().toFile(), status);
+						getFileManager().getStore().delete(getLocation().toFile(), status);
 					else
-						getLocalManager().delete(this, force, false, false, Policy.monitorFor(null));
+						getFileManager().delete(this, force, false, false, Policy.monitorFor(null));
 				} catch (CoreException e) {
 					if (info != null) {
 						getPropertyManager().closePropertyStore(this);
@@ -443,7 +447,7 @@ protected void deleteMetaArea(IProject project) throws CoreException {
 	// close project's propertyStore
 	getPropertyManager().closePropertyStore(project);
 	java.io.File location = workspace.getMetaArea().getLocationFor(project).toFile();
-	getLocalManager().getStore().delete(location);
+	getFileManager().getStore().delete(location);
 }
 /**
  * @see IProject
@@ -453,6 +457,11 @@ public IProjectDescription getDescription() throws CoreException {
 	checkAccessible(getFlags(info));
 	return (IProjectDescription) ((ProjectInfo) info).getDescription().clone();
 }
+
+public FileManager getFileManager() {
+	return fileManager;
+}
+
 /**
  * @see IProject#getNature
  */
@@ -574,7 +583,7 @@ protected void internalCopy(IProjectDescription destDesc, boolean force, IProgre
 			workspace.changing(this);
 
 			workspace.beginOperation(true);
-			getLocalManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
 			// close the property store so incorrect info is not copied to the destination
 			getPropertyManager().closePropertyStore(this);
@@ -592,7 +601,7 @@ protected void internalCopy(IProjectDescription destDesc, boolean force, IProgre
 			// copied over from the source but we want to ensure the .prj file
 			// contains the correct info
 			try {
-				getLocalManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+				getFileManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 			} catch (CoreException e) {
 				try {
 					destProject.delete(force, null);
@@ -612,7 +621,7 @@ protected void internalCopy(IProjectDescription destDesc, boolean force, IProgre
 
 			// refresh local
 			monitor.subTask(Policy.bind("resources.updating"));
-			getLocalManager().refresh(destProject, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+			getFileManager().refresh(destProject, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -650,7 +659,7 @@ protected void internalCopyToFolder(IPath destPath, boolean force, IProgressMoni
 			workspace.beginOperation(true);
 			// flush the build order early in case there is a problem
 			workspace.flushBuildOrder();
-			getLocalManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
 			// copy just the project and not its children
 			internalCopyProjectOnly(destFolder, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
@@ -662,7 +671,7 @@ protected void internalCopyToFolder(IPath destPath, boolean force, IProgressMoni
 
 			// refresh local
 			monitor.subTask(Policy.bind("resources.updating"));
-			getLocalManager().refresh(destFolder, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(destFolder, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -705,7 +714,7 @@ protected void internalMove(IProjectDescription destDesc, boolean force, IProgre
 			workspace.beginOperation(true);
 			// flush the build order early in case there is a problem
 			workspace.flushBuildOrder();
-			getLocalManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
 			// let people know that we are deleting the project
 			workspace.deleting(this);
@@ -733,7 +742,7 @@ protected void internalMove(IProjectDescription destDesc, boolean force, IProgre
 			// copied over from the source but we want to ensure the .prj file
 			// contains the correct info
 			try {
-				getLocalManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+				getFileManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 			} catch (CoreException e) {
 				try {
 					destProject.delete(force, null);
@@ -795,7 +804,7 @@ protected void internalMoveContent(IProjectDescription destDesc, boolean force, 
 				IPath destination = getLocation();
 				rollbackLevel++;
 				// actually move the resources
-				getLocalManager().getStore().move(source.toFile(), destination.toFile(), force, Policy.subMonitorFor(monitor, Policy.opWork * 70 / 100));
+				getFileManager().getStore().move(source.toFile(), destination.toFile(), force, Policy.subMonitorFor(monitor, Policy.opWork * 70 / 100));
 				rollbackLevel = 0;
 				// we need to refresh local in case we moved to an existing location
 				// that already had content
@@ -832,7 +841,7 @@ protected void internalMoveToFolder(IPath destPath, boolean force, IProgressMoni
 			workspace.beginOperation(true);
 			// flush the build order early in case there is a problem
 			workspace.flushBuildOrder();
-			getLocalManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(this, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 
 			// copy just the project and not its children
 			internalCopyProjectOnly(destFolder, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
@@ -851,7 +860,7 @@ protected void internalMoveToFolder(IPath destPath, boolean force, IProgressMoni
 
 			// refresh local
 			monitor.subTask(Policy.bind("resources.updating"));
-			getLocalManager().refresh(destFolder, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
+			getFileManager().refresh(destFolder, DEPTH_INFINITE, Policy.subMonitorFor(monitor, Policy.opWork * 20 / 100));
 		} catch (OperationCanceledException e) {
 			workspace.getWorkManager().operationCanceled();
 			throw e;
@@ -1055,6 +1064,11 @@ public void setDescription(IProjectDescription description, IProgressMonitor mon
 		monitor.done();
 	}
 }
+
+public void setFileStore(FileStore store) {
+	fileManager = new FileManager(workspace, store);
+}
+
 /**
  * Restore the non-persisted state for the project.  For example, read and set 
  * the description from the local meta area.  Also, open the property store etc.
@@ -1126,7 +1140,7 @@ protected void internalChangeCase(IProjectDescription destDesc, boolean force, I
 			info.clearNatures();
 
 			// write out the project info to the meta area
-			getLocalManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
+			getFileManager().write(destProject, Policy.subMonitorFor(monitor, Policy.opWork * 10 / 100));
 
 			// rename meta-area
 			renameMetaArea(this, destProject, null);

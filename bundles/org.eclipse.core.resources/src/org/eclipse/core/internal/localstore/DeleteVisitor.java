@@ -42,7 +42,7 @@ protected void deleteAndKeepHistory(UnifiedTreeNode node) {
 			delete(target, location);
 			return;
 		}
-		HistoryStore store = target.getLocalManager().getHistoryStore();
+		HistoryStore store = ((Workspace) target.getWorkspace()).getFileManager().getHistoryStore();
 		store.addState(target.getFullPath(), location, node.getLastModified(), true);
 		if (target.getLocation().toFile().exists())
 			delete(target, location);
@@ -53,7 +53,7 @@ protected void deleteAndKeepHistory(UnifiedTreeNode node) {
 	}
 }
 protected void delete(Resource target, IPath location) {
-	if(!target.getLocalManager().getStore().delete(location.toFile(), status))
+	if(!target.getFileManager().getStore().delete(location.toFile(), status))
 		return;
 	try {
 		target.deleteResource(convertToPhantom, status);

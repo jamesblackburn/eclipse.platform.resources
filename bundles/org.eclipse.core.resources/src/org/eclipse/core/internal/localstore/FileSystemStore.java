@@ -12,7 +12,7 @@ import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.internal.utils.*;
 import java.io.*;
 
-public class FileSystemStore implements ILocalStoreConstants {
+public class FileSystemStore extends FileStore implements ILocalStoreConstants {
 public FileSystemStore() {
 }
 public void copy(File source, File destination, int depth, IProgressMonitor monitor) throws CoreException {
@@ -246,4 +246,14 @@ public void writeFolder(File target) throws CoreException {
 		throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, new Path(target.getAbsolutePath()), message, null);
 	}
 }
+
+// HACK:
+public void write(IFolder target) throws CoreException {
+	writeFolder(target.getLocation().toFile());
+}
+// HACK:
+public FileObject getFile(IResource target) throws CoreException {
+	return null;
+}
+
 }
