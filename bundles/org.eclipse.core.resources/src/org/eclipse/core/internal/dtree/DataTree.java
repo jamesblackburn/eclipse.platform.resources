@@ -185,10 +185,10 @@ public void empty() {
  public DataTreeNode findNodeAt (IPath key) {
  	
  	AbstractDataTreeNode node = this.getRootNode();
- 	String[] segments = key.segments();
- 	for (int i = 0; i < segments.length; i++) {
+ 	int keyLength = key.segmentCount();
+ 	for (int i = 0; i < keyLength; i++) {
  		try {
- 			node = node.childAt(segments[i]);
+ 			node = node.childAt(key.segment(i));
  		} catch (ObjectNotFoundException notFound) {
  			return null;
  		}
