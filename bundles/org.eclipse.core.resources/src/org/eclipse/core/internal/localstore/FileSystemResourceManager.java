@@ -19,10 +19,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	protected HistoryStore historyStore;
 	protected FileSystemStore localStore;
 	
-	//single entry cache for resource location lookup
-	private IResource cachedResource;
-	private IPath cachedLocation;
-	
 public FileSystemResourceManager(Workspace workspace) {
 	this.workspace = workspace;
 	localStore = new FileSystemStore();
@@ -114,8 +110,6 @@ protected Workspace getWorkspace() {
 	return workspace;
 }
 public IPath locationFor(IResource target) {
-	if (cachedResource == target)
-		return cachedLocation;
 	switch (target.getType()) {
 		case IResource.ROOT :
 			return Platform.getLocation();
@@ -127,10 +121,15 @@ public IPath locationFor(IResource target) {
 			}
 			return getProjectDefaultLocation(project);
 		default:
-			cachedResource = target;
-			cachedLocation = locationFor(target.getProject());
-			cachedLocation = cachedLocation.append(target.getFullPath().removeFirstSegments(1));
-			return cachedLocation;
+			//first get the location of the project (without the project name)
+			IPath projectLocation = null;
+			description = ((Project)target.getProject()).internalGetDescription();
+			if (description != null && description.getLocation() != null) {
+				projectLocation = description.getLocation().removeFirstSegments(1);
+			} else {
+				projectLocation = Platform.getLocation();
+			}
+			return projectLocation.append(target.getFullPath());
 	}
 }
 public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
@@ -336,10 +335,9 @@ public void updateLocalSync(ResourceInfo info, long localSyncInfo, boolean isFil
  * has NOT changed since last synchronization, otherwise a CoreException
  * is thrown.
  */
-public void write(IFile target, InputStream content, boolean force, boolean keepHistory, boolean append, IProgressMonitor monitor) throws CoreException {
+public void write(IFile target, IPath location, InputStream content, boolean force, boolean keepHistory, boolean append, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(null);
 	try {
-		IPath location = locationFor(target);
 		java.io.File localFile = location.toFile();
 		long stat = CoreFileSystemLibrary.getStat(localFile.getAbsolutePath());
 		if (CoreFileSystemLibrary.isReadOnly(stat)) {
