@@ -26,6 +26,7 @@ public class ResourceDeltaFactory {
  * starting from the given root element.
  */
 public static ResourceDelta computeDelta(Workspace workspace, ElementTree oldTree, ElementTree newTree, IPath root, boolean notification) {
+	//compute the underlying delta tree.
 	ResourceComparator comparator = ResourceComparator.getComparator(notification);
 	newTree.immutable();
 	DeltaDataTree delta = null;
@@ -42,11 +43,14 @@ public static ResourceDelta computeDelta(Workspace workspace, ElementTree oldTre
 	Map allMarkerDeltas = null;
 	if (notification)
 		allMarkerDeltas = workspace.getMarkerManager().getMarkerDeltas();
+		
+	//recursively walk the delta and create a tree of ResourceDelta objects.
 	ResourceDeltaInfo deltaInfo = new ResourceDeltaInfo(workspace, allMarkerDeltas, comparator);
 	ResourceDelta result = createDelta(workspace, delta, deltaInfo, pathInTree, pathInDelta);
 	
 	//compute node ID map and fix up moves
-	result.fixMovesAndMarkers(computeNodeIDMap(result, new NodeIDMap()));
+	deltaInfo.setNodeIDMap(computeNodeIDMap(result, new NodeIDMap()));
+	result.fixMovesAndMarkers();
 
 	// check all the projects and if they were added and opened then tweek the flags
 	// so the delta reports both.
