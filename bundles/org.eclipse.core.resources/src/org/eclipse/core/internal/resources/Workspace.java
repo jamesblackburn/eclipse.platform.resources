@@ -11,7 +11,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.*;
-
+import java.io.IOException;
 import org.eclipse.core.internal.events.*;
 import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
@@ -1049,6 +1049,27 @@ public boolean isTreeLocked() {
 protected void linkTrees(IPath path, ElementTree[] newTrees) throws CoreException {
 	tree = tree.mergeDeltaChain(path, newTrees);
 }
+/**
+ * @see IWorkspace#loadProjectDescription
+ * @since 2.0
+ */
+public IProjectDescription loadProjectDescription(IPath path) throws CoreException {
+	IProjectDescription result = null;
+	IOException e = null;
+	try {
+		result = (IProjectDescription) new ModelObjectReader().read(path);
+		result.setLocation(path.removeLastSegments(1));
+	} catch (IOException ex) {
+		e = ex;
+	}
+	if (result == null | e != null) {
+		String message = Policy.bind("resources.errorReadProject", path.toOSString());//$NON-NLS1
+		IStatus status = new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_READ_METADATA, message, e);
+		throw new ResourceException(status);
+	}
+	return result;
+} 
+
 
 /*
  * @see IWorkspace#move
