@@ -220,7 +220,7 @@ public class HistoryBucket extends Bucket {
 	/** 
 	 * Version number for the current implementation file's format.
 	 * <p>
-	 * Version 1:
+	 * Version 2:
 	 * <pre>
 	 * FILE ::= VERSION_ID ENTRY+
 	 * ENTRY ::= PATH STATE_COUNT STATE+
@@ -232,7 +232,7 @@ public class HistoryBucket extends Bucket {
 	 * </pre>
 	 * </p>
 	 */
-	public final static byte VERSION = 1;
+	public final static byte VERSION = 2;
 
 	public HistoryBucket() {
 		super();
