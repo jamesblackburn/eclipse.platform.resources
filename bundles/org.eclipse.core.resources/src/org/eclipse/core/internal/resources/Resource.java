@@ -338,20 +338,7 @@ public void copy(IPath destination, boolean force, IProgressMonitor monitor) thr
  * the phantom boolean is true.
  */
 public int countResources(int depth, boolean phantom) throws CoreException {
-	ResourceInfo info = getResourceInfo(phantom, false);
-	if (!exists(getFlags(info), false))
-		return 0;
-	int total = 1;
-	if (getType() == FILE || depth == DEPTH_ZERO)
-		return total;
-	if (depth == DEPTH_ONE)
-		depth = DEPTH_ZERO;
-	IResource[] children = ((Container) this).members(phantom);
-	for (int i = 0; i < children.length; i++) {
-		Resource child = (Resource) children[i];
-		total += child.countResources(depth, phantom);
-	}
-	return total;
+	return workspace.countResources(path, depth, phantom);
 }
 /**
  * @see IResource
