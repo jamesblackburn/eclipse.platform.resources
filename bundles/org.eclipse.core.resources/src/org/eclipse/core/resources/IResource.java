@@ -187,7 +187,7 @@ public interface IResource extends IAdaptable {
 	 * Other constants:
 	 *====================================================================*/
 	
-	/** 
+	 /** 
 	 * Modification stamp constant (value -1) indicating no modification stamp is
 	 * available.
 	 *

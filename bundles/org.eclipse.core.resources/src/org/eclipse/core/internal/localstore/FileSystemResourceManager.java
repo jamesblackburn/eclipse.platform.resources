@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.util.*;
+
 /**
  * Manages the synchronization between the workspace's view and the file system.  
  */
@@ -243,23 +244,32 @@ public IPath locationFor(IResource target) {
 		case IResource.ROOT :
 			return Platform.getLocation();
 		case IResource.PROJECT :
-			Project project = (Project) target.getProject();
+			Project project = (Project) target;
 			IProjectDescription description = project.internalGetDescription();
 			if (description != null && description.getLocation() != null) {
 				return description.getLocation();
 			}
 			return getProjectDefaultLocation(project);
 		default:
-			//first get the location of the project (without the project name)
-			description = ((Project)target.getProject()).internalGetDescription();
-			if (description != null && description.getLocation() != null) {
-				return description.getLocation().append(target.getProjectRelativePath());
+			project = (Project)target.getProject();
+			description = project.internalGetDescription();
+			IPath path = target.getFullPath();
+			//for non-existent projects, just return the default location
+			if (description == null)
+				return Platform.getLocation().append(path);
+			IPath prefix = null;
+			//look for a mapping for this resource
+			IResourceMapping mapping = description.getMapping(path.segment(1));
+			if (mapping != null && (prefix = mapping.getLocation()) != null)
+				return prefix.append(path.removeFirstSegments(2));
+			//now look for a project location
+			if ((prefix = description.getLocation()) != null) {
+				return prefix.append(target.getProjectRelativePath());
 			} else {
 				return Platform.getLocation().append(target.getFullPath());
 			}
 	}
-}
-public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
+}public void move(IResource target, IPath destination, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
 	monitor = Policy.monitorFor(monitor);
 	try {
 		monitor.beginTask(Policy.bind("localstore.moving", target.getFullPath().toString()), Policy.totalWork); //$NON-NLS-1$

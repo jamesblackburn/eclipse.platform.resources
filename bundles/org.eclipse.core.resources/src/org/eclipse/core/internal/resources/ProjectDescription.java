@@ -10,11 +10,14 @@
  ******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.IPath;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.Assert;
-import java.util.*;
+import org.eclipse.core.resources.*;
+import org.eclipse.core.runtime.IPath;
+
 
 public class ProjectDescription extends ModelObject implements IProjectDescription {
 	// fields
@@ -22,6 +25,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected IProject[] projects;
 	protected String[] natures;
 	protected ICommand[] buildSpec;
+	protected HashMap mappings;
+
 	protected String comment =""; //$NON-NLS-1$
 	protected boolean dirty = true;
 
@@ -33,6 +38,12 @@ public ProjectDescription() {
 	super();
 	buildSpec = EMPTY_COMMAND_ARRAY;
 	projects = EMPTY_PROJECT_ARRAY;
+	mappings = new HashMap(3);
+}
+public void addMapping(IResourceMapping mapping) {
+	Assert.isLegal(mapping != null);
+	mappings.put(mapping.getName(), mapping);
+	dirty = true;
 }
 /**
  * Clears the dirty bit.  This should be used after saving descriptions to disk
@@ -62,6 +73,25 @@ public String getComment() {
  */
 public IPath getLocation() {
 	return location;
+}
+public IResourceMapping getMapping(String name) {
+	return (IResourceMapping) mappings.get(name);
+}
+/**
+ * Returns a copy of the project mappings, or null if there are none.
+ */
+public Map getMappings() {
+	return getMappings(true);
+}
+/**
+ * The makeCopy parameter is used for optimization. As this method is not API, in
+ * cases we only want to take a look at the mappings we don't need to make a copy
+ * of it.  Returns null if no mappings are defined.
+ */
+public Map getMappings(boolean makeCopy) {
+	if (!makeCopy)
+		return mappings;
+	return new HashMap(mappings);
 }
 /**
  * @see IProjectDescription
@@ -111,6 +141,16 @@ public ICommand newCommand() {
 	return new BuildCommand();
 }
 /**
+ * @see IProjectDescription#newMapping
+ */
+public IResourceMapping newMapping(String name, IPath local) {
+	return new ResourceMapping(name, local);
+}
+public void removeMapping(String name) {
+	mappings.remove(name);
+	dirty = true;
+}
+/**
  * @see IProjectDescription
  */
 public void setBuildSpec(ICommand[] value) {
@@ -130,6 +170,11 @@ public void setComment(String value) {
  */
 public void setLocation(IPath location) {
 	this.location = location;
+	dirty = true;
+}
+/* package */ void setMappings(HashMap mappings) {
+	Assert.isLegal(mappings != null);
+	this.mappings = mappings;
 	dirty = true;
 }
 /**

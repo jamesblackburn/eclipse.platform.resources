@@ -17,6 +17,7 @@ import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
+
 public class Project extends Container implements IProject {
 	/**
 	 * Used to ensure we don't read the description immediately after writing it.
@@ -26,7 +27,6 @@ public class Project extends Container implements IProject {
 protected Project(IPath path, Workspace container) {
 	super(path, container);
 }
-
 /*
  * If the creation boolean is true then this method is being called on project creation.
  * Otherwise it is being called via #setDescription. The difference is that we don't allow
@@ -637,6 +637,7 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 			workspace.prepareOperation();
 			ResourceInfo info = getResourceInfo(false, false);
 			checkAccessible(getFlags(info));
+			validateMappings(description);
 			//If we're out of sync and !FORCE, then fail.
 			//If the file is missing, we want to write the new description then throw an exception.
 			boolean hadSavedDescription = true;
@@ -670,6 +671,14 @@ public void setDescription(IProjectDescription description, int updateFlags, IPr
 		monitor.done();
 	}
 }
+
+/**
+ * Validates the mappings for the given project description.
+ */
+private void validateMappings(IProjectDescription description) {
+	throw new RuntimeException("Not yet implemented");
+}
+
 /**
  * @see IProject
  */
@@ -723,6 +732,45 @@ protected void updateDescription() throws CoreException {
 	workspace.changing(this);
 	ProjectDescription description = getLocalManager().read(this, false);
 	internalSetDescription(description, true);
+}
+/**
+ * @see IProject#validateMapping
+ */
+public IStatus validateMapping(IResourceMapping mapping) {
+	Assert.isLegal(mapping != null);
+	IPath localLocation = mapping.getLocation();
+	if (localLocation == null)
+		return ResourceStatus.OK_STATUS;
+	// test if the given local location overlaps the default default location
+	IPath defaultDefaultLocation = Platform.getLocation();
+	if (defaultDefaultLocation.isPrefixOf(localLocation) || localLocation.isPrefixOf(defaultDefaultLocation)) {
+		String message = Policy.bind("overlapLocal", new String[] { localLocation.toString(), defaultDefaultLocation.toString()});
+		return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
+	}
+
+	// Iterate over each known project and ensure that the mapping to validate does not 
+	// conflict with any of the mappings already defined.
+	IProject[] projects = getWorkspace().getRoot().getProjects();
+	for (int i = 0; i < projects.length; i++) {
+		IProject project = (IProject) projects[i];
+		boolean sameProject = project.equals(this);
+		// iterate over each mapping skipping the one we are validating (if it exists)
+		IProjectDescription description = ((Project) project).internalGetDescription();
+		if (description == null)
+			continue;
+		for (Iterator mappings = ((ProjectDescription) description).getMappings(false).keySet().iterator(); mappings.hasNext();) {
+			IResourceMapping map = (IResourceMapping) mappings.next();
+			if (sameProject && map.getName().equals(mapping.getName()))
+				continue;
+			IPath definedLocalLocation = map.getLocation();
+			if (definedLocalLocation != null)
+				if (localLocation.isPrefixOf(definedLocalLocation) || definedLocalLocation.isPrefixOf(localLocation)) {
+					String message = Policy.bind("overlapLocal", new String[] { localLocation.toString(), definedLocalLocation.toString()});
+					return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
+				}
+		}
+	}
+	return new ResourceStatus(IResourceStatus.OK, Policy.bind("validMapping"));
 }
 /**
  * Writes the project description file to disk.  This is the only method

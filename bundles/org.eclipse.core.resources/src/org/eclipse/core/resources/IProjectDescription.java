@@ -11,8 +11,10 @@
 package org.eclipse.core.resources;
 
 import java.util.Map;
+
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+
 
 /**
  * A project description contains the metadata required to define
@@ -33,6 +35,30 @@ public interface IProjectDescription {
 	 */
 	public static final String DESCRIPTION_FILE_NAME = ".project"; //$NON-NLS-1$
 /**
+ * Adds the given resource mapping to this project description, replacing 
+ * an existing mapping of the same name.
+ * This project need not be open.
+ * <p>
+ * Changing resource mappings does not directly modify any resources 
+ * in the project; it simply changes the mapping defining where those
+ * resources are stored. However, changing a project's mappings while
+ * it is open should be expected to cause the workspace to become out
+ * of sync with the local file system.
+ * </p>
+ * <p>
+ * Users must call <code>IProject.setDescription</code> before changes 
+ * made to this description take effect.
+ * </p>
+ *
+ * @param mapping the mapping to add
+ *
+ * @see IResourceMapping
+ * @see #newMapping
+ * @see #getMapping
+ * @see #removeMapping
+ */
+public void addMapping(IResourceMapping mapping);
+/**
  * Returns the list of build commands to run when building the described project.
  * The commands are listed in the order in which they are to be run.
  *
@@ -52,6 +78,52 @@ public String getComment();
  * @return the location for the described project or <code>null</code>
  */
 public IPath getLocation();
+/**
+ * Returns this project's mapping for the resource with the given name, or
+ * <code>null</code> if it does not have one. If the name is the value of the
+ * <code>PROJECT_ROOT</code> constant, this project's default mapping is
+ * returned (it always has one).
+ * This project need not be open.
+ * <p>
+ * The mapping returned is a copy which can be edited.
+ * Editing the returned value does not change the mappings for this project.
+ * The changed mapping must be re-installed using the <code>addMapping</code> method.
+ * </p>
+ *
+ * @param name the name of the resource to be mapped, or <code>PROJECT_ROOT</code>
+ *    for the default mapping
+ * @return the mapping for the named resource, or <code>null</code> 
+ *     if it does not have one. 
+ * @see IResourceMapping
+ * @see IResource#PROJECT_ROOT
+ * @see #newMapping
+ * @see #getMappings
+ * @see #addMapping
+ * @see #removeMapping
+ */
+public IResourceMapping getMapping(String name);
+/**
+ * Returns a table of all the mappings defined for this project.
+ * This project need not be open.
+ * <p>
+ * The keys are names (<code>String</code>s); the values are
+ * mappings (<code>IResourceMapping</code>s).
+ * The mappings returned are copies which may be edited.
+ * Editing the returned value, or the mappings it contains,
+ * does not change the mappings for this project.
+ * Changed mappings must be re-installed using the 
+ * <code>addMapping</code> method.
+ * </p>
+ *
+ * @return the table of resource mappings, keyed by name
+ *  (key type: <code>String</code>, value type: <code>IResourceMapping</code>) 
+ * @see IResourceMapping
+ * @see #newMapping
+ * @see #getMapping
+ * @see #addMapping
+ * @see #removeMapping
+ */
+public Map getMappings() throws CoreException;
 /**
  * Returns the name of the described project.
  *
@@ -95,6 +167,55 @@ public boolean hasNature(String natureId);
  * @see #setBuildSpec
  */
 public ICommand newCommand();
+/**
+ * Creates and returns a new mapping with the given attributes.
+ * <p>
+ * The returned value can be added to this project description using
+ * the <code>addMapping</code> method.
+ *
+ * @param name the name of the resource to be mapped, or <code>PROJECT_ROOT</code>
+ *    for the default mapping
+ * @param local an absolute local file system path, or <code>null</code>
+ * @return a new resource mapping
+ * @see IResourceMapping
+ * @see IResource#PROJECT_ROOT
+ * @see #getMappings
+ * @see #addMapping
+ * @see #removeMapping
+ */
+public IResourceMapping newMapping(String name, IPath local);
+/**
+ * Removes the mapping with the given name from this project description.
+ * If the resource has no such mapping, no action is taken. 
+ * If the name is the value of the <code>PROJECT_ROOT</code> constant, 
+ * this project's default mapping is reset to its initial value.
+ * This project need not be open.
+ * <p>
+ * Changing resource mappings does not directly modify any resources 
+ * in the project; it simply changes the mapping defining where those
+ * resources are stored. However, changing a project's mappings while
+ * it is open should be expected to cause the workspace to become out
+ * of sync with the local file system.
+ * </p>
+ * <p>
+ * Users must call <code>IProject.setDescription</code> before changes 
+ * made to this description take effect.
+ * </p>
+ *
+ * @param name the string name of the mapping to remove
+ * @exception CoreException if this method fails. Reasons include:
+ * <ul>
+ * <li> This project does not exist.</li>
+ * <li> Resource changes are disallowed during resource change event 
+ *   notification.</li>
+ * </ul>
+ * @see IResourceMapping
+ * @see IResource#PROJECT_ROOT
+ * @see #newMapping
+ * @see #getMappings
+ * @see #addMapping
+ */
+public void removeMapping(String name) throws CoreException;
 /**
  * Sets the list of build command to run when building the described project.
  * <p>

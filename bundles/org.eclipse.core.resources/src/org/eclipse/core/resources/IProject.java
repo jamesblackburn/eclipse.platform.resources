@@ -10,8 +10,10 @@
  **********************************************************************/
 package org.eclipse.core.resources;
 
-import org.eclipse.core.runtime.*;
 import java.util.Map;
+
+import org.eclipse.core.runtime.*;
+
 
 /**
  * A project is a type of resource which groups resources
@@ -41,6 +43,7 @@ import java.util.Map;
  * @see Platform#getAdapterManager
  */
 public interface IProject extends IContainer, IAdaptable {
+
 /**
  * Invokes the <code>build</code> method of the specified builder 
  * for this project. Does nothing if this project is closed.
@@ -323,6 +326,8 @@ public IFile getFile(String name);
  * @see #getFile
  */
 public IFolder getFolder(String name);
+
+
 /** 
  * Returns the specified project nature for this project or <code>null</code> if
  * the project nature has not been added to this project.
@@ -474,6 +479,7 @@ public boolean isOpen();
  */
 public void move(IProjectDescription description, boolean force, IProgressMonitor monitor) throws CoreException;
 
+
 /**
  * Opens this project.  No action is taken if the project is already open.
  * <p>
@@ -501,6 +507,7 @@ public void move(IProjectDescription description, boolean force, IProgressMonito
  * @see #close
  */
 public void open(IProgressMonitor monitor) throws CoreException;
+
 
 /**
  * Changes this project resource to match the given project
@@ -543,6 +550,15 @@ public void open(IProgressMonitor monitor) throws CoreException;
  * @see #setDescription(IProjectDescription,int,IProgressMonitor)
  */
 public void setDescription(IProjectDescription description, IProgressMonitor monitor) throws CoreException;
+/**
+ * Returns whether the given mapping can be added to this project.  To be
+ * valid, the mapping must not specify locations in the local file system
+ * which overlap with mappings for any projects in the workspace.
+ *
+ * @param mapping the mapping to validate
+ * @return a status object
+ */
+public IStatus validateMapping(IResourceMapping mapping);
 
 /**
  * Changes this project resource to match the given project
