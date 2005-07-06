@@ -130,9 +130,14 @@ public class FileSystemStore implements ILocalStoreConstants {
 	/**
 	 * Deletes the given file recursively, adding failure info to
 	 * the provided status object.
+	 * @throws CoreException 
 	 */
-	public boolean delete(File root, MultiStatus status) {
-		return delete(root, root.getAbsolutePath(), status);
+	private void internalDelete(File root) throws CoreException {
+		String message = Messages.localstore_deleteProblemDuringMove; 
+		MultiStatus result = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, null);
+		delete(root, root.getAbsolutePath(), result);
+		if (!result.isOK())
+			throw new ResourceException(result);
 	}
 
 	/**
@@ -280,10 +285,7 @@ public class FileSystemStore implements ILocalStoreConstants {
 			} finally {
 				if (success) {
 					// fail if source cannot be successfully deleted
-					String message = Messages.localstore_deleteProblemDuringMove; 
-					MultiStatus result = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, null);
-					if (!delete(source, result))
-						throw new ResourceException(result);
+					internalDelete(source);
 				} else {
 					if (!canceled) {
 						// We do not want to delete the destination in case of failure. It might
