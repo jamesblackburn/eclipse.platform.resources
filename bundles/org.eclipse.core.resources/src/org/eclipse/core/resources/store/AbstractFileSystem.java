@@ -12,23 +12,21 @@ package org.eclipse.core.resources.store;
 import java.io.InputStream;
 import java.io.OutputStream;
 import org.eclipse.core.runtime.*;
-import org.eclipse.core.runtime.IPath;
 
 /**
  * 
  */
 public abstract class AbstractFileSystem {
-	
-	public static final int ATTRIBUTE_READ_ONLY = 1;
-	
-	public static final int NONE = 0;
+
 	public static final int APPEND = 1;
-	public static final int OVERWRITE = 2;
-	
+
+	public static final int ATTRIBUTE_READ_ONLY = 1;
 	public static final int FILE = 1;
 	public static final int FOLDER = 2;
 
-	
+	public static final int NONE = 0;
+	public static final int OVERWRITE = 2;
+
 	private final IPath parentPath;
 
 	public AbstractFileSystem(IPath parentPath) {
@@ -52,7 +50,7 @@ public abstract class AbstractFileSystem {
 
 	public abstract Object getFileSystemObject(IPath pathInParent);
 
-	protected IPath getParentPath() {
+	protected final IPath getParentPath() {
 		return parentPath;
 	}
 

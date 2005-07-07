@@ -44,8 +44,8 @@ public class LocalFileSystem extends AbstractFileSystem {
 	}
 
 	public int attributes(Object fsObject) {
-		return 0;
-		//TODO
+		File target = (File)fsObject;
+		return target.canWrite() ? NONE : ATTRIBUTE_READ_ONLY;
 	}
 
 	/**
@@ -345,9 +345,11 @@ public class LocalFileSystem extends AbstractFileSystem {
 	}
 
 	public void setAttributes(Object fsObject, int value) {
+		if ((value & ATTRIBUTE_READ_ONLY) != 0)
+			((File)fsObject).setReadOnly();
 	}
 
-	public void setLastModified(Object fsObject, long value) throws CoreException {
+	public void setLastModified(Object fsObject, long value) {
 		((File) fsObject).setLastModified(value);
 	}
 
