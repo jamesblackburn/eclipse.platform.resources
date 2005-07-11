@@ -13,7 +13,7 @@
 package org.eclipse.core.internal.resources;
 
 import org.eclipse.core.internal.events.LifecycleEvent;
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
+import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.utils.*;
@@ -268,7 +268,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 
 		//first check the tree for an exact case match
 		checkDoesNotExist(getFlags(getResourceInfo(false, false)), false);
-		if (CoreFileSystemLibrary.isCaseSensitive()) {
+		if (Workspace.caseSensitive) {
 			return;
 		}
 		//now look for a matching case variant in the tree
@@ -358,7 +358,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		Resource dest = workspace.newResource(destination, destinationType);
 
 		// check if we are only changing case
-		IResource variant = CoreFileSystemLibrary.isCaseSensitive() ? null : findExistingResourceVariant(destination);
+		IResource variant = Workspace.caseSensitive ? null : findExistingResourceVariant(destination);
 		if (variant == null || !this.equals(variant))
 			dest.checkDoesNotExist();
 

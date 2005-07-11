@@ -183,7 +183,7 @@ public class RefreshLocalVisitor implements IUnifiedTreeVisitor, ILocalStoreCons
 	protected int synchronizeExistence(UnifiedTreeNode node, Resource target, int level) throws CoreException {
 		boolean existsInWorkspace = node.existsInWorkspace();
 		if (!existsInWorkspace) {
-			if (!CoreFileSystemLibrary.isCaseSensitive() && level == 0) {
+			if (!Workspace.caseSensitive && level == 0) {
 				// do we have any alphabetic variants in the workspace?
 				IResource variant = target.findExistingResourceVariant(target.getFullPath());
 				if (variant != null)

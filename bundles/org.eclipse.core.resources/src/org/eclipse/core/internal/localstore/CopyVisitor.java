@@ -75,7 +75,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 			}
 			if (destination.getType() == IResource.FOLDER) {
 				((IFolder) destination).create(updateFlags, true, null);
-				CoreFileSystemLibrary.copyAttributes(node.getLocalLocation(), destination.getLocation().toOSString(), false);
+//				CoreFileSystemLibrary.copyAttributes(node.getLocalLocation(), destination.getLocation().toOSString(), false);
 				return true;
 			}
 			((IFile) destination).create(((IFile) source).getContents(false), updateFlags, null);
@@ -91,7 +91,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 			//XXX: this will update aliases twice because setContents above will also do it
 			getWorkspace().getAliasManager().updateAliases(destination, destinationLocation, IResource.DEPTH_ZERO, monitor);
 			// update file attributes
-			CoreFileSystemLibrary.copyAttributes(node.getLocalLocation(), destinationLocation.toOSString(), false);
+//			CoreFileSystemLibrary.copyAttributes(node.getLocalLocation(), destinationLocation.toOSString(), false);
 			destination.getLocalManager().getHistoryStore().copyHistory(source, destination, false);
 		} catch (CoreException e) {
 			status.add(e.getStatus());
@@ -155,7 +155,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 		int work = 1;
 		try {
 			//location can be null if based on an undefined variable
-			if (node.getLocalLocation() == null) {
+			if (node.getStore() == null) {
 				//should still be a best effort copy
 				IPath path = node.getResource().getFullPath();
 				String message = NLS.bind(Messages.localstore_locationUndefined, path);

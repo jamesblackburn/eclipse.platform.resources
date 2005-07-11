@@ -12,6 +12,8 @@ package org.eclipse.core.internal.localstore;
 
 import java.util.Enumeration;
 import java.util.List;
+import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.internal.utils.Messages;
@@ -48,13 +50,13 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 		Resource target = (Resource) node.getResource();
 		try {
 			deleteLocalFile = deleteLocalFile && !target.isLinked() && node.existsInFileSystem();
-			java.io.File localFile = deleteLocalFile ? new java.io.File(node.getLocalLocation()) : null;
+			FileStore localFile = deleteLocalFile ? node.getStore() : null;
 			// if it is a folder in the file system, delete its children first
 			if (target.getType() == IResource.FOLDER) {
 				// if this file is a POSIX symbolic link then deleting the local file before the recursion will
-				// keep its contents from being deleted on the filesystem.
+				// keep its contents from being deleted on the file system.
 				if (localFile != null)
-					localFile.delete();
+					localFile.delete(IFileStoreConstants.NONE);
 				for (Enumeration children = node.getChildren(); children.hasMoreElements();)
 					delete((UnifiedTreeNode) children.nextElement(), deleteLocalFile, shouldKeepHistory);
 				node.removeChildrenFromTree();
@@ -63,7 +65,7 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 			}
 			if (shouldKeepHistory) {
 				IHistoryStore store = target.getLocalManager().getHistoryStore();
-				store.addState(target.getFullPath(), localFile, node.getLastModified(), true);
+				store.addState(target.getFullPath(), new java.io.File(localFile.getAbsolutePath()), node.getLastModified(), true);
 			}
 			delete(node.existsInWorkspace() ? target : null, localFile);
 		} catch (CoreException e) {
@@ -73,18 +75,15 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 		}
 	}
 
-	//XXX: in which situation would delete be called with (null, null)? It happens (see bug 29445), but why?
-	protected void delete(Resource target, java.io.File localFile) {
-		if (target != null) {
-			try {
-				if (localFile != null && !target.isLinked())
-					target.getLocalManager().getStore().delete(localFile);
+	protected void delete(Resource target, FileStore store) {
+		try {
+			if (store != null && !target.isLinked())
+				store.delete(IFileStoreConstants.NONE);
+			if (target != null)
 				target.deleteResource(convertToPhantom, status);
-			} catch (CoreException e) {
-				status.add(e.getStatus());
-			}
-		} else if (localFile != null)
-			localFile.delete();
+		} catch (CoreException e) {
+			status.add(e.getStatus());
+		}
 	}
 
 	protected boolean equals(IResource one, IResource another) {

@@ -12,6 +12,7 @@ package org.eclipse.core.internal.resources;
 
 import java.io.*;
 import java.util.Map;
+import org.eclipse.core.internal.localstore.FileStoreRoot;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.internal.watson.IElementTreeData;
 import org.eclipse.core.resources.IResource;
@@ -26,6 +27,11 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 	 * and the character set generation count in the higher two bytes.
 	 */
 	protected volatile int charsetAndContentId = 0;
+
+	/**
+	 * The file system root that this resource is stored in
+	 */
+	protected FileStoreRoot fileStoreRoot;
 
 	/** Set of flags which reflect various states of the info (used, derived, ...). */
 	protected int flags = 0;
@@ -119,6 +125,10 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 
 	public int getContentId() {
 		return charsetAndContentId & LOWER;
+	}
+
+	public FileStoreRoot getFileStoreRoot() {
+		return fileStoreRoot;
 	}
 
 	/** 
@@ -303,6 +313,10 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 		temp &= ~mask;
 		temp |= newValue;
 		flags = temp;
+	}
+
+	public void setFileStoreRoot(FileStoreRoot fileStoreRoot) {
+		this.fileStoreRoot = fileStoreRoot;
 	}
 
 	/** 

@@ -11,6 +11,7 @@
 package org.eclipse.core.internal.localstore;
 
 import java.util.Enumeration;
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 
@@ -18,19 +19,17 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	protected IResource resource;
 	protected UnifiedTreeNode child;
 	protected UnifiedTree tree;
-	protected long stat;
+	protected FileStore store;
 	protected boolean existsWorkspace;
 
 	//the location of the resource in the local file system, if any
-	protected String localLocation;
 	protected String localName;
 
-	public UnifiedTreeNode(UnifiedTree tree, IResource resource, long stat, String localLocation, String localName, boolean existsWorkspace) {
+	public UnifiedTreeNode(UnifiedTree tree, IResource resource, FileStore store, String localName, boolean existsWorkspace) {
 		this.tree = tree;
 		this.resource = resource;
-		this.stat = stat;
+		this.store = store;
 		this.existsWorkspace = existsWorkspace;
-		this.localLocation = localLocation;
 		this.localName = localName;
 	}
 
@@ -54,7 +53,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	}
 
 	public long getLastModified() {
-		return CoreFileSystemLibrary.getLastModified(stat);
+		return store.lastModified();
 	}
 
 	public int getLevel() {
@@ -62,14 +61,14 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	}
 
 	/**
-	 * Returns the local location of this resource.  May be null.
+	 * Returns the local store of this resource.  May be null.
 	 */
-	public String getLocalLocation() {
-		return localLocation != null ? localLocation : tree.getLocalLocation(resource);
+	public FileStore getStore() {
+		return store;
 	}
 
 	/**
-	 * Gets the name of this node in the local filesystem.
+	 * Gets the name of this node in the local file system.
 	 * @return Returns a String
 	 */
 	public String getLocalName() {
@@ -81,11 +80,11 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	}
 
 	public boolean isFile() {
-		return CoreFileSystemLibrary.isFile(stat);
+		return !store.isDirectory();
 	}
 
 	public boolean isFolder() {
-		return CoreFileSystemLibrary.isFolder(stat);
+		return store.isDirectory();
 	}
 
 	public void setExistsWorkspace(boolean exists) {
@@ -112,13 +111,12 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	/**
 	 * Reuses this object by assigning all new values for the fields.
 	 */
-	public void reuse(UnifiedTree aTree, IResource aResource, long aStat, String aLocalLocation, String aLocalName, boolean existsInWorkspace) {
+	public void reuse(UnifiedTree aTree, IResource aResource, FileStore aStore, String aLocalName, boolean existsInWorkspace) {
 		this.tree = aTree;
 		this.child = null;
 		this.resource = aResource;
-		this.stat = aStat;
+		this.store = aStore;
 		this.existsWorkspace = existsInWorkspace;
-		this.localLocation = aLocalLocation;
 		this.localName = aLocalName;
 	}
 }

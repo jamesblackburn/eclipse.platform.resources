@@ -12,7 +12,7 @@
 
 package org.eclipse.core.resources;
 
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
+import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
 
 /**
  * This class represents platform specific attributes of files.

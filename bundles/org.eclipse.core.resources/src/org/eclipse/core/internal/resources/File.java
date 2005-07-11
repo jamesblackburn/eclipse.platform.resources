@@ -11,7 +11,6 @@
 package org.eclipse.core.internal.resources;
 
 import java.io.*;
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
 import org.eclipse.core.internal.preferences.EclipsePreferences;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.resources.*;
@@ -119,7 +118,7 @@ public class File extends Resource implements IFile {
 				}
 				java.io.File localFile = location.toFile();
 				if (force) {
-					if (!CoreFileSystemLibrary.isCaseSensitive()) {
+					if (!Workspace.caseSensitive) {
 						if (localFile.exists()) {
 							String name = getLocalManager().getLocalName(localFile);
 							if (name == null || localFile.getName().equals(name)) {
@@ -135,7 +134,7 @@ public class File extends Resource implements IFile {
 				} else {
 					if (localFile.exists()) {
 						//return an appropriate error message for case variant collisions
-						if (!CoreFileSystemLibrary.isCaseSensitive()) {
+						if (!Workspace.caseSensitive) {
 							String name = getLocalManager().getLocalName(localFile);
 							if (name != null && !localFile.getName().equals(name)) {
 								message = NLS.bind(Messages.resources_existsLocalDifferentCase, location.removeLastSegments(1).append(name).toOSString());

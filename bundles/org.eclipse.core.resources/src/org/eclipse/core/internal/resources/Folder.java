@@ -10,7 +10,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
 import org.eclipse.core.internal.utils.Messages;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
@@ -37,7 +36,7 @@ public class Folder extends Container implements IFolder {
 		final boolean force = (updateFlags & IResource.FORCE) != 0;
 		if (!force && localFile.exists()) {
 			//return an appropriate error message for case variant collisions
-			if (!CoreFileSystemLibrary.isCaseSensitive()) {
+			if (!Workspace.caseSensitive) {
 				String name = getLocalManager().getLocalName(localFile);
 				if (name != null && !localFile.getName().equals(name)) {
 					String msg = NLS.bind(Messages.resources_existsLocalDifferentCase, location.removeLastSegments(1).append(name).toOSString());
@@ -90,7 +89,7 @@ public class Folder extends Container implements IFolder {
 				assertCreateRequirements(location, updateFlags);
 				workspace.beginOperation(true);
 				java.io.File localFile = location.toFile();
-				if (force && !CoreFileSystemLibrary.isCaseSensitive() && localFile.exists()) {
+				if (force && !Workspace.caseSensitive && localFile.exists()) {
 					String name = getLocalManager().getLocalName(localFile);
 					if (name == null || localFile.getName().equals(name)) {
 						delete(true, null);

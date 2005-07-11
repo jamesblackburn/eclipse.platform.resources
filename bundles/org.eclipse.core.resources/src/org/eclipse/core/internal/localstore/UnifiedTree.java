@@ -11,12 +11,9 @@
 package org.eclipse.core.internal.localstore;
 
 import java.util.*;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.resources.*;
-import org.eclipse.core.internal.resources.Resource;
-import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.internal.utils.*;
-//import "queue" explicitly here to prevent ambiguity when running against 1.5.
-import org.eclipse.core.internal.utils.Queue;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -48,10 +45,10 @@ public class UnifiedTree {
 	protected ArrayList freeNodes = new ArrayList();
 
 	/** special node to mark the beginning of a level in the tree */
-	protected static final UnifiedTreeNode levelMarker = new UnifiedTreeNode(null, null, 0, null, null, false);
+	protected static final UnifiedTreeNode levelMarker = new UnifiedTreeNode(null, null, null, null, false);
 
 	/** special node to mark the separation of a node's children */
-	protected static final UnifiedTreeNode childrenMarker = new UnifiedTreeNode(null, null, 0, null, null, false);
+	protected static final UnifiedTreeNode childrenMarker = new UnifiedTreeNode(null, null, null, null, false);
 	
 	/** Singleton to indicate no local children */
 	private static final Object[] NO_CHILDREN = new Object[0];
@@ -98,9 +95,9 @@ public class UnifiedTree {
 			return;
 
 		// get the list of resources in the file system 
-		String parentLocalLocation = node.getLocalLocation();
+		FileStore parentStore = node.getStore();
 		// don't ask for local children if we know it doesn't exist locally
-		Object[] list = node.existsInFileSystem() ? getLocalList(node, parentLocalLocation) : NO_CHILDREN;
+		Object[] list = node.existsInFileSystem() ? getLocalList(node) : NO_CHILDREN;
 		int localIndex = 0;
 		
 		// See if the children of this resource have been computed before 
@@ -130,18 +127,17 @@ public class UnifiedTree {
 						localIndex++;
 				} else if (comp == 0) {
 					// resource exists in workspace and file system
-					String localLocation = createChildLocation(parentLocalLocation, localName);
-					long stat = CoreFileSystemLibrary.getStat(localLocation);
-					child = createNode(target, stat, localLocation, localName, true);
+					FileStore childStore = parentStore.getChild(localName);
+					child = createNode(target, childStore, localName, true);
 					localIndex++;
 					workspaceIndex++;
 				} else if (comp > 0) {
 					// resource exists only in file system 
-					child = createChildNodeFromFileSystem(node, parentLocalLocation, localName);
+					child = createChildNodeFromFileSystem(node, parentStore, localName);
 					localIndex++;
 				} else {
 					// resource exists only in the workspace
-					child = createNode(target, 0, null, null, true);
+					child = createNode(target, null, null, true);
 					workspaceIndex++;
 				}
 				if (child != null)
@@ -150,7 +146,7 @@ public class UnifiedTree {
 		}
 
 		/* process any remaining resource from the file system */
-		addChildrenFromFileSystem(node, parentLocalLocation, list, localIndex);
+		addChildrenFromFileSystem(node, parentStore, list, localIndex);
 		
 		/* Mark the children as now known */
 		if (unknown) {
@@ -170,23 +166,21 @@ public class UnifiedTree {
 	 */
 	protected UnifiedTreeNode createChildForLinkedResource(IResource target) {
 		IPath location = target.getLocation();
-		long stat = 0;
-		String locationString = null;
+		FileStore store = null;
 		String name = null;
 		if (location != null) {
-			locationString = location.toOSString();
 			name = location.lastSegment();
-			stat = CoreFileSystemLibrary.getStat(locationString);
+			store = FileStoreFactory.create(location);
 		}
-		return createNode(target, stat, locationString, name, true);
+		return createNode(target, store, name, true);
 	}
 
-	protected void addChildrenFromFileSystem(UnifiedTreeNode node, String parentLocalLocation, Object[] list, int index) {
+	protected void addChildrenFromFileSystem(UnifiedTreeNode node, FileStore parentStore, Object[] list, int index) {
 		if (list == null)
 			return;
 		for (int i = index; i < list.length; i++) {
 			String localName = (String) list[i];
-			UnifiedTreeNode child = createChildNodeFromFileSystem(node, parentLocalLocation, localName);
+			UnifiedTreeNode child = createChildNodeFromFileSystem(node, parentStore, localName);
 			if (child != null)
 				addChildToTree(node, child);
 		}
@@ -204,19 +198,6 @@ public class UnifiedTree {
 
 	protected void addElementToQueue(UnifiedTreeNode target) {
 		queue.add(target);
-	}
-
-	/**
-	 * Creates a string representing the OS path for the given parent and child name.
-	 */
-	protected String createChildLocation(String parentLocation, String childLocation) {
-		if (parentLocation == null)
-			return null;
-		StringBuffer buffer = new StringBuffer(parentLocation.length() + childLocation.length() + 1);
-		buffer.append(parentLocation);
-		buffer.append(java.io.File.separatorChar);
-		buffer.append(childLocation);
-		return buffer.toString();
 	}
 
 	protected void addNodeChildrenToQueue(UnifiedTreeNode node) throws CoreException {
@@ -238,15 +219,13 @@ public class UnifiedTree {
 	}
 
 	protected void addRootToQueue() {
-		long stat = 0;
-		String rootLocationString = null;
+		FileStore rootStore = null;
 		String name = null;
 		if (rootLocalLocation != null) {
-			rootLocationString = rootLocalLocation.toOSString();
+			rootStore = FileStoreFactory.create(rootLocalLocation);
 			name = rootLocalLocation.lastSegment();
-			stat = CoreFileSystemLibrary.getStat(rootLocationString);
 		}
-		UnifiedTreeNode node = createNode(root, stat, rootLocationString, name, root.exists());
+		UnifiedTreeNode node = createNode(root, rootStore, name, root.exists());
 		if (!node.existsInFileSystem() && !node.existsInWorkspace())
 			return;
 		addElementToQueue(node);
@@ -255,32 +234,31 @@ public class UnifiedTree {
 	/**
 	 * Creates a child node for a location in the file system. Does nothing and returns null if the location does not correspond to a valid file/folder. 
 	 */
-	protected UnifiedTreeNode createChildNodeFromFileSystem(UnifiedTreeNode parent, String parentLocalLocation, String childName) {
+	protected UnifiedTreeNode createChildNodeFromFileSystem(UnifiedTreeNode parent, FileStore parentStore, String childName) {
 		IPath childPath = parent.getResource().getFullPath().append(childName);
-		String location = createChildLocation(parentLocalLocation, childName);
-		long stat = CoreFileSystemLibrary.getStat(location);
-		int type = CoreFileSystemLibrary.isFile(stat) ? IResource.FILE : (CoreFileSystemLibrary.isFolder(stat) ? IResource.FOLDER : 0);
+		FileStore childStore = parentStore.getChild(childName);
+		int type = childStore.isDirectory() ? IResource.FOLDER : IResource.FILE;
 		// if it is not a valid file or folder
 		if (type == 0)
 			return null;
 		IResource target = getWorkspace().newResource(childPath, type);
-		return createNode(target, stat, location, childName, false);
+		return createNode(target, childStore, childName, false);
 	}
 
 	/**
 	 * Factory method for creating a node for this tree.
 	 */
-	protected UnifiedTreeNode createNode(IResource resource, long stat, String localLocation, String localName, boolean existsWorkspace) {
+	protected UnifiedTreeNode createNode(IResource resource, FileStore store, String localName, boolean existsWorkspace) {
 		//first check for reusable objects
 		UnifiedTreeNode node = null;
 		int size = freeNodes.size();
 		if (size > 0) {
 			node = (UnifiedTreeNode) freeNodes.remove(size - 1);
-			node.reuse(this, resource, stat, localLocation, localName, existsWorkspace);
+			node.reuse(this, resource, store, localName, existsWorkspace);
 			return node;
 		}
 		//none available, so create a new one
-		return new UnifiedTreeNode(this, resource, stat, localLocation, localName, existsWorkspace);
+		return new UnifiedTreeNode(this, resource, store,  localName, existsWorkspace);
 	}
 
 	protected Enumeration getChildren(UnifiedTreeNode node) throws CoreException {
@@ -322,10 +300,8 @@ public class UnifiedTree {
 		return level;
 	}
 
-	protected Object[] getLocalList(UnifiedTreeNode node, String location) {
-		if (node.isFile() || location == null)
-			return null;
-		String[] list = new java.io.File(location).list();
+	protected Object[] getLocalList(UnifiedTreeNode node) {
+		String[] list = node.getStore().childNames(IFileStoreConstants.NONE);
 		if (list == null)
 			return list;
 		int size = list.length;
@@ -348,12 +324,12 @@ public class UnifiedTree {
 		return isValidLevel(level, depth);
 	}
 	protected void initializeQueue() {
-		//init the queue
+		//initialize the queue
 		if (queue == null)
 			queue = new Queue(100, false);
 		else
 			queue.reset();
-		//init the free nodes list
+		//initialize the free nodes list
 		if (freeNodes == null)
 			freeNodes = new ArrayList(100);
 		else

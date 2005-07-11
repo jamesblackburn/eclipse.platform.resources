@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import org.eclipse.core.internal.events.*;
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.refresh.RefreshManager;
@@ -33,7 +32,8 @@ import org.xml.sax.InputSource;
 public class Workspace extends PlatformObject implements IWorkspace, ICoreConstants {
 	// whether the resources plugin is in debug mode.
 	public static boolean DEBUG = false;
-	protected static final String REFRESH_ON_STARTUP = "-refresh"; //$NON-NLS-1$
+	public static final boolean caseSensitive = Platform.OS_MACOSX.equals(Platform.getOS()) ? false : new java.io.File("a").compareTo(new java.io.File("A")) != 0; //$NON-NLS-1$ //$NON-NLS-2$
+
 	protected WorkspacePreferences description;
 	protected LocalMetaArea localMetaArea;
 	protected boolean openFlag = false;
@@ -1355,7 +1355,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		IPath one = location1;
 		IPath two = location2;
 		// If we are on a case-insensitive file system then convert to all lowercase.
-		if (!CoreFileSystemLibrary.isCaseSensitive()) {
+		if (!caseSensitive) {
 			one = new Path(location1.toOSString().toLowerCase());
 			two = new Path(location2.toOSString().toLowerCase());
 		}
