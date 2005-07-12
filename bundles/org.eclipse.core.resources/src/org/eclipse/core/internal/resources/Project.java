@@ -11,6 +11,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.*;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.resources.*;
@@ -232,9 +233,9 @@ public class Project extends Container implements IProject {
 	}
 
 	protected void copyMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
-		java.io.File oldMetaArea = workspace.getMetaArea().locationFor(source).toFile();
-		java.io.File newMetaArea = workspace.getMetaArea().locationFor(destination).toFile();
-		getLocalManager().getStore().copy(oldMetaArea, newMetaArea, IResource.DEPTH_INFINITE, monitor);
+		FileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
+		FileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
+		oldMetaArea.copy(newMetaArea, IFileStoreConstants.NONE, monitor);
 	}
 
 	/* (non-Javadoc)

@@ -12,7 +12,8 @@
 
 package org.eclipse.core.resources;
 
-import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
+import org.eclipse.core.filesystem.*;
+import org.eclipse.core.runtime.Path;
 
 /**
  * This class represents platform specific attributes of files.
@@ -43,7 +44,10 @@ public class ResourceAttributes {
 	 * @return A resource attributes object
 	 */
 	public static ResourceAttributes fromFile(java.io.File file) {
-		return CoreFileSystemLibrary.getResourceAttributes(file.getAbsolutePath());
+		FileStore store = FileStoreFactory.create(Path.fromOSString(file.getAbsolutePath()));
+		ResourceAttributes attributes = new ResourceAttributes();
+		attributes.setReadOnly((store.attributes() & IFileStoreConstants.READ_ONLY_LOCAL) != 0);
+		return attributes;
 	}
 
 	/**

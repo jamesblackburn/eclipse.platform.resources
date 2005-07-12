@@ -13,7 +13,6 @@
 package org.eclipse.core.internal.resources;
 
 import org.eclipse.core.internal.events.LifecycleEvent;
-import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.utils.*;
@@ -962,11 +961,12 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @see IResource#getResourceAttributes()
 	 */
 	public ResourceAttributes getResourceAttributes() {
-		// get the attributes
-		IPath location = getLocation();
-		if (location == null)
+		try {
+			return getLocalManager().attributes(this);
+		} catch (CoreException e) {
+			//failure is not an option
 			return null;
-		return CoreFileSystemLibrary.getResourceAttributes(location.toOSString());
+		}
 	}
 
 	/**
@@ -1121,10 +1121,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @deprecated
 	 */
 	public boolean isReadOnly() {
-		IPath location = getLocation();
-		if (location == null)
-			return false;
-		return CoreFileSystemLibrary.isReadOnly(location.toOSString());
+		return getResourceAttributes().isReadOnly();
 	}
 
 	/* (non-Javadoc)
@@ -1325,9 +1322,13 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @deprecated
 	 */
 	public void setReadOnly(boolean readonly) {
-		IPath location = getLocation();
-		if (location != null)
-			CoreFileSystemLibrary.setReadOnly(location.toOSString(), readonly);
+		ResourceAttributes attributes = new ResourceAttributes();
+		attributes.setReadOnly(readonly);
+		try {
+			setResourceAttributes(attributes);
+		} catch (CoreException e) {
+			//failure is not an option
+		}
 	}
 
 	/* (non-Javadoc)
@@ -1338,12 +1339,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		int flags = getFlags(info);
 		checkAccessible(flags);
 		checkLocal(flags, DEPTH_ZERO);
-		IPath location = getLocation();
-		if (location == null) {
-			String message = NLS.bind(Messages.localstore_locationUndefined, getFullPath());
-			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, getFullPath(), message, null);
-		}
-		CoreFileSystemLibrary.setResourceAttributes(location.toOSString(), attributes);
+		getLocalManager().setResourceAttributes(this, attributes);
 	}
 
 	/* (non-Javadoc)

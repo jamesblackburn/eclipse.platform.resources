@@ -10,7 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.internal.localstore.*;
+import org.eclipse.core.filesystem.*;
+import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.resources.*;
@@ -24,7 +25,7 @@ import org.eclipse.osgi.util.NLS;
  * 
  * Implementation note: Since the move/delete hook involves running third
  * party code, the workspace lock is not held.  This means the workspace
- * lock must be reacquired whenever we need to manipulate the workspace
+ * lock must be re-acquired whenever we need to manipulate the workspace
  * in any way.  All entry points from third party code back into the tree must
  * be done in an acquire/release pair.
  */
@@ -66,11 +67,11 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.exists())
 				return;
-			IPath path = file.getLocation();
-			if (path == null || !path.toFile().exists())
+			FileStore store = getStoreOrNull(file);
+			if (store == null || !store.exists())
 				return;
-			long lastModified = internalComputeTimestamp(path.toOSString());
-			((Resource) file).getLocalManager().getHistoryStore().addState(file.getFullPath(), path.toFile(), lastModified, false);
+			long lastModified = store.lastModified();
+			((Resource) file).getLocalManager().getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
 		} finally {
 			lock.release();
 		}
@@ -236,10 +237,10 @@ class ResourceTree implements IResourceTree {
 					// log the status but don't return until we try and move the rest of the resource info
 					failed(status);
 				}
-				java.io.File oldMetaArea = workspace.getMetaArea().locationFor(source).toFile();
-				java.io.File newMetaArea = workspace.getMetaArea().locationFor(destination).toFile();
+				FileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
+				FileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
 				try {
-					source.getLocalManager().getStore().move(oldMetaArea, newMetaArea, false, new NullProgressMonitor());
+					oldMetaArea.move(newMetaArea, IFileStoreConstants.NONE, new NullProgressMonitor());
 				} catch (CoreException e) {
 					String message = NLS.bind(Messages.resources_moveMeta, oldMetaArea, newMetaArea);
 					IStatus status = new ResourceStatus(IResourceStatus.FAILED_WRITE_METADATA, destination.getFullPath(), message, e);
@@ -315,6 +316,14 @@ class ResourceTree implements IResourceTree {
 	 */
 	protected IStatus getStatus() {
 		return multistatus;
+	}
+	
+	private FileStore getStore(IResource resource) throws CoreException {
+		return ((Resource)resource).getLocalManager().getStore(resource);
+	}
+
+	private FileStore getStoreOrNull(IResource resource) {
+		return ((Resource)resource).getLocalManager().getStoreOrNull(resource);
 	}
 
 	/**
@@ -466,17 +475,11 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.getProject().exists())
 				return NULL_TIMESTAMP;
-			return internalComputeTimestamp(file.getLocation().toOSString());
+			FileStore store = getStoreOrNull(file);
+			return store == null ? NULL_TIMESTAMP : store.lastModified();
 		} finally {
 			lock.release();
 		}
-	}
-
-	/**
-	 * Return the timestamp of the file at the given location.
-	 */
-	protected long internalComputeTimestamp(String location) {
-		return CoreFileSystemLibrary.getLastModified(location);
 	}
 
 	/**
@@ -813,22 +816,21 @@ class ResourceTree implements IResourceTree {
 			// If the locations are the same (and non-default) then there is nothing to do.
 			if (srcDescription.getLocation() != null && srcDescription.getLocation().equals(destDescription))
 				return;
-
-			IPath srcLocation = source.getLocation();
+			
 			IPath destLocation = destDescription.getLocation();
-
 			// Use the default area if necessary for the destination. The source project
 			// should already have a location assigned to it.
 			if (destLocation == null)
 				destLocation = Platform.getLocation().append(destDescription.getName());
+			FileStore destStore = FileStoreFactory.create(destLocation);
 
-			java.io.File destinationFile = destLocation.toFile();
 			// Move the contents on disk.
+			final FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
 			try {
-				moveInFileSystem(srcLocation.toFile(), destinationFile, flags, monitor);
+				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException ce) {
 				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = ce instanceof ResourceException && ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destinationFile.exists();
+				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.exists();
 				// if not, then rethrow the exception to abort the move operation
 				if (!failedDeletingSource)
 					throw ce;
@@ -844,10 +846,9 @@ class ResourceTree implements IResourceTree {
 					if (children[i].isLinked()) {
 						message = NLS.bind(Messages.resources_moving, children[i].getFullPath());
 						monitor.subTask(message);
-						java.io.File sourceFile = children[i].getLocation().toFile();
-						java.io.File destFile = destLocation.append(children[i].getName()).toFile();
+						FileStore linkDestination = destStore.getChild(children[i].getName());
 						try {
-							moveInFileSystem(sourceFile, destFile, flags, Policy.monitorFor(null));
+							localManager.move(children[i], linkDestination, flags, Policy.monitorFor(null));
 						} catch (CoreException ce) {
 							//log the failure, but keep trying on remaining links
 							failed(ce.getStatus());
@@ -900,16 +901,17 @@ class ResourceTree implements IResourceTree {
 				return;
 			}
 
-			java.io.File sourceFile = source.getLocation().toFile();
-			java.io.File destFile = destination.getLocation().toFile();
 			// If the file was successfully moved in the file system then the workspace
 			// tree needs to be updated accordingly. Otherwise signal that we have an error.
+			FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
+			FileStore destStore = null;
 			try {
-				moveInFileSystem(sourceFile, destFile, flags, monitor);
+				destStore = getStore(destination);
+				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?									
-				boolean failedDeletingSource = e instanceof ResourceException && e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destFile.exists();
+				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
@@ -963,19 +965,20 @@ class ResourceTree implements IResourceTree {
 
 			// Move the resources in the file system. Only the FORCE flag is valid here so don't
 			// have to worry about clearing the KEEP_HISTORY flag.
-			java.io.File sourceFile = source.getLocation().toFile();
-			java.io.File destinationFile = destination.getLocation().toFile();
+			FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
+			FileStore destStore = null;
 			try {
-				moveInFileSystem(sourceFile, destinationFile, flags, monitor);
+				destStore = getStore(destination);
+				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = e instanceof ResourceException && e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destinationFile.exists();
+				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
 			}
-			boolean success = destinationFile.exists();
+			boolean success = destStore != null && destStore.exists();
 			if (success) {
 				movedFolderSubtree(source, destination);
 				updateTimestamps(destination, isDeep);
@@ -1169,19 +1172,6 @@ class ResourceTree implements IResourceTree {
 			lock.release();
 			monitor.done();
 		}
-	}
-
-	/**
-	 * Move the contents of the specified file from the source location to the destination location.
-	 * If the source points to a directory then move that directory and all its contents.
-	 * 
-	 * <code>IResource.FORCE</code> is the only valid flag.
-	 */
-	private void moveInFileSystem(java.io.File source, java.io.File destination, int flags, IProgressMonitor monitor) throws CoreException {
-		Assert.isLegal(isValid);
-		FileSystemStore store = ((Resource) ResourcesPlugin.getWorkspace().getRoot()).getLocalManager().getStore();
-		boolean force = (flags & IResource.FORCE) != 0;
-		store.move(source, destination, force, monitor);
 	}
 
 	/**

@@ -110,6 +110,16 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		}
 		return toReturn;
 	}
+	
+	/* (non-javadoc)
+	 * @see IResource.setResourceAttributes
+	 */
+	public ResourceAttributes attributes(IResource resource) throws CoreException {
+		FileStore store = getStore(resource);
+		ResourceAttributes attributes = new ResourceAttributes();
+		attributes.setReadOnly((store.attributes() & IFileStoreConstants.READ_ONLY_LOCAL) != 0);
+		return attributes;
+	}
 
 	/**
 	 * Returns a container for the given file system location or null if there
@@ -554,6 +564,18 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				return Platform.getLocation().append(target.getFullPath());
 		}
 	}
+	
+	public void move(IResource source, IResource destination, int flags, IProgressMonitor monitor) throws CoreException {
+		move(source, getStore(destination), flags, monitor);
+	}
+
+	public void move(IResource source, FileStore destination, int flags, IProgressMonitor monitor) throws CoreException {
+		FileStore sourceStore = getStore(source);
+		int storeFlags = 0;
+		if ((flags & IResource.FORCE) != 0)
+			storeFlags &= IFileStoreConstants.OVERWRITE;
+		sourceStore.move(destination, storeFlags, monitor);
+	}
 
 	/**
 	 * Returns a resource path to the given local location. Returns null if
@@ -785,6 +807,17 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		return files ? (IResource) root.getFile(path) : (IResource) root.getFolder(path);
 	}
 
+	/* (non-javadoc)
+	 * @see IResource.setResourceAttributes
+	 */
+	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
+		FileStore store = getStore(resource);
+		int value = 0;
+		if (attributes.isReadOnly())
+			value &= IFileStoreConstants.READ_ONLY_LOCAL;
+		store.setAttributes(value);
+	}
+	
 	/* (non-javadoc)
 	 * @see IResouce.setLocalTimeStamp
 	 */
