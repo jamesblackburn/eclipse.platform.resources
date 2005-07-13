@@ -110,7 +110,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		}
 		return toReturn;
 	}
-	
+
 	/* (non-javadoc)
 	 * @see IResource.setResourceAttributes
 	 */
@@ -155,12 +155,13 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		}
 	}
 
-	public void delete(IResource target, boolean force, boolean convertToPhantom, boolean keepHistory, IProgressMonitor monitor) throws CoreException {
+	public void delete(IResource target, int flags, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			Resource resource = (Resource) target;
 			int totalWork = resource.countResources(IResource.DEPTH_INFINITE, false);
-			if (!force)
+			boolean force = (flags & IResource.FORCE) != 0;
+			if (force)
 				totalWork *= 2;
 			String title = NLS.bind(Messages.localstore_deleting, resource.getFullPath());
 			monitor.beginTask(title, totalWork);
@@ -180,7 +181,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 					sub.done();
 				}
 			}
-			DeleteVisitor deleteVisitor = new DeleteVisitor(skipList, force, convertToPhantom, keepHistory, monitor);
+			DeleteVisitor deleteVisitor = new DeleteVisitor(skipList, flags, monitor);
 			tree.accept(deleteVisitor, IResource.DEPTH_INFINITE);
 			status.merge(deleteVisitor.getStatus());
 			if (!status.isOK())
@@ -274,6 +275,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		}
 		return false;
 	}
+
 	/**
 	 * Returns an IFile for the given file system location or null if there
 	 * is no mapping for this path. This method does NOT check the existence
@@ -340,7 +342,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	/**
 	 * Never returns null
 	 * @param target
-	 * @return
+	 * @return The file store for this resource
 	 * @throws CoreException
 	 */
 	public FileStore getStore(IResource target) throws CoreException {
@@ -361,13 +363,15 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 
 	private FileStoreRoot getStoreRoot(IResource target) {
 		final ResourceInfo info = workspace.getResourceInfo(target.getFullPath(), true, false);
-		if (info == null)
-			return null;
-		FileStoreRoot root = info.getFileStoreRoot();
-		if (root != null)
-			return root;
+		FileStoreRoot root;
+		if (info != null) {
+			root = info.getFileStoreRoot();
+			if (root != null)
+				return root;
+		}
 		root = getStoreRoot(target.getParent());
-		info.setFileStoreRoot(root);
+		if (info != null)
+			info.setFileStoreRoot(root);
 		return root;
 	}
 
@@ -378,6 +382,21 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public boolean hasSavedProject(IProject project) {
 		IPath location = getDescriptionLocationFor(project);
 		return location == null ? false : location.toFile().exists();
+	}
+
+	/**
+	 * Initializes the file store for a resource.
+	 * 
+	 * @param target The resource to initialize the file store for.
+	 * @param location the File system location of this resource on disk
+	 * @return The file store for the provided resource
+	 */
+	private FileStore initializeStore(IResource target, IPath location) {
+		FileStore store = FileStoreFactory.create(location);
+		FileStoreRoot root = new FileStoreRoot(store, target.getFullPath());
+		ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
+		info.setFileStoreRoot(root);
+		return store;
 	}
 
 	/**
@@ -454,14 +473,14 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		ResourceInfo projectInfo = ((Resource) target).getResourceInfo(false, false);
 		if (projectInfo == null)
 			return false;
-		 FileStore store = getStoreOrNull(descriptionFile);
-		 if (store == null)
-			 return false;
-		return projectInfo.getLocalSyncInfo() ==store.lastModified();
+		FileStore store = getStoreOrNull(descriptionFile);
+		if (store == null)
+			return false;
+		return projectInfo.getLocalSyncInfo() == store.lastModified();
 	}
 
 	/* (non-Javadoc)
-	 * Returns true if the given resource is synchronized with the filesystem
+	 * Returns true if the given resource is synchronized with the file system
 	 * to the given depth.  Returns false otherwise.
 	 * 
 	 * @see IResource#isSynchronized(int)
@@ -564,10 +583,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				return Platform.getLocation().append(target.getFullPath());
 		}
 	}
-	
-	public void move(IResource source, IResource destination, int flags, IProgressMonitor monitor) throws CoreException {
-		move(source, getStore(destination), flags, monitor);
-	}
 
 	public void move(IResource source, FileStore destination, int flags, IProgressMonitor monitor) throws CoreException {
 		FileStore sourceStore = getStore(source);
@@ -575,6 +590,10 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if ((flags & IResource.FORCE) != 0)
 			storeFlags &= IFileStoreConstants.OVERWRITE;
 		sourceStore.move(destination, storeFlags, monitor);
+	}
+
+	public void move(IResource source, IResource destination, int flags, IProgressMonitor monitor) throws CoreException {
+		move(source, getStore(destination), flags, monitor);
 	}
 
 	/**
@@ -713,21 +732,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		return description;
 	}
 
-	/**
-	 * Initializes the file store for a resource.
-	 * 
-	 * @param target The resource to initialize the file store for.
-	 * @param location the File system location of this resource on disk
-	 * @return The file store for the provided resource
-	 */
-	private FileStore initializeStore(IResource target, IPath location) {
-		FileStore store = FileStoreFactory.create(location);
-		FileStoreRoot root = new FileStoreRoot(store, target.getFullPath());
-		ResourceInfo info = ((Resource)target).getResourceInfo(false, true);
-		info.setFileStoreRoot(root);
-		return store;
-	}
-
 	public boolean refresh(IResource target, int depth, boolean updateAliases, IProgressMonitor monitor) throws CoreException {
 		switch (target.getType()) {
 			case IResource.ROOT :
@@ -762,7 +766,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	/**
-	 * Synchronizes the entire workspace with the local filesystem.
+	 * Synchronizes the entire workspace with the local file system.
 	 * The current implementation does this by synchronizing each of the
 	 * projects currently in the workspace.  A better implementation may
 	 * be possible.
@@ -808,17 +812,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	/* (non-javadoc)
-	 * @see IResource.setResourceAttributes
-	 */
-	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
-		FileStore store = getStore(resource);
-		int value = 0;
-		if (attributes.isReadOnly())
-			value &= IFileStoreConstants.READ_ONLY_LOCAL;
-		store.setAttributes(value);
-	}
-	
-	/* (non-javadoc)
 	 * @see IResouce.setLocalTimeStamp
 	 */
 	public long setLocalTimeStamp(IResource target, ResourceInfo info, long value) throws CoreException {
@@ -827,6 +820,17 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		long actualValue = store.lastModified();
 		updateLocalSync(info, actualValue);
 		return actualValue;
+	}
+
+	/* (non-javadoc)
+	 * @see IResource.setResourceAttributes
+	 */
+	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
+		FileStore store = getStore(resource);
+		int value = 0;
+		if (attributes.isReadOnly())
+			value &= IFileStoreConstants.READ_ONLY_LOCAL;
+		store.setAttributes(value);
 	}
 
 	public void shutdown(IProgressMonitor monitor) throws CoreException {
@@ -915,7 +919,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * target's location.
 	 */
 	public void write(IFolder target, boolean force, IProgressMonitor monitor) throws CoreException {
-		FileStore store= getStore(target);
+		FileStore store = getStore(target);
 		if (!force) {
 			if (store.isDirectory()) {
 				String message = NLS.bind(Messages.localstore_resourceExists, target.getFullPath());

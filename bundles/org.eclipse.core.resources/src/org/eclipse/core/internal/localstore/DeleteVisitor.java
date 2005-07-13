@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
-import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.filesystem.IFileStoreConstants;
@@ -28,17 +28,10 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 	protected MultiStatus status;
 	protected List skipList;
 
-	/**
-	 * Flag to indicate if resources are going to be removed
-	 * from the workspace or converted into phantoms
-	 */
-	protected boolean convertToPhantom;
-
-	public DeleteVisitor(List skipList, boolean force, boolean convertToPhantom, boolean keepHistory, IProgressMonitor monitor) {
+	public DeleteVisitor(List skipList, int flags, IProgressMonitor monitor) {
 		this.skipList = skipList;
-		this.force = force;
-		this.convertToPhantom = convertToPhantom;
-		this.keepHistory = keepHistory;
+		this.force = (flags & IResource.FORCE) != 0;
+		this.keepHistory = (flags & IResource.KEEP_HISTORY) != 0;
 		this.monitor = monitor;
 		status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, Messages.localstore_deleteProblem, null);
 	}
@@ -51,38 +44,30 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 		try {
 			deleteLocalFile = deleteLocalFile && !target.isLinked() && node.existsInFileSystem();
 			FileStore localFile = deleteLocalFile ? node.getStore() : null;
-			// if it is a folder in the file system, delete its children first
-			if (target.getType() == IResource.FOLDER) {
-				// if this file is a POSIX symbolic link then deleting the local file before the recursion will
-				// keep its contents from being deleted on the file system.
-				if (localFile != null)
-					localFile.delete(IFileStoreConstants.NONE);
-				for (Enumeration children = node.getChildren(); children.hasMoreElements();)
-					delete((UnifiedTreeNode) children.nextElement(), deleteLocalFile, shouldKeepHistory);
-				node.removeChildrenFromTree();
-				delete(node.existsInWorkspace() ? target : null, localFile);
-				return;
-			}
 			if (shouldKeepHistory) {
 				IHistoryStore store = target.getLocalManager().getHistoryStore();
-				store.addState(target.getFullPath(), new java.io.File(localFile.getAbsolutePath()), node.getLastModified(), true);
+				recursiveKeepHistory(store, node);
 			}
-			delete(node.existsInWorkspace() ? target : null, localFile);
+			node.removeChildrenFromTree();
+			//delete from disk
+			if (localFile != null && !target.isLinked())
+				localFile.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, 1));
+			else
+				monitor.worked(1);
+			//delete from tree
+			if (target != null && node.existsInWorkspace())
+				target.deleteResource(true, status);
 		} catch (CoreException e) {
 			status.add(e.getStatus());
-		} finally {
-			monitor.worked(1);
 		}
 	}
 
-	protected void delete(Resource target, FileStore store) {
-		try {
-			if (store != null && !target.isLinked())
-				store.delete(IFileStoreConstants.NONE);
-			if (target != null)
-				target.deleteResource(convertToPhantom, status);
-		} catch (CoreException e) {
-			status.add(e.getStatus());
+	private void recursiveKeepHistory(IHistoryStore store, UnifiedTreeNode node) {
+		if (node.isFolder()) {
+			for (Iterator children = node.getChildren(); children.hasNext();)
+				recursiveKeepHistory(store, (UnifiedTreeNode) children.next());
+		} else {
+			store.addState(node.getResource().getFullPath(), new java.io.File(node.getStore().getAbsolutePath()), node.getLastModified(), true);
 		}
 	}
 

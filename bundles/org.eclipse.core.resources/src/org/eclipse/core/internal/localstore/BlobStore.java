@@ -93,7 +93,7 @@ public class BlobStore {
 	public boolean deleteBlob(UniversalUniqueIdentifier uuid) {
 		Assert.isNotNull(uuid);
 		try {
-			fileFor(uuid).delete(IFileStoreConstants.NONE);
+			fileFor(uuid).delete(IFileStoreConstants.NONE, null);
 			return true;
 		} catch (CoreException e) {
 			return false;

@@ -14,7 +14,10 @@ package org.eclipse.core.internal.resources;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.FileStoreFactory;
 import org.eclipse.core.internal.events.*;
+import org.eclipse.core.internal.localstore.FileStoreRoot;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
 import org.eclipse.core.internal.refresh.RefreshManager;
@@ -1528,6 +1531,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 				break;
 			case IResource.ROOT :
 				result = new RootInfo();
+				//initialize root location
+				FileStore rootStore = FileStoreFactory.create(Platform.getLocation());
+				result.setFileStoreRoot(new FileStoreRoot(rootStore, Path.ROOT));
 				break;
 		}
 		result.setNodeId(nextNodeId());

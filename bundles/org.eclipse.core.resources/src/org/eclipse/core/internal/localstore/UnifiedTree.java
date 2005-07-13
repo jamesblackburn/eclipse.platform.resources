@@ -26,9 +26,6 @@ public class UnifiedTree {
 	/** tree's root */
 	protected IResource root;
 
-	/** cache root's location (may be null) */
-	protected IPath rootLocalLocation;
-
 	/** tree's actual level */
 	protected int level;
 
@@ -37,7 +34,7 @@ public class UnifiedTree {
 	 * to the requested refresh depth, false otherwise
 	 */
 	protected boolean childLevelValid = false;
-	
+
 	/** our queue */
 	protected Queue queue;
 
@@ -49,9 +46,11 @@ public class UnifiedTree {
 
 	/** special node to mark the separation of a node's children */
 	protected static final UnifiedTreeNode childrenMarker = new UnifiedTreeNode(null, null, null, null, false);
-	
+
 	/** Singleton to indicate no local children */
 	private static final Object[] NO_CHILDREN = new Object[0];
+	private static final IResource[] NO_RESOURCES = (IResource[])NO_CHILDREN;
+	private static final Iterator EMPTY_ITERATOR = Collections.EMPTY_LIST.iterator();
 
 	/**
 	 * The root must only be a file or a folder.
@@ -73,7 +72,7 @@ public class UnifiedTree {
 			if (isChildrenMarker(node))
 				continue;
 			if (isLevelMarker(node)) {
-				if (!setLevel(getLevel()+1, depth))
+				if (!setLevel(getLevel() + 1, depth))
 					break;
 				continue;
 			}
@@ -86,8 +85,8 @@ public class UnifiedTree {
 		}
 	}
 
-	protected void addChildren(UnifiedTreeNode node) throws CoreException {
-		Resource parent = (Resource)node.getResource();
+	protected void addChildren(UnifiedTreeNode node) {
+		Resource parent = (Resource) node.getResource();
 
 		// is there a possibility to have children? 
 		int parentType = parent.getType();
@@ -99,7 +98,7 @@ public class UnifiedTree {
 		// don't ask for local children if we know it doesn't exist locally
 		Object[] list = node.existsInFileSystem() ? getLocalList(node) : NO_CHILDREN;
 		int localIndex = 0;
-		
+
 		// See if the children of this resource have been computed before 
 		ResourceInfo resourceInfo = parent.getResourceInfo(false, false);
 		int flags = parent.getFlags(resourceInfo);
@@ -109,7 +108,12 @@ public class UnifiedTree {
 		if (!unknown && (parentType == IResource.FOLDER || parentType == IResource.PROJECT) && parent.exists(flags, true)) {
 			IResource target = null;
 			UnifiedTreeNode child = null;
-			IResource[] members = ((IContainer) parent).members(IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
+			IResource[] members;
+			try {
+				members = ((IContainer) parent).members(IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
+			} catch (CoreException e) {
+				members = NO_RESOURCES;
+			}
 			int workspaceIndex = 0;
 			//iterate simultaneously over file system and workspace members
 			while (workspaceIndex < members.length) {
@@ -147,7 +151,7 @@ public class UnifiedTree {
 
 		/* process any remaining resource from the file system */
 		addChildrenFromFileSystem(node, parentStore, list, localIndex);
-		
+
 		/* Mark the children as now known */
 		if (unknown) {
 			// Don't open the info - we might not be inside a workspace-modifying operation
@@ -165,14 +169,10 @@ public class UnifiedTree {
 	 * Creates a tree node for a resource that is linked in a different file system location.
 	 */
 	protected UnifiedTreeNode createChildForLinkedResource(IResource target) {
-		IPath location = target.getLocation();
-		FileStore store = null;
-		String name = null;
-		if (location != null) {
-			name = location.lastSegment();
-			store = FileStoreFactory.create(location);
-		}
-		return createNode(target, store, name, true);
+		FileStore store = ((Resource) target).getLocalManager().getStoreOrNull(target);
+		if (store == null)
+			return null;
+		return createNode(target, store, store.getName(), true);
 	}
 
 	protected void addChildrenFromFileSystem(UnifiedTreeNode node, FileStore parentStore, Object[] list, int index) {
@@ -200,7 +200,7 @@ public class UnifiedTree {
 		queue.add(target);
 	}
 
-	protected void addNodeChildrenToQueue(UnifiedTreeNode node) throws CoreException {
+	protected void addNodeChildrenToQueue(UnifiedTreeNode node) {
 		/* if the first child is not null we already added the children */
 		/* If the children won't be at a valid level for the refresh depth, don't bother adding them */
 		if (!childLevelValid || node.getFirstChild() != null)
@@ -219,13 +219,8 @@ public class UnifiedTree {
 	}
 
 	protected void addRootToQueue() {
-		FileStore rootStore = null;
-		String name = null;
-		if (rootLocalLocation != null) {
-			rootStore = FileStoreFactory.create(rootLocalLocation);
-			name = rootLocalLocation.lastSegment();
-		}
-		UnifiedTreeNode node = createNode(root, rootStore, name, root.exists());
+		FileStore rootStore = ((Resource)root).getLocalManager().getStoreOrNull(root);
+		UnifiedTreeNode node = createNode(root, rootStore, root.getName(), root.exists());
 		if (!node.existsInFileSystem() && !node.existsInWorkspace())
 			return;
 		addElementToQueue(node);
@@ -258,24 +253,24 @@ public class UnifiedTree {
 			return node;
 		}
 		//none available, so create a new one
-		return new UnifiedTreeNode(this, resource, store,  localName, existsWorkspace);
+		return new UnifiedTreeNode(this, resource, store, localName, existsWorkspace);
 	}
 
-	protected Enumeration getChildren(UnifiedTreeNode node) throws CoreException {
+	protected Iterator getChildren(UnifiedTreeNode node) {
 		/* if first child is null we need to add node's children to queue */
 		if (node.getFirstChild() == null)
 			addNodeChildrenToQueue(node);
 
 		/* if the first child is still null, the node does not have any children */
 		if (node.getFirstChild() == null)
-			return EmptyEnumeration.getEnumeration();
+			return EMPTY_ITERATOR;
 
 		/* get the index of the first child */
 		int index = queue.indexOf(node.getFirstChild());
 
 		/* if we do not have children, just return an empty enumeration */
 		if (index == -1)
-			return EmptyEnumeration.getEnumeration();
+			return EMPTY_ITERATOR;
 
 		/* create an enumeration with node's children */
 		List result = new ArrayList(10);
@@ -286,14 +281,7 @@ public class UnifiedTree {
 			result.add(child);
 			index = queue.increment(index);
 		}
-		return Collections.enumeration(result);
-	}
-
-	protected String getLocalLocation(IResource target) {
-		if (rootLocalLocation == null)
-			return null;
-		int segments = target.getFullPath().matchingFirstSegments(root.getFullPath());
-		return rootLocalLocation.append(target.getFullPath().removeFirstSegments(segments)).toOSString();
+		return result.iterator();
 	}
 
 	protected int getLevel() {
@@ -320,9 +308,10 @@ public class UnifiedTree {
 	 */
 	protected boolean setLevel(int newLevel, int depth) {
 		level = newLevel;
-		childLevelValid = isValidLevel(level+1, depth);
+		childLevelValid = isValidLevel(level + 1, depth);
 		return isValidLevel(level, depth);
 	}
+
 	protected void initializeQueue() {
 		//initialize the queue
 		if (queue == null)
@@ -376,7 +365,6 @@ public class UnifiedTree {
 
 	public void setRoot(IResource root) {
 		this.root = root;
-		this.rootLocalLocation = root.getLocation();
 	}
 
 	/**

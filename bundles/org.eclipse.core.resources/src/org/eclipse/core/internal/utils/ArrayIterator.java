@@ -10,29 +10,28 @@
  *******************************************************************************/
 package org.eclipse.core.internal.utils;
 
-import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * An object which enumerates the elements of an array
+ * An object that iterates over the elements of an array
  */
-
-public class ArrayEnumeration implements Enumeration {
+public class ArrayIterator implements Iterator {
+	Object[] elements;
 	int index;
 	int lastElement;
-	Object[] elements;
 
 	/**
 	 * Returns new array enumeration over the given object array
 	 */
-	public ArrayEnumeration(Object[] elements) {
+	public ArrayIterator(Object[] elements) {
 		this(elements, 0, elements.length - 1);
 	}
 
 	/**
 	 * Returns new array enumeration over the given object array
 	 */
-	public ArrayEnumeration(Object[] elements, int firstElement, int lastElement) {
+	public ArrayIterator(Object[] elements, int firstElement, int lastElement) {
 		super();
 		this.elements = elements;
 		index = firstElement;
@@ -42,7 +41,7 @@ public class ArrayEnumeration implements Enumeration {
 	/**
 	 * Returns true if this enumeration contains more elements.
 	 */
-	public boolean hasMoreElements() {
+	public boolean hasNext() {
 		return elements != null && index <= lastElement;
 	}
 
@@ -50,9 +49,13 @@ public class ArrayEnumeration implements Enumeration {
 	 * Returns the next element of this enumeration.
 	 * @exception  NoSuchElementException  if no more elements exist.
 	 */
-	public Object nextElement() throws NoSuchElementException {
-		if (!hasMoreElements())
+	public Object next() throws NoSuchElementException {
+		if (!hasNext())
 			throw new NoSuchElementException();
 		return elements[index++];
+	}
+
+	public void remove() {
+		throw new UnsupportedOperationException();
 	}
 }

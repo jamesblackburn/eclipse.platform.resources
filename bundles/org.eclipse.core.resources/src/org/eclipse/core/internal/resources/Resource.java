@@ -661,7 +661,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				message = Messages.resources_deleteProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
 				WorkManager workManager = workspace.getWorkManager();
-				ResourceTree tree = new ResourceTree(workManager.getLock(), status, updateFlags);
+				ResourceTree tree = new ResourceTree(workspace.getFileSystemManager(), workManager.getLock(), status, updateFlags);
 				int depth = 0;
 				try {
 					depth = workManager.beginUnprotected();
@@ -1197,7 +1197,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				message = Messages.resources_moveProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
 				WorkManager workManager = workspace.getWorkManager();
-				ResourceTree tree = new ResourceTree(workManager.getLock(), status, updateFlags);
+				ResourceTree tree = new ResourceTree(workspace.getFileSystemManager(), workManager.getLock(), status, updateFlags);
 				boolean success = false;
 				int depth = 0;
 				try {

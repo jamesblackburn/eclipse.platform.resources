@@ -746,7 +746,7 @@ public class Project extends Container implements IProject {
 				message = Messages.resources_moveProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
 				WorkManager workManager = workspace.getWorkManager();
-				ResourceTree tree = new ResourceTree(workManager.getLock(), status, updateFlags);
+				ResourceTree tree = new ResourceTree(getLocalManager(), workManager.getLock(), status, updateFlags);
 				IMoveDeleteHook hook = workspace.getMoveDeleteHook();
 				workspace.broadcastEvent(LifecycleEvent.newEvent(LifecycleEvent.PRE_PROJECT_MOVE, this, destination, updateFlags));
 				int depth = 0;

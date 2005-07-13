@@ -10,10 +10,9 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
-import java.util.Enumeration;
+import java.util.Iterator;
 import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
 
 public class UnifiedTreeNode implements ILocalStoreConstants {
 	protected IResource resource;
@@ -44,7 +43,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	/**
 	 * Returns an Enumeration of UnifiedResourceNode.
 	 */
-	public Enumeration getChildren() throws CoreException {
+	public Iterator getChildren() {
 		return tree.getChildren(this);
 	}
 

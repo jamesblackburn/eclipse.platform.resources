@@ -31,31 +31,24 @@ import org.eclipse.osgi.util.NLS;
  */
 class ResourceTree implements IResourceTree {
 
+	private boolean isValid = true;
+	private final FileSystemResourceManager localManager;
 	/**
 	 * The lock to acquire when the workspace needs to be manipulated
 	 */
 	private ILock lock;
 	private MultiStatus multistatus;
 	private int updateFlags;
-	private boolean isValid = true;
 
 	/**
 	 * Constructor for this class.
 	 */
-	public ResourceTree(ILock lock, MultiStatus status, int updateFlags) {
+	public ResourceTree(FileSystemResourceManager localManager, ILock lock, MultiStatus status, int updateFlags) {
 		super();
+		this.localManager = localManager;
 		this.lock = lock;
 		this.multistatus = status;
 		this.updateFlags = updateFlags;
-	}
-
-	/**
-	 * The specific operation for which this tree was created has completed and this tree
-	 * should not be used anymore. Ensure that this is the case by making it invalid. This
-	 * is checked by all API methods.
-	 */
-	void makeInvalid() {
-		this.isValid = false;
 	}
 
 	/**
@@ -67,11 +60,47 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.exists())
 				return;
-			FileStore store = getStoreOrNull(file);
+			FileStore store = localManager.getStoreOrNull(file);
 			if (store == null || !store.exists())
 				return;
 			long lastModified = store.lastModified();
-			((Resource) file).getLocalManager().getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
+			localManager.getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * Add this resource and all child files to the local history. Only adds content for
+	 * resources of type <code>IResource.FILE</code>.
+	 */
+	private void addToLocalHistory(IResource root, int depth) {
+		IResourceVisitor visitor = new IResourceVisitor() {
+			public boolean visit(IResource resource) {
+				if (resource.getType() == IResource.FILE)
+					addToLocalHistory((IFile) resource);
+				return true;
+			}
+		};
+		try {
+			root.accept(visitor, depth, false);
+		} catch (CoreException e) {
+			// We want to ignore any exceptions thrown by the history store because
+			// they aren't enough to fail the operation as a whole. 
+		}
+	}
+
+	/**
+	 * @see IResourceTree#computeTimestamp(IFile)
+	 */
+	public long computeTimestamp(IFile file) {
+		Assert.isLegal(isValid);
+		try {
+			lock.acquire();
+			if (!file.getProject().exists())
+				return NULL_TIMESTAMP;
+			FileStore store = localManager.getStoreOrNull(file);
+			return store == null ? NULL_TIMESTAMP : store.lastModified();
 		} finally {
 			lock.release();
 		}
@@ -84,7 +113,356 @@ class ResourceTree implements IResourceTree {
 	 * associated IFile under destination.
 	 */
 	private void copyLocalHistory(IResource source, IResource destination) {
-		((Resource) destination).getLocalManager().getHistoryStore().copyHistory(source, destination, true);
+		localManager.getHistoryStore().copyHistory(source, destination, true);
+	}
+
+	/**
+	 * @see IResourceTree#deletedFile(IFile)
+	 */
+	public void deletedFile(IFile file) {
+		Assert.isLegal(isValid);
+		try {
+			lock.acquire();
+			// Do nothing if the resource doesn't exist.
+			if (!file.exists())
+				return;
+			try {
+				// Delete properties, generate marker deltas, and remove the node from the workspace tree.
+				((Resource) file).deleteResource(true, null);
+			} catch (CoreException e) {
+				String message = NLS.bind(Messages.resources_errorDeleting, file.getFullPath());
+				IStatus status = new ResourceStatus(IStatus.ERROR, file.getFullPath(), message, e);
+				failed(status);
+			}
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * @see IResourceTree#deletedFolder(IFolder)
+	 */
+	public void deletedFolder(IFolder folder) {
+		Assert.isLegal(isValid);
+		try {
+			lock.acquire();
+			// Do nothing if the resource doesn't exist.
+			if (!folder.exists())
+				return;
+			try {
+				// Delete properties, generate marker deltas, and remove the node from the workspace tree.
+				((Resource) folder).deleteResource(true, null);
+			} catch (CoreException e) {
+				String message = NLS.bind(Messages.resources_errorDeleting, folder.getFullPath());
+				IStatus status = new ResourceStatus(IStatus.ERROR, folder.getFullPath(), message, e);
+				failed(status);
+			}
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * @see IResourceTree#deletedProject(IProject)
+	 */
+	public void deletedProject(IProject target) {
+		Assert.isLegal(isValid);
+		try {
+			lock.acquire();
+			// Do nothing if the resource doesn't exist.
+			if (!target.exists())
+				return;
+			Project project = (Project) target;
+			Workspace workspace = (Workspace) project.getWorkspace();
+
+			// Delete properties, generate marker deltas, and remove the node from the workspace tree.
+			try {
+				project.deleteResource(false, null);
+			} catch (CoreException e) {
+				String message = NLS.bind(Messages.resources_errorDeleting, project.getFullPath());
+				IStatus status = new ResourceStatus(IStatus.ERROR, project.getFullPath(), message, e);
+				// log the status but don't return until we try and delete the rest of the project info
+				failed(status);
+			}
+
+			// Delete the project metadata.
+			try {
+				workspace.getMetaArea().delete(project);
+			} catch (CoreException e) {
+				String message = NLS.bind(Messages.resources_deleteMeta, project.getFullPath());
+				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_METADATA, project.getFullPath(), message, e);
+				// log the status but don't return until we try and delete the rest of the project info
+				failed(status);
+			}
+
+			// Clear the history store.
+			project.clearHistory(null);
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * This operation has failed for the given reason. Add it to this
+	 * resource tree's status.
+	 */
+	public void failed(IStatus reason) {
+		Assert.isLegal(isValid);
+		multistatus.add(reason);
+	}
+
+	/**
+	 * Returns the status object held onto by this resource tree.
+	 */
+	protected IStatus getStatus() {
+		return multistatus;
+	}
+
+	/**
+	 * @see IResourceTree#getTimestamp(IFile)
+	 */
+	public long getTimestamp(IFile file) {
+		Assert.isLegal(isValid);
+		try {
+			lock.acquire();
+			if (!file.exists())
+				return NULL_TIMESTAMP;
+			ResourceInfo info = ((File) file).getResourceInfo(false, false);
+			return info == null ? NULL_TIMESTAMP : info.getLocalSyncInfo();
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * Helper method for #standardDeleteFile. Returns a boolean indicating whether or
+	 * not the delete was successful. 
+	 */
+	private boolean internalDeleteFile(IFile file, int flags, IProgressMonitor monitor) {
+		try {
+			String message = NLS.bind(Messages.resources_deleting, file.getFullPath());
+			monitor.beginTask(message, Policy.totalWork);
+
+			// Do nothing if the file doesn't exist in the workspace.
+			if (!file.exists()) {
+				// Indicate that the delete was successful.
+				return true;
+			}
+			// Don't delete contents if this is a linked resource
+			if (file.isLinked()) {
+				deletedFile(file);
+				return true;
+			}
+			// If the file doesn't exist on disk then signal to the workspace to delete the
+			// file and return.
+			FileStore fileStore = localManager.getStoreOrNull(file);
+			if (fileStore == null || !fileStore.exists()) {
+				deletedFile(file);
+				// Indicate that the delete was successful.
+				return true;
+			}
+
+			boolean keepHistory = (flags & IResource.KEEP_HISTORY) != 0;
+			boolean force = (flags & IResource.FORCE) != 0;
+
+			// Add the file to the local history if requested by the user.
+			if (keepHistory)
+				addToLocalHistory(file);
+			monitor.worked(Policy.totalWork / 4);
+
+			// We want to fail if force is false and the file is not synchronized with the 
+			// local file system.
+			if (!force) {
+				boolean inSync = isSynchronized(file, IResource.DEPTH_ZERO);
+				// only want to fail if the file still exists.
+				if (!inSync && fileStore.exists()) {
+					message = NLS.bind(Messages.localstore_resourceIsOutOfSync, file.getFullPath());
+					IStatus status = new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, file.getFullPath(), message);
+					failed(status);
+					// Indicate that the delete was unsuccessful.
+					return false;
+				}
+			}
+			monitor.worked(Policy.totalWork / 4);
+
+			// Try to delete the file from the file system.
+			try {
+				fileStore.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, Policy.totalWork/4));
+				// If the file was successfully deleted from the file system the
+				// workspace tree should be updated accordingly.
+				deletedFile(file);
+				// Indicate that the delete was successful.
+				return true;
+			} catch (CoreException e) {
+				message = NLS.bind(Messages.resources_couldnotDelete, fileStore.getAbsolutePath());
+				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message, e);
+				failed(status);
+			}
+			// Indicate that the delete was unsuccessful.
+			return false;
+		} finally {
+			monitor.done();
+		}
+	}
+
+	/**
+	 * Helper method for #standardDeleteFolder. Returns a boolean indicating 
+	 * whether or not the deletion of this folder was successful. Does a best effort
+	 * delete of this resource and its children.
+	 */
+	private boolean internalDeleteFolder(IFolder folder, int flags, IProgressMonitor monitor) {
+		String message = NLS.bind(Messages.resources_deleting, folder.getFullPath());
+		monitor.beginTask(message, Policy.totalWork);
+
+		// Do nothing if the folder doesn't exist in the workspace.
+		if (!folder.exists())
+			return true;
+
+		// Don't delete contents if this is a linked resource
+		if (folder.isLinked()) {
+			deletedFolder(folder);
+			return true;
+		}
+
+		// If the folder doesn't exist on disk then update the tree and return.
+		FileStore fileStore = localManager.getStoreOrNull(folder);
+		if (fileStore == null || !fileStore.exists()) {
+			deletedFolder(folder);
+			return true;
+		}
+
+		try {
+			//this will delete local and workspace
+			localManager.delete(folder, flags, Policy.subMonitorFor(monitor, Policy.totalWork));
+		} catch (CoreException ce) {
+			message = NLS.bind(Messages.localstore_couldnotDelete, folder.getFullPath());
+			MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, ce);
+			if (ce.getStatus() != null)
+				status.merge(ce.getStatus());
+			failed(status);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Does a best-effort delete on this resource and all its children.
+	 */
+	private boolean internalDeleteProject(IProject project, int flags, IProgressMonitor monitor) {
+
+		// Recursively delete each member of the project.
+		IResource[] members = null;
+		try {
+			members = project.members(IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
+		} catch (CoreException e) {
+			String message = NLS.bind(Messages.resources_errorMembers, project.getFullPath());
+			IStatus status = new ResourceStatus(IStatus.ERROR, project.getFullPath(), message, e);
+			failed(status);
+			// Indicate that the delete was unsuccessful.
+			return false;
+		}
+		boolean deletedChildren = true;
+		for (int i = 0; i < members.length; i++) {
+			IResource child = members[i];
+			switch (child.getType()) {
+				case IResource.FILE :
+					if (child.getName().equals(IProjectDescription.DESCRIPTION_FILE_NAME)) {
+						// ignore the .project file for now and delete it last
+					} else {
+						deletedChildren &= internalDeleteFile((IFile) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
+					}
+					break;
+				case IResource.FOLDER :
+					deletedChildren &= internalDeleteFolder((IFolder) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
+					break;
+			}
+		}
+		FileStore projectStore;
+		try {
+			projectStore = localManager.getStore(project);
+		} catch (CoreException e) {
+			failed(e.getStatus());
+			return false;
+		}
+		// Check to see if the children were deleted ok. If there was a problem
+		// just return as the problem should have been logged by the recursive
+		// call to the child.
+		if (deletedChildren) {
+			IResource file = project.findMember(IProjectDescription.DESCRIPTION_FILE_NAME);
+			if (file == null) {
+				//the .project have may have been recreated on disk automatically by snapshot
+				FileStore dotProject = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
+				try {
+					dotProject.delete(IFileStoreConstants.NONE, null);
+				} catch (CoreException e) {
+					failed(e.getStatus());
+				}
+			} else {
+				boolean deletedProjectFile = internalDeleteFile((IFile) file, flags, Policy.monitorFor(null));
+				if (!deletedProjectFile) {
+					String message = NLS.bind(Messages.resources_couldnotDelete, file.getFullPath());
+					IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
+					failed(status);
+					// Indicate that the delete was unsuccessful.
+					return false;
+				}
+			}
+		} else {
+			// Indicate that the delete was unsuccessful.
+			return false;
+		}
+
+		//children are deleted, so now delete the parent
+		try {
+			projectStore.delete(IFileStoreConstants.NONE, null);
+			deletedProject(project);
+			// Indicate that the delete was successful.
+			return true;
+		} catch (CoreException e) {
+			String message = NLS.bind(Messages.resources_couldnotDelete, projectStore.getAbsolutePath());
+			IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message, e);
+			failed(status);
+			// Indicate that the delete was unsuccessful.
+			return false;
+		}
+	}
+
+	/**
+	 * Return <code>true</code> if there is a change in the content area for the project.
+	 */
+	private boolean isContentChange(IProject project, IProjectDescription destinationDescription) {
+		IProjectDescription sourceDescription = ((Project) project).internalGetDescription();
+		if (sourceDescription.getLocation() == null || destinationDescription.getLocation() == null)
+			return true;
+		return !sourceDescription.getLocation().equals(destinationDescription.getLocation());
+	}
+
+	/**
+	 * Return <code>true</code> if there is a change in the name of the project.
+	 */
+	private boolean isNameChange(IProject project, IProjectDescription description) {
+		return !project.getName().equals(description.getName());
+	}
+
+	/**
+	 * @see IResourceTree#isSynchronized(IResource, int)
+	 */
+	public boolean isSynchronized(IResource resource, int depth) {
+		try {
+			lock.acquire();
+			return localManager.isSynchronized(resource, depth);
+		} finally {
+			lock.release();
+		}
+	}
+
+	/**
+	 * The specific operation for which this tree was created has completed and this tree
+	 * should not be used anymore. Ensure that this is the case by making it invalid. This
+	 * is checked by all API methods.
+	 */
+	void makeInvalid() {
+		this.isValid = false;
 	}
 
 	/**
@@ -312,173 +690,59 @@ class ResourceTree implements IResourceTree {
 	}
 
 	/**
-	 * Returns the status object held onto by this resource tree.
+	 * Helper method for moving the project content. Determines the content location
+	 * based on the project description. (default location or user defined?)
 	 */
-	protected IStatus getStatus() {
-		return multistatus;
-	}
-	
-	private FileStore getStore(IResource resource) throws CoreException {
-		return ((Resource)resource).getLocalManager().getStore(resource);
-	}
-
-	private FileStore getStoreOrNull(IResource resource) {
-		return ((Resource)resource).getLocalManager().getStoreOrNull(resource);
-	}
-
-	/**
-	 * @see IResourceTree#getTimestamp(IFile)
-	 */
-	public long getTimestamp(IFile file) {
-		Assert.isLegal(isValid);
+	private void moveProjectContent(IProject source, IProjectDescription destDescription, int flags, IProgressMonitor monitor) throws CoreException {
 		try {
-			lock.acquire();
-			if (!file.exists())
-				return NULL_TIMESTAMP;
-			ResourceInfo info = ((File) file).getResourceInfo(false, false);
-			return info == null ? NULL_TIMESTAMP : info.getLocalSyncInfo();
-		} finally {
-			lock.release();
-		}
-	}
-
-	/**
-	 * @see IResourceTree#deletedFile(IFile)
-	 */
-	public void deletedFile(IFile file) {
-		Assert.isLegal(isValid);
-		try {
-			lock.acquire();
-			// Do nothing if the resource doesn't exist.
-			if (!file.exists())
+			String message = NLS.bind(Messages.resources_moving, source.getFullPath());
+			monitor.beginTask(message, 10);
+			IProjectDescription srcDescription = source.getDescription();
+			// If the locations are the same (and non-default) then there is nothing to do.
+			if (srcDescription.getLocation() != null && srcDescription.getLocation().equals(destDescription))
 				return;
+
+			IPath destLocation = destDescription.getLocation();
+			// Use the default area if necessary for the destination. The source project
+			// should already have a location assigned to it.
+			if (destLocation == null)
+				destLocation = Platform.getLocation().append(destDescription.getName());
+			FileStore destStore = FileStoreFactory.create(destLocation);
+
+			// Move the contents on disk.
 			try {
-				// Delete properties, generate marker deltas, and remove the node from the workspace tree.
-				((Resource) file).deleteResource(true, null);
-			} catch (CoreException e) {
-				String message = NLS.bind(Messages.resources_errorDeleting, file.getFullPath());
-				IStatus status = new ResourceStatus(IStatus.ERROR, file.getFullPath(), message, e);
-				failed(status);
+				localManager.move(source, destStore, flags, monitor);
+			} catch (CoreException ce) {
+				// did the fail occur after copying to the destination?
+				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.exists();
+				// if not, then rethrow the exception to abort the move operation
+				if (!failedDeletingSource)
+					throw ce;
+				// if so, we should log the failure and proceed with moving the tree
+				failed(ce.getStatus());
 			}
-		} finally {
-			lock.release();
-		}
-	}
+			monitor.worked(9);
 
-	/**
-	 * @see IResourceTree#deletedFolder(IFolder)
-	 */
-	public void deletedFolder(IFolder folder) {
-		Assert.isLegal(isValid);
-		try {
-			lock.acquire();
-			// Do nothing if the resource doesn't exist.
-			if (!folder.exists())
-				return;
-			try {
-				// Delete properties, generate marker deltas, and remove the node from the workspace tree.
-				((Resource) folder).deleteResource(true, null);
-			} catch (CoreException e) {
-				String message = NLS.bind(Messages.resources_errorDeleting, folder.getFullPath());
-				IStatus status = new ResourceStatus(IStatus.ERROR, folder.getFullPath(), message, e);
-				failed(status);
+			//if this is a deep move, move the contents of any linked resources
+			if ((flags & IResource.SHALLOW) == 0) {
+				IResource[] children = source.members();
+				for (int i = 0; i < children.length; i++) {
+					if (children[i].isLinked()) {
+						message = NLS.bind(Messages.resources_moving, children[i].getFullPath());
+						monitor.subTask(message);
+						FileStore linkDestination = destStore.getChild(children[i].getName());
+						try {
+							localManager.move(children[i], linkDestination, flags, Policy.monitorFor(null));
+						} catch (CoreException ce) {
+							//log the failure, but keep trying on remaining links
+							failed(ce.getStatus());
+						}
+					}
+				}
 			}
+			monitor.worked(1);
 		} finally {
-			lock.release();
-		}
-	}
-
-	/**
-	 * @see IResourceTree#deletedProject(IProject)
-	 */
-	public void deletedProject(IProject target) {
-		Assert.isLegal(isValid);
-		try {
-			lock.acquire();
-			// Do nothing if the resource doesn't exist.
-			if (!target.exists())
-				return;
-			Project project = (Project) target;
-			Workspace workspace = (Workspace) project.getWorkspace();
-
-			// Delete properties, generate marker deltas, and remove the node from the workspace tree.
-			try {
-				project.deleteResource(false, null);
-			} catch (CoreException e) {
-				String message = NLS.bind(Messages.resources_errorDeleting, project.getFullPath());
-				IStatus status = new ResourceStatus(IStatus.ERROR, project.getFullPath(), message, e);
-				// log the status but don't return until we try and delete the rest of the project info
-				failed(status);
-			}
-
-			// Delete the project metadata.
-			try {
-				workspace.getMetaArea().delete(project);
-			} catch (CoreException e) {
-				String message = NLS.bind(Messages.resources_deleteMeta, project.getFullPath());
-				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_METADATA, project.getFullPath(), message, e);
-				// log the status but don't return until we try and delete the rest of the project info
-				failed(status);
-			}
-
-			// Clear the history store.
-			project.clearHistory(null);
-		} finally {
-			lock.release();
-		}
-	}
-
-	/**
-	 * This operation has failed for the given reason. Add it to this
-	 * resource tree's status.
-	 */
-	public void failed(IStatus reason) {
-		Assert.isLegal(isValid);
-		multistatus.add(reason);
-	}
-
-	/**
-	 * Return <code>true</code> if there is a change in the name of the project.
-	 */
-	private boolean isNameChange(IProject project, IProjectDescription description) {
-		return !project.getName().equals(description.getName());
-	}
-
-	/**
-	 * Return <code>true</code> if there is a change in the content area for the project.
-	 */
-	private boolean isContentChange(IProject project, IProjectDescription destinationDescription) {
-		IProjectDescription sourceDescription = ((Project) project).internalGetDescription();
-		if (sourceDescription.getLocation() == null || destinationDescription.getLocation() == null)
-			return true;
-		return !sourceDescription.getLocation().equals(destinationDescription.getLocation());
-	}
-
-	/**
-	 * @see IResourceTree#isSynchronized(IResource, int)
-	 */
-	public boolean isSynchronized(IResource resource, int depth) {
-		try {
-			lock.acquire();
-			return ((Resource) resource).getLocalManager().isSynchronized(resource, depth);
-		} finally {
-			lock.release();
-		}
-	}
-
-	/**
-	 * @see IResourceTree#computeTimestamp(IFile)
-	 */
-	public long computeTimestamp(IFile file) {
-		Assert.isLegal(isValid);
-		try {
-			lock.acquire();
-			if (!file.getProject().exists())
-				return NULL_TIMESTAMP;
-			FileStore store = getStoreOrNull(file);
-			return store == null ? NULL_TIMESTAMP : store.lastModified();
-		} finally {
-			lock.release();
+			monitor.done();
 		}
 	}
 
@@ -496,230 +760,17 @@ class ResourceTree implements IResourceTree {
 	}
 
 	/**
-	 * Helper method for #standardDeleteFile. Returns a boolean indicating whether or
-	 * not the delete was successful. 
-	 */
-	private boolean internalDeleteFile(IFile file, int flags, IProgressMonitor monitor) {
-		try {
-			String message = NLS.bind(Messages.resources_deleting, file.getFullPath());
-			monitor.beginTask(message, Policy.totalWork);
-
-			// Do nothing if the file doesn't exist in the workspace.
-			if (!file.exists()) {
-				// Indicate that the delete was successful.
-				return true;
-			}
-			// Don't delete contents if this is a linked resource
-			if (file.isLinked()) {
-				deletedFile(file);
-				return true;
-			}
-			// If the file doesn't exist on disk then signal to the workspace to delete the
-			// file and return.
-			java.io.File fileOnDisk = file.getLocation().toFile();
-			if (!fileOnDisk.exists()) {
-				deletedFile(file);
-				// Indicate that the delete was successful.
-				return true;
-			}
-
-			boolean keepHistory = (flags & IResource.KEEP_HISTORY) != 0;
-			boolean force = (flags & IResource.FORCE) != 0;
-
-			// Add the file to the local history if requested by the user.
-			if (keepHistory)
-				addToLocalHistory(file);
-			monitor.worked(Policy.totalWork / 4);
-
-			// We want to fail if force is false and the file is not synchronized with the 
-			// local file system.
-			if (!force) {
-				boolean inSync = isSynchronized(file, IResource.DEPTH_ZERO);
-				// only want to fail if the file still exists.
-				if (!inSync && file.getLocation().toFile().exists()) {
-					message = NLS.bind(Messages.localstore_resourceIsOutOfSync, file.getFullPath());
-					IStatus status = new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, file.getFullPath(), message);
-					failed(status);
-					// Indicate that the delete was unsuccessful.
-					return false;
-				}
-			}
-			monitor.worked(Policy.totalWork / 4);
-
-			// Try to delete the file from the file system.
-			boolean success = fileOnDisk.delete();
-			monitor.worked(Policy.totalWork / 4);
-
-			// If the file was successfully deleted from the file system the
-			// workspace tree should be updated accordingly. Otherwise
-			// we need to signal that a problem occurred.
-			if (success) {
-				deletedFile(file);
-				// Indicate that the delete was successful.
-				return true;
-			}
-			message = NLS.bind(Messages.resources_couldnotDelete, file.getLocation().toOSString());
-			IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
-			failed(status);
-			// Indicate that the delete was unsuccessful.
-			return false;
-		} finally {
-			monitor.done();
-		}
-	}
-
-	/**
 	 * @see IResourceTree#standardDeleteFolder(IFolder, int, IProgressMonitor)
 	 */
 	public void standardDeleteFolder(IFolder folder, int flags, IProgressMonitor monitor) {
 		Assert.isLegal(isValid);
 		try {
 			lock.acquire();
-			String message = NLS.bind(Messages.resources_deleting, folder.getFullPath());
-			monitor.beginTask(message, Policy.totalWork);
-
-			// Do nothing if the folder doesn't exist in the workspace.
-			if (!folder.exists())
-				return;
-
-			// Don't delete contents if this is a linked resource
-			if (folder.isLinked()) {
-				deletedFolder(folder);
-				return;
-			}
-
-			// If the folder doesn't exist on disk then update the tree and return.
-			java.io.File folderOnDisk = folder.getLocation().toFile();
-			if (!folderOnDisk.exists()) {
-				deletedFolder(folder);
-				return;
-			}
-
-			// Check to see if we are synchronized with the local file system. If we are in sync then
-			// we can short circuit this operation and delete all the files on disk, otherwise we have
-			// to recursively try and delete them doing best-effort, thus leaving only the ones which
-			// were out of sync.
-			boolean force = (flags & IResource.FORCE) != 0;
-			if (!force && !isSynchronized(folder, IResource.DEPTH_INFINITE)) {
-				// we are not in sync and force is false so delete via best effort
-				internalDeleteFolder(folder, flags, monitor);
-				return;
-			}
-
-			// Add the contents of the files to the local history if so requested by the user.
-			boolean keepHistory = (flags & IResource.KEEP_HISTORY) != 0;
-			if (keepHistory)
-				addToLocalHistory(folder, IResource.DEPTH_INFINITE);
-
-			boolean success;
-			try {
-				FileSystemResourceManager localManager = ((Folder) folder).getLocalManager();
-				localManager.delete(folder, force, true, false, Policy.subMonitorFor(monitor, Policy.totalWork));
-				java.io.File folderLocation = folder.getLocation().toFile();
-				success = Workspace.clear(folderLocation);
-			} catch (CoreException ce) {
-				message = NLS.bind(Messages.localstore_couldnotDelete, folder.getFullPath());
-				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, ce);
-				if (ce.getStatus() != null)
-					status.merge(ce.getStatus());
-				failed(status);
-				return;
-			}
-
-			// If the folder was successfully deleted from the file system the
-			// workspace tree should be updated accordingly. Otherwise
-			// we need to signal that a problem occurred.
-			if (success) {
-				deletedFolder(folder);
-			} else {
-				message = NLS.bind(Messages.resources_couldnotDelete, folder.getLocation().toOSString());
-				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, folder.getFullPath(), message);
-				failed(status);
-			}
+			internalDeleteFolder(folder, flags, monitor);
 		} finally {
 			lock.release();
 			monitor.done();
 		}
-	}
-
-	/**
-	 * Add this resource and all child files to the local history. Only adds content for
-	 * resources of type <code>IResource.FILE</code>.
-	 */
-	private void addToLocalHistory(IResource root, int depth) {
-		IResourceVisitor visitor = new IResourceVisitor() {
-			public boolean visit(IResource resource) {
-				if (resource.getType() == IResource.FILE)
-					addToLocalHistory((IFile) resource);
-				return true;
-			}
-		};
-		try {
-			root.accept(visitor, depth, false);
-		} catch (CoreException e) {
-			// We want to ignore any exceptions thrown by the history store because
-			// they aren't enough to fail the operation as a whole. 
-		}
-	}
-
-	/**
-	 * Helper method for #standardDeleteFolder. Returns a boolean indicating 
-	 * whether or not the deletion of this folder was successful. Does a best effort
-	 * delete of this resource and its children.
-	 */
-	private boolean internalDeleteFolder(IFolder folder, int flags, IProgressMonitor monitor) {
-
-		// Recursively delete each member of the folder.
-		IResource[] members = null;
-		try {
-			members = folder.members(IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
-		} catch (CoreException e) {
-			String message = NLS.bind(Messages.resources_errorMembers, folder.getFullPath());
-			IStatus status = new ResourceStatus(IStatus.ERROR, folder.getFullPath(), message, e);
-			failed(status);
-			// Indicate that the delete was unsuccessful.
-			return false;
-		}
-		boolean deletedChildren = true;
-		for (int i = 0; i < members.length; i++) {
-			IResource child = members[i];
-			switch (child.getType()) {
-				case IResource.FILE :
-					deletedChildren &= internalDeleteFile((IFile) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
-					break;
-				case IResource.FOLDER :
-					deletedChildren &= internalDeleteFolder((IFolder) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
-					break;
-			}
-		}
-		// Check to see if the children were deleted ok. If there was a problem
-		// just return as the problem should have been logged by the recursive
-		// call to the child.
-		if (!deletedChildren) {
-			// Indicate that the delete was unsuccessful.
-			return false;
-		}
-
-		// Try to delete the folder from the local file system. This will fail
-		// if the folder is not empty. No need to check the force flag since this is
-		// an internal method and force is always false when we are here.
-		java.io.File folderOnDisk = folder.getLocation().toFile();
-		boolean success = folderOnDisk.delete();
-		if (!success && !folderOnDisk.exists()) {
-			// Indicate that the delete was successful.
-			success = true;
-		}
-
-		if (success) {
-			deletedFolder(folder);
-			// Indicate that the delete was successful.
-			return true;
-		}
-		String message = NLS.bind(Messages.resources_couldnotDelete, folder.getLocation().toOSString());
-		IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, folder.getFullPath(), message);
-		failed(status);
-		// Indicate that the delete was unsuccessful.
-		return false;
 	}
 
 	/**
@@ -755,42 +806,35 @@ class ResourceTree implements IResourceTree {
 					if (success) {
 						deletedProject(project);
 					} else {
-						message = NLS.bind(Messages.resources_couldnotDelete, project.getLocation().toOSString());
+						FileStore store = localManager.getStoreOrNull(project);
+						String location = store == null ? project.getName() : store.getAbsolutePath();
+						message = NLS.bind(Messages.resources_couldnotDelete, location);
 						IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message);
 						failed(status);
 					}
 					return;
 				}
 
-				// If the content area is in the default location then delete the directory and all its
-				// children. If it is specified by the user then leave the directory itself but delete the children.
-				IProjectDescription description = ((Project) project).internalGetDescription();
-				boolean defaultLocation = description == null || description.getLocation() == null;
-				java.io.File projectLocation = project.getLocation().toFile();
-				// if the project is open, we must perform a best-effort deletion			
-				if (project.isOpen()) {
-					try {
-						FileSystemResourceManager localManager = ((Project) project).getLocalManager();
-						localManager.delete(project, force, false, false, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
-						// if the project location is not the default we want to keep the root directory (it is empty now)
-						if (defaultLocation)
-							success = Workspace.clear(projectLocation);
-					} catch (CoreException ce) {
-						message = NLS.bind(Messages.localstore_couldnotDelete, project.getFullPath());
-						MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, ce);
-						if (ce.getStatus() != null)
-							status.merge(ce.getStatus());
-						failed(status);
-						return;
+				try {
+					FileStore projectStore = localManager.getStore(project);
+					// if the project is open, we must perform a best-effort deletion			
+					if (project.isOpen()) {
+						localManager.delete(project, flags, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
+						projectStore.delete(IFileStoreConstants.NONE, null);
+					} else {
+						projectStore.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
 					}
-				} else {
-					success = defaultLocation ? Workspace.clear(projectLocation) : Workspace.clearChildren(projectLocation);
-					monitor.worked(Policy.totalWork * 3 / 4);
+				} catch (CoreException ce) {
+					message = NLS.bind(Messages.localstore_couldnotDelete, project.getFullPath());
+					MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IResourceStatus.FAILED_DELETE_LOCAL, message, ce);
+					if (ce.getStatus() != null)
+						status.merge(ce.getStatus());
+					failed(status);
+					return;
 				}
 			}
 
-			// Signal that the workspace tree should be updated that the project
-			// has been deleted.
+			// Signal that the workspace tree should be updated that the project has been deleted.
 			if (success)
 				deletedProject(project);
 			else {
@@ -800,64 +844,6 @@ class ResourceTree implements IResourceTree {
 			}
 		} finally {
 			lock.release();
-			monitor.done();
-		}
-	}
-
-	/**
-	 * Helper method for moving the project content. Determines the content location
-	 * based on the project description. (default location or user defined?)
-	 */
-	private void moveProjectContent(IProject source, IProjectDescription destDescription, int flags, IProgressMonitor monitor) throws CoreException {
-		try {
-			String message = NLS.bind(Messages.resources_moving, source.getFullPath());
-			monitor.beginTask(message, 10);
-			IProjectDescription srcDescription = source.getDescription();
-			// If the locations are the same (and non-default) then there is nothing to do.
-			if (srcDescription.getLocation() != null && srcDescription.getLocation().equals(destDescription))
-				return;
-			
-			IPath destLocation = destDescription.getLocation();
-			// Use the default area if necessary for the destination. The source project
-			// should already have a location assigned to it.
-			if (destLocation == null)
-				destLocation = Platform.getLocation().append(destDescription.getName());
-			FileStore destStore = FileStoreFactory.create(destLocation);
-
-			// Move the contents on disk.
-			final FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
-			try {
-				localManager.move(source, destStore, flags, monitor);
-			} catch (CoreException ce) {
-				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.exists();
-				// if not, then rethrow the exception to abort the move operation
-				if (!failedDeletingSource)
-					throw ce;
-				// if so, we should log the failure and proceed with moving the tree
-				failed(ce.getStatus());
-			}
-			monitor.worked(9);
-
-			//if this is a deep move, move the contents of any linked resources
-			if ((flags & IResource.SHALLOW) == 0) {
-				IResource[] children = source.members();
-				for (int i = 0; i < children.length; i++) {
-					if (children[i].isLinked()) {
-						message = NLS.bind(Messages.resources_moving, children[i].getFullPath());
-						monitor.subTask(message);
-						FileStore linkDestination = destStore.getChild(children[i].getName());
-						try {
-							localManager.move(children[i], linkDestination, flags, Policy.monitorFor(null));
-						} catch (CoreException ce) {
-							//log the failure, but keep trying on remaining links
-							failed(ce.getStatus());
-						}
-					}
-				}
-			}
-			monitor.worked(1);
-		} finally {
 			monitor.done();
 		}
 	}
@@ -903,10 +889,9 @@ class ResourceTree implements IResourceTree {
 
 			// If the file was successfully moved in the file system then the workspace
 			// tree needs to be updated accordingly. Otherwise signal that we have an error.
-			FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
 			FileStore destStore = null;
 			try {
-				destStore = getStore(destination);
+				destStore = localManager.getStore(destination);
 				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
@@ -965,10 +950,9 @@ class ResourceTree implements IResourceTree {
 
 			// Move the resources in the file system. Only the FORCE flag is valid here so don't
 			// have to worry about clearing the KEEP_HISTORY flag.
-			FileSystemResourceManager localManager = ((Resource)source).getLocalManager();
 			FileStore destStore = null;
 			try {
-				destStore = getStore(destination);
+				destStore = localManager.getStore(destination);
 				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
@@ -991,133 +975,6 @@ class ResourceTree implements IResourceTree {
 			lock.release();
 			monitor.done();
 		}
-	}
-
-	/**
-	 * Helper method to update all the timestamps in the tree to match
-	 * those in the file system. Used after a #move.
-	 */
-	private void updateTimestamps(IResource root, final boolean isDeep) {
-		IResourceVisitor visitor = new IResourceVisitor() {
-			public boolean visit(IResource resource) {
-				boolean isLinked = resource.isLinked();
-				if (isLinked && !isDeep)
-					//don't need to visit children because they didn't move
-					return false;
-				if (resource.getType() == IResource.FILE) {
-					IFile file = (IFile) resource;
-					updateMovedFileTimestamp(file, computeTimestamp(file));
-				} else {
-					if (isLinked) {
-						//clear the linked resource bit, if any
-						ResourceInfo info = ((Resource) resource).getResourceInfo(false, true);
-						info.clear(ICoreConstants.M_LINK);
-					}
-				}
-				return true;
-			}
-		};
-		try {
-			root.accept(visitor, IResource.DEPTH_INFINITE, IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
-		} catch (CoreException e) {
-			// No exception should be thrown.
-		}
-	}
-
-	/**
-	 * Does a best-effort delete on this resource and all its children.
-	 */
-	private boolean internalDeleteProject(IProject project, int flags, IProgressMonitor monitor) {
-
-		// Recursively delete each member of the project.
-		IResource[] members = null;
-		try {
-			members = project.members(IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
-		} catch (CoreException e) {
-			String message = NLS.bind(Messages.resources_errorMembers, project.getFullPath());
-			IStatus status = new ResourceStatus(IStatus.ERROR, project.getFullPath(), message, e);
-			failed(status);
-			// Indicate that the delete was unsuccessful.
-			return false;
-		}
-		boolean deletedChildren = true;
-		for (int i = 0; i < members.length; i++) {
-			IResource child = members[i];
-			switch (child.getType()) {
-				case IResource.FILE :
-					if (child.getName().equals(IProjectDescription.DESCRIPTION_FILE_NAME)) {
-						// ignore the .project file for now and delete it last
-					} else {
-						deletedChildren &= internalDeleteFile((IFile) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
-					}
-					break;
-				case IResource.FOLDER :
-					deletedChildren &= internalDeleteFolder((IFolder) child, flags, Policy.subMonitorFor(monitor, Policy.totalWork / members.length));
-					break;
-			}
-		}
-		// Check to see if the children were deleted ok. If there was a problem
-		// just return as the problem should have been logged by the recursive
-		// call to the child.
-		if (deletedChildren) {
-			IResource file = project.findMember(IProjectDescription.DESCRIPTION_FILE_NAME);
-			if (file == null) {
-				//the .project have may have been recreated on disk automatically by snapshot
-				IPath location = project.getFile(IProjectDescription.DESCRIPTION_FILE_NAME).getLocation();
-				if (location != null)
-					location.toFile().delete();
-			} else {
-				if (file.getType() != IResource.FILE) {
-					// We should never get here since the only reason we skipped it above was because
-					// it was a file named .project.
-					String message = NLS.bind(Messages.resources_couldnotDelete, file.getFullPath());
-					IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
-					failed(status);
-					// Indicate that the delete was unsuccessful.
-					return false;
-				}
-				boolean deletedProjectFile = internalDeleteFile((IFile) file, flags, Policy.monitorFor(null));
-				if (!deletedProjectFile) {
-					String message = NLS.bind(Messages.resources_couldnotDelete, file.getFullPath());
-					IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
-					failed(status);
-					// Indicate that the delete was unsuccessful.
-					return false;
-				}
-			}
-		} else {
-			// Indicate that the delete was unsuccessful.
-			return false;
-		}
-
-		// If the content area is in the default location then delete the directory and all its
-		// children. If it is specified by the user then leave the directory itself but delete the children.
-		// No need to check the force flag since this is an internal method and by the time we
-		// get here we know that force is false.
-		java.io.File root = project.getLocation().toFile();
-		IProjectDescription description = ((Project) project).internalGetDescription();
-		// If we have a user-defined location delete the directory, otherwise just see if its empty
-		boolean success;
-		if (description == null || description.getLocation() == null) {
-			success = root.delete();
-			if (!success && !root.exists()) {
-				success = true;
-			}
-		} else {
-			String[] children = root.list();
-			success = children == null || children.length == 0;
-		}
-
-		if (success) {
-			deletedProject(project);
-			// Indicate that the delete was successful.
-			return true;
-		}
-		String message = NLS.bind(Messages.resources_couldnotDelete, project.getLocation().toOSString());
-		IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message);
-		failed(status);
-		// Indicate that the delete was unsuccessful.
-		return false;
 	}
 
 	/**
@@ -1187,11 +1044,42 @@ class ResourceTree implements IResourceTree {
 			// Update the timestamp in the tree.
 			ResourceInfo info = ((Resource) file).getResourceInfo(false, true);
 			// The info should never be null since we just checked that the resource exists in the tree.
-			((Resource) file).getLocalManager().updateLocalSync(info, timestamp);
+			localManager.updateLocalSync(info, timestamp);
 			//remove the linked bit since this resource has been moved in the file system
 			info.clear(ICoreConstants.M_LINK);
 		} finally {
 			lock.release();
+		}
+	}
+
+	/**
+	 * Helper method to update all the timestamps in the tree to match
+	 * those in the file system. Used after a #move.
+	 */
+	private void updateTimestamps(IResource root, final boolean isDeep) {
+		IResourceVisitor visitor = new IResourceVisitor() {
+			public boolean visit(IResource resource) {
+				boolean isLinked = resource.isLinked();
+				if (isLinked && !isDeep)
+					//don't need to visit children because they didn't move
+					return false;
+				if (resource.getType() == IResource.FILE) {
+					IFile file = (IFile) resource;
+					updateMovedFileTimestamp(file, computeTimestamp(file));
+				} else {
+					if (isLinked) {
+						//clear the linked resource bit, if any
+						ResourceInfo info = ((Resource) resource).getResourceInfo(false, true);
+						info.clear(ICoreConstants.M_LINK);
+					}
+				}
+				return true;
+			}
+		};
+		try {
+			root.accept(visitor, IResource.DEPTH_INFINITE, IContainer.INCLUDE_TEAM_PRIVATE_MEMBERS);
+		} catch (CoreException e) {
+			// No exception should be thrown.
 		}
 	}
 }
