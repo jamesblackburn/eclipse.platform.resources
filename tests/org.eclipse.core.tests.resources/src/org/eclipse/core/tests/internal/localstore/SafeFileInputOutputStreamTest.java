@@ -72,7 +72,6 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		File target = new File(temp, "target");
 		Workspace.clear(target); // make sure there was nothing here before
 		assertTrue("1.0", !target.exists());
-		FileSystemStore store = new FileSystemStore();
 
 		// define temp path
 		Path parentLocation = new Path(target.getParentFile().getAbsolutePath());
@@ -83,7 +82,7 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		File tempFile = tempLocation.toFile();
 		String contents = getRandomString();
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("3.0", e);
 		}
@@ -92,7 +91,7 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		safeStream = createSafeStream(target.getAbsolutePath(), tempLocation.toOSString(), "4.0");
 		tempFile = tempLocation.toFile();
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("4.0", e);
 		}
@@ -113,13 +112,12 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		File target = new File(temp, "target");
 		Workspace.clear(target); // make sure there was nothing here before
 		assertTrue("1.0", !target.exists());
-		FileSystemStore store = new FileSystemStore();
 
 		// basic use (like a FileOutputStream)
 		SafeFileOutputStream safeStream = createSafeStream(target, "1.0");
 		String contents = getRandomString();
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("1.1", e);
 		}
@@ -132,7 +130,7 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		File tempFile = new File(safeStream.getTempFilePath());
 		assertTrue("2.0", tempFile.exists());
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("3.0", e);
 		}
@@ -146,7 +144,6 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		File target = new File(temp, "target");
 		Workspace.clear(target); // make sure there was nothing here before
 		assertTrue("1.0", !target.exists());
-		FileSystemStore store = new FileSystemStore();
 
 		// define temp path
 		Path parentLocation = new Path(target.getParentFile().getAbsolutePath());
@@ -160,7 +157,7 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		// update target contents
 		String contents = getRandomString();
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("3.0", e);
 		}
@@ -176,7 +173,7 @@ public class SafeFileInputOutputStreamTest extends ResourceTest {
 		// update target contents
 		contents = getRandomString();
 		try {
-			store.transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
+			transferStreams(getContents(contents), safeStream, target.getAbsolutePath(), null);
 		} catch (CoreException e) {
 			fail("5.0", e);
 		}

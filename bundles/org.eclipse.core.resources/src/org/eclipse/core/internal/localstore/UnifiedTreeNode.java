@@ -52,7 +52,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	}
 
 	public long getLastModified() {
-		return store.lastModified();
+		return store == null ? 0 : store.lastModified();
 	}
 
 	public int getLevel() {
@@ -79,11 +79,11 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	}
 
 	public boolean isFile() {
-		return !store.isDirectory();
+		return store != null && !store.isDirectory();
 	}
 
 	public boolean isFolder() {
-		return store.isDirectory();
+		return store != null && store.isDirectory();
 	}
 
 	public void setExistsWorkspace(boolean exists) {

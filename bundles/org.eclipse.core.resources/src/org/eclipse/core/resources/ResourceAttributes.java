@@ -46,7 +46,7 @@ public class ResourceAttributes {
 	public static ResourceAttributes fromFile(java.io.File file) {
 		FileStore store = FileStoreFactory.create(Path.fromOSString(file.getAbsolutePath()));
 		ResourceAttributes attributes = new ResourceAttributes();
-		attributes.setReadOnly((store.attributes() & IFileStoreConstants.READ_ONLY_LOCAL) != 0);
+		attributes.setReadOnly((store.attributes() & IFileStoreConstants.ATTRIBUTE_READ_ONLY) != 0);
 		return attributes;
 	}
 

@@ -117,7 +117,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public ResourceAttributes attributes(IResource resource) throws CoreException {
 		FileStore store = getStore(resource);
 		ResourceAttributes attributes = new ResourceAttributes();
-		attributes.setReadOnly((store.attributes() & IFileStoreConstants.READ_ONLY_LOCAL) != 0);
+		attributes.setReadOnly((store.attributes() & IFileStoreConstants.ATTRIBUTE_READ_ONLY) != 0);
 		return attributes;
 	}
 
@@ -407,11 +407,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * because it was unchanged
 	 */
 	public boolean internalWrite(IProject target, IProjectDescription description, int updateFlags, boolean hasPublicChanges, boolean hasPrivateChanges) throws CoreException {
-		IPath location = locationFor(target);
-		if (location == null) {
-			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
-			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
-		}
 		FileStore store = getStore(target);
 		store.create(IFileStoreConstants.FOLDER);
 		//write the project's private description to the metadata area
@@ -829,7 +824,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		FileStore store = getStore(resource);
 		int value = 0;
 		if (attributes.isReadOnly())
-			value &= IFileStoreConstants.READ_ONLY_LOCAL;
+			value &= IFileStoreConstants.ATTRIBUTE_READ_ONLY;
 		store.setAttributes(value);
 	}
 
@@ -864,7 +859,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		monitor = Policy.monitorFor(null);
 		try {
 			FileStore store = getStore(target);
-			if ((store.attributes() & IFileStoreConstants.READ_ONLY_LOCAL) != 0) {
+			if ((store.attributes() & IFileStoreConstants.ATTRIBUTE_READ_ONLY) != 0) {
 				String message = NLS.bind(Messages.localstore_couldNotWriteReadOnly, target.getFullPath());
 				throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 			}

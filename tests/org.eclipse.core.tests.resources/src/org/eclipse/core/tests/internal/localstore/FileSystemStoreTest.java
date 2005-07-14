@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.Date;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.internal.localstore.CoreFileSystemLibrary;
+import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
 import org.eclipse.core.internal.localstore.FileSystemStore;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.IResource;

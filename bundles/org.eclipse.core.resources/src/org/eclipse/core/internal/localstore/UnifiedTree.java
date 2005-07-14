@@ -48,8 +48,8 @@ public class UnifiedTree {
 	protected static final UnifiedTreeNode childrenMarker = new UnifiedTreeNode(null, null, null, null, false);
 
 	/** Singleton to indicate no local children */
-	private static final Object[] NO_CHILDREN = new Object[0];
-	private static final IResource[] NO_RESOURCES = (IResource[])NO_CHILDREN;
+	private static final IResource[] NO_RESOURCES = new IResource[0];
+	private static final Object[] NO_CHILDREN = NO_RESOURCES;
 	private static final Iterator EMPTY_ITERATOR = Collections.EMPTY_LIST.iterator();
 
 	/**
