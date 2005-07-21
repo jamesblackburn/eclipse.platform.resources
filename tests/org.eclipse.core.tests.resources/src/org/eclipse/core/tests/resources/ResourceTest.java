@@ -11,6 +11,7 @@
 package org.eclipse.core.tests.resources;
 
 import java.io.*;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.filesystem.Policy;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
 import org.eclipse.core.resources.*;
@@ -414,15 +415,14 @@ public class ResourceTest extends CoreTest {
 	/**
 	 * Create the given file in the local store. 
 	 */
-	public void createFileInFileSystem(IPath path) throws CoreException {
-		java.io.File file = path.toFile();
-		file.getParentFile().mkdirs();
-		FileOutputStream output = null;
+	public void createFileInFileSystem(FileStore file) throws CoreException {
+		file.getParent().create(IFileStoreConstants.NONE, null);
+		OutputStream output = null;
 		try {
-			output = new FileOutputStream(file);
+			output = file.openOutputStream(IFileStoreConstants.NONE);
 			output.write("".getBytes("UTF8"));
 		} catch (IOException e) {
-			throw new CoreException(new Status(IStatus.ERROR, "foo", 2, "Failed during write: " + path, e));
+			throw new CoreException(new Status(IStatus.ERROR, "foo", 2, "Failed during write: " + file.getAbsolutePath(), e));
 		} finally {
 			try {
 				if (output != null)
@@ -514,10 +514,8 @@ public class ResourceTest extends CoreTest {
 	 * to ensure that we have a correct Path -> File mapping.
 	 */
 	public void ensureExistsInFileSystem(IFile file) {
-		IPath path = file.getLocation();
 		try {
-			if (path != null)
-				createFileInFileSystem(path);
+			createFileInFileSystem(file.getStore());
 		} catch (CoreException e) {
 			fail("#ensureExistsInFileSystem(IFile): " + file.getFullPath(), e);
 		}
@@ -829,6 +827,19 @@ public class ResourceTest extends CoreTest {
 			//ignore
 		} catch (InterruptedException e) {
 			//ignore
+		}
+	}
+
+	protected boolean usingNatives() {
+		return false;
+		//return CoreFileSystemLibrary.usingNatives();
+	}
+
+	protected void clear(FileStore store) {
+		try {
+			store.delete(NONE, null);
+		} catch (CoreException e) {
+			fail("IResourceTest#clear.99", e);
 		}
 	}
 }

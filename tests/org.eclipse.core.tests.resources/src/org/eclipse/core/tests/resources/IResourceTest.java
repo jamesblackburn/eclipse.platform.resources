@@ -14,13 +14,15 @@ import java.io.File;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.internal.filesystem.CoreFileSystemLibrary;
+import org.eclipse.core.filesystem.IFileStoreConstants;
+import org.eclipse.core.internal.filesystem.local.CoreFileSystemLibrary;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
-import org.eclipse.core.tests.harness.*;
+import org.eclipse.core.tests.harness.CancelingProgressMonitor;
+import org.eclipse.core.tests.harness.FussyProgressMonitor;
 
-public class IResourceTest extends ResourceTest {
+public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	protected static final Boolean[] FALSE_AND_TRUE = new Boolean[] {Boolean.FALSE, Boolean.TRUE};
 	protected static IPath[] interestingPaths;
 	protected static IResource[] interestingResources;
@@ -265,7 +267,7 @@ public class IResourceTest extends ResourceTest {
 			ensureDoesNotExistInWorkspace(changedTarget);
 		ensureExistsInWorkspace(interestingResources, true);
 	}
-
+	
 	/**
 	 * Returns an array of all projects in the given resource array. */
 	protected IProject[] getProjects(IResource[] resources) {

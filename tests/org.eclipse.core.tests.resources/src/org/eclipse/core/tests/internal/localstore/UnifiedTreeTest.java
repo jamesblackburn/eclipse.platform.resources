@@ -10,13 +10,13 @@
  *******************************************************************************/
 package org.eclipse.core.tests.internal.localstore;
 
-import java.io.*;
+import java.io.OutputStream;
 import java.util.Hashtable;
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.resources.Workspace;
-import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 
@@ -34,12 +34,11 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		super(name);
 	}
 
-	protected void createFiles(File folder, Hashtable set) throws CoreException {
-		FileSystemStore store = new FileSystemStore();
+	protected void createFiles(FileStore folder, Hashtable set) throws Exception {
 		for (int i = 0; i < limit; i++) {
-			File child = new File(folder, "fsFile" + i);
-			InputStream input = new ByteArrayInputStream("contents".getBytes());
-			store.write(child, input, false, Policy.monitorFor(null));
+			FileStore child = folder.getChild("fsFile" + i);
+			OutputStream out = child.openOutputStream(NONE);
+			out.write("contents".getBytes());
 			String location = child.getAbsolutePath();
 			set.put(location, "");
 		}
@@ -60,11 +59,11 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		workspace.run(operation, null);
 	}
 
-	protected void createResourcesInFileSystem(File folder, Hashtable set) throws CoreException {
+	protected void createResourcesInFileSystem(FileStore folder, Hashtable set) throws Exception {
 		createFiles(folder, set);
 		for (int i = 0; i < limit; i++) {
-			File child = new File(folder, "fsFolder" + i);
-			child.mkdirs();
+			FileStore child = folder.getChild("fsFolder" + i);
+			child.create(DIRECTORY, null);
 			String location = child.getAbsolutePath();
 			set.put(location, "");
 			if (i < (limit / 2))
@@ -101,8 +100,8 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		IFolder folder = project.getFolder("root");
 		folder.create(true, true, null);
 
-		/* Create a hashtable to hold all resources the tree should visit.
-		 The resources are going to be removed from the hashtable as
+		/* Create a hash table to hold all resources the tree should visit.
+		 The resources are going to be removed from the hash table as
 		 the visitor visits it. */
 		final Hashtable set = new Hashtable();
 
@@ -110,17 +109,18 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		createResourcesInWorkspace(folder, set);
 
 		/* create some file system structure */
-		createResourcesInFileSystem(folder.getLocation().toFile(), set);
+		createResourcesInFileSystem(folder.getStore(), set);
 
 		/* create a visitor */
 		IUnifiedTreeVisitor visitor = new IUnifiedTreeVisitor() {
-			public boolean visit(UnifiedTreeNode node) throws CoreException {
+			public boolean visit(UnifiedTreeNode node) {
 
-				/* test the node.getLocalLocation() method */
-				String key = node.getLocalLocation();
-				assertEquals("1.0", node.getResource().getLocation().toOSString(), key);
+				/* test the node.getLocalName() method */
+				String key = node.getLocalName();
+				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
+				assertEquals("1.0", node.getResource().getStore(), node.getStore());
 
-				/* remove from the hashtable the resource we're visiting */
+				/* remove from the hash table the resource we're visiting */
 				set.remove(key);
 				return true;
 			}
@@ -130,7 +130,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		UnifiedTree tree = new UnifiedTree(folder);
 		tree.accept(visitor);
 
-		/* if the hashtable is empty, we walked through all resources */
+		/* if the hash table is empty, we walked through all resources */
 		assertTrue("2.0", set.isEmpty());
 	}
 
@@ -138,14 +138,14 @@ public class UnifiedTreeTest extends LocalStoreTest {
 	 * Creates some resources in the file system and some in the workspace. After that,
 	 * makes sure the visitor is going to walk through some of them.
 	 */
-	public void testTraverseMechanismInFolderSkipingSomeChildren() throws Throwable {
+	public void testTraverseMechanismInFolderSkippingSomeChildren() throws Throwable {
 		/* create common objects */
 		IProject project = projects[0];
 		IFolder folder = project.getFolder("root");
 		folder.create(true, true, null);
 
-		/* Create a hashtable to hold all resources the tree should visit.
-		 The resources are going to be removed from the hashtable as
+		/* Create a hash table to hold all resources the tree should visit.
+		 The resources are going to be removed from the hash table as
 		 the visitor visits it. */
 		final Hashtable set = new Hashtable();
 
@@ -153,15 +153,16 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		createResourcesInWorkspace(folder, set);
 
 		/* create some file system structure */
-		createResourcesInFileSystem(folder.getLocation().toFile(), set);
+		createResourcesInFileSystem(folder.getStore(), set);
 
 		/* create a visitor */
 		IUnifiedTreeVisitor visitor = new IUnifiedTreeVisitor() {
-			public boolean visit(UnifiedTreeNode node) throws CoreException {
+			public boolean visit(UnifiedTreeNode node) {
 
-				/* test the node.getLocalLocation() method */
-				String key = node.getLocalLocation();
-				assertEquals("1.0", node.getResource().getLocation().toOSString(), key);
+				/* test the node.getLocalName() method */
+				String key = node.getLocalName();
+				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
+				assertEquals("1.1", node.getResource().getStore(), node.getStore());
 
 				/* force children to be added to the queue */
 				node.getChildren();
@@ -170,7 +171,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 				if (node.getResource().getName().startsWith("fsFolder"))
 					return false;
 
-				/* remove from the hashtable the resource we're visiting */
+				/* remove from the hash table the resource we're visiting */
 				set.remove(key);
 				return true;
 			}
@@ -183,7 +184,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		UnifiedTree tree = new UnifiedTree(folder);
 		tree.accept(visitor);
 
-		/* if the hashtable is empty, we walked through all resources */
+		/* if the hash table is empty, we walked through all resources */
 		assertTrue("2.0", !set.isEmpty());
 		assertTrue("2.1", set.size() != initialSize);
 	}
@@ -196,8 +197,8 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		/* create common objects */
 		IProject project = projects[0];
 
-		/* Create a hashtable to hold all resources the tree should visit.
-		 The resources are going to be removed from the hashtable as
+		/* Create a hash table to hold all resources the tree should visit.
+		 The resources are going to be removed from the hash table as
 		 the visitor visits it. */
 		final Hashtable set = new Hashtable();
 
@@ -205,16 +206,17 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		createResourcesInWorkspace(project, set);
 
 		/* create some file system structure */
-		createResourcesInFileSystem(project.getLocation().toFile(), set);
+		createResourcesInFileSystem(project.getStore(), set);
 
 		/* create a visitor */
 		IUnifiedTreeVisitor visitor = new IUnifiedTreeVisitor() {
 			public boolean visit(UnifiedTreeNode node) throws CoreException {
 
-				/* test the node.getLocalLocation() method */
-				String key = node.getLocalLocation();
-				assertEquals("1.0", node.getResource().getLocation().toOSString(), key);
-				/* remove from the hashtable the resource we're visiting */
+				/* test the node.getLocalName() method */
+				String key = node.getLocalName();
+				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
+				assertEquals("1.1", node.getResource().getStore(), node.getStore());
+				/* remove from the hash table the resource we're visiting */
 				set.remove(key);
 				return true;
 			}
@@ -224,7 +226,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		UnifiedTree tree = new UnifiedTree(project);
 		tree.accept(visitor);
 
-		/* if the hashtable is empty, we walked through all resources */
+		/* if the hash table is empty, we walked through all resources */
 		assertTrue("2.0", set.isEmpty());
 	}
 }

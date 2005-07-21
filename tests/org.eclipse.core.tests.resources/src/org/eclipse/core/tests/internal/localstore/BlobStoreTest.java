@@ -112,7 +112,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		File target = new File(root, "target");
 		UniversalUniqueIdentifier uuid = null;
 		try {
-			createFile(target, "bla bla bla");
+			createIOFile(target, "bla bla bla");
 			uuid = store.addBlob(target, true);
 		} catch (IOException e) {
 			fail("4.0", e);
@@ -149,7 +149,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		UniversalUniqueIdentifier uuid = null;
 		String content = "nothing important........tnatropmi gnihton";
 		try {
-			createFile(target, content);
+			createIOFile(target, content);
 			uuid = store.addBlob(target, true);
 		} catch (IOException e) {
 			fail("3.0", e);
@@ -181,7 +181,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		UniversalUniqueIdentifier uuid = null;
 		String content = "nothing important........tnatropmi gnihton";
 		try {
-			createFile(target, content);
+			createIOFile(target, content);
 			uuid = store.addBlob(target, true);
 		} catch (IOException e) {
 			fail("2.0", e);
