@@ -268,9 +268,8 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public boolean fastIsSynchronized(File target) {
 		ResourceInfo info = target.getResourceInfo(false, false);
 		if (target.exists(target.getFlags(info), true)) {
-			FileStore store = getStoreOrNull(target);
-			//TODO - optimize two file system calls here
-			if (store != null && !store.fetchInfo().isDirectory() && info.getLocalSyncInfo() == store.fetchInfo().getLastModified())
+			IFileInfo fileInfo= getStore(target).fetchInfo();
+			if (!fileInfo.isDirectory() && info.getLocalSyncInfo() == fileInfo.getLastModified())
 				return true;
 		}
 		return false;
@@ -333,20 +332,16 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * @return The file store for this resource
 	 * @throws CoreException
 	 */
-	public FileStore getStore(IResource target) throws CoreException {
+	public FileStore getStore(IResource target) {
 		FileStoreRoot root = getStoreRoot(target);
 		//handle case where resource location cannot be resolved
 		//location can be null if based on an undefined variable
 		if (root == null) {
-			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
-			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
+			return FileStoreFactory.createNullStore(target.getFullPath());
+//			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
+//			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 		}
 		return root.getFileSystemObject(target.getFullPath());
-	}
-
-	public FileStore getStoreOrNull(IResource target) {
-		FileStoreRoot root = getStoreRoot(target);
-		return root == null ? null : root.getFileSystemObject(target.getFullPath());
 	}
 
 	private FileStoreRoot getStoreRoot(IResource target) {
@@ -371,20 +366,14 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * Returns whether the project has a project description file on disk.
 	 */
 	public boolean hasSavedDescription(IProject project) {
-		final FileStore store = getStoreOrNull(project);
-		if (store == null)
-			return false;
-		return store.getChild(IProjectDescription.DESCRIPTION_FILE_NAME).fetchInfo().exists();
+		return getStore(project).getChild(IProjectDescription.DESCRIPTION_FILE_NAME).fetchInfo().exists();
 	}
 
 	/**
 	 * Returns whether the project has any local content on disk.
 	 */
 	public boolean hasSavedContent(IProject project) {
-		final FileStore store = getStoreOrNull(project);
-		if (store == null)
-			return false;
-		return store.fetchInfo().exists();
+		return getStore(project).fetchInfo().exists();
 	}
 
 	/**
@@ -469,10 +458,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		ResourceInfo projectInfo = ((Resource) target).getResourceInfo(false, false);
 		if (projectInfo == null)
 			return false;
-		FileStore store = getStoreOrNull(descriptionFile);
-		if (store == null)
-			return false;
-		return projectInfo.getLocalSyncInfo() == store.fetchInfo().getLastModified();
+		return projectInfo.getLocalSyncInfo() == getStore(descriptionFile).fetchInfo().getLastModified();
 	}
 
 	/* (non-Javadoc)

@@ -1315,10 +1315,9 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	public Object getSessionProperty(QualifiedName key) throws CoreException;
 
 	/**
-	 * Returns the file system store where this resource is stored if it exists.
-	 * 
+	 * Returns the file system store where this resource is stored.
 	 */
-	public FileStore getStore() throws CoreException;
+	public FileStore getStore();
 	/**
 	 * Returns the type of this resource.
 	 * The returned value will be one of <code>FILE</code>, 

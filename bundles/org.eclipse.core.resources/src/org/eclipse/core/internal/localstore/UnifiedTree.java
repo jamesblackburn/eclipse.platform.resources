@@ -167,9 +167,7 @@ public class UnifiedTree {
 	 * Creates a tree node for a resource that is linked in a different file system location.
 	 */
 	protected UnifiedTreeNode createChildForLinkedResource(IResource target) {
-		FileStore store = ((Resource) target).getLocalManager().getStoreOrNull(target);
-		if (store == null)
-			return null;
+		FileStore store = ((Resource) target).getLocalManager().getStore(target);
 		return createNode(target, store, store.fetchInfo(), true);
 	}
 
@@ -213,7 +211,7 @@ public class UnifiedTree {
 	}
 
 	protected void addRootToQueue() {
-		FileStore rootStore = ((Resource)root).getLocalManager().getStoreOrNull(root);
+		FileStore rootStore = ((Resource)root).getLocalManager().getStore(root);
 		UnifiedTreeNode node = createNode(root, rootStore, rootStore.fetchInfo(), root.exists());
 		if (!node.existsInFileSystem() && !node.existsInWorkspace())
 			return;

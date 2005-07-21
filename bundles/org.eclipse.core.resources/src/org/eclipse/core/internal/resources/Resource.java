@@ -990,7 +990,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		return info.getSessionProperty(key);
 	}
 	
-	public FileStore getStore() throws CoreException {
+	public FileStore getStore() {
 		return getLocalManager().getStore(this);
 	}
 

@@ -60,9 +60,9 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.exists())
 				return;
-			FileStore store = localManager.getStoreOrNull(file);
+			FileStore store = localManager.getStore(file);
 			final IFileInfo fileInfo = store.fetchInfo();
-			if (store == null || !fileInfo.exists())
+			if (!fileInfo.exists())
 				return;
 			long lastModified = fileInfo.getLastModified();
 			localManager.getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
@@ -100,8 +100,8 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.getProject().exists())
 				return NULL_TIMESTAMP;
-			FileStore store = localManager.getStoreOrNull(file);
-			return store == null ? NULL_TIMESTAMP : store.fetchInfo().getLastModified();
+			IFileInfo fileInfo = localManager.getStore(file).fetchInfo();
+			return fileInfo.exists() ? fileInfo.getLastModified() : NULL_TIMESTAMP;
 		} finally {
 			lock.release();
 		}
@@ -256,8 +256,9 @@ class ResourceTree implements IResourceTree {
 			}
 			// If the file doesn't exist on disk then signal to the workspace to delete the
 			// file and return.
-			FileStore fileStore = localManager.getStoreOrNull(file);
-			if (fileStore == null || !fileStore.fetchInfo().exists()) {
+			FileStore fileStore = localManager.getStore(file);
+			boolean localExists = fileStore.fetchInfo().exists();
+			if (!localExists) {
 				deletedFile(file);
 				// Indicate that the delete was successful.
 				return true;
@@ -276,7 +277,7 @@ class ResourceTree implements IResourceTree {
 			if (!force) {
 				boolean inSync = isSynchronized(file, IResource.DEPTH_ZERO);
 				// only want to fail if the file still exists.
-				if (!inSync && fileStore.fetchInfo().exists()) {
+				if (!inSync && localExists) {
 					message = NLS.bind(Messages.localstore_resourceIsOutOfSync, file.getFullPath());
 					IStatus status = new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, file.getFullPath(), message);
 					failed(status);
@@ -326,8 +327,8 @@ class ResourceTree implements IResourceTree {
 		}
 
 		// If the folder doesn't exist on disk then update the tree and return.
-		FileStore fileStore = localManager.getStoreOrNull(folder);
-		if (fileStore == null || !fileStore.fetchInfo().exists()) {
+		FileStore fileStore = localManager.getStore(folder);
+		if (!fileStore.fetchInfo().exists()) {
 			deletedFolder(folder);
 			return true;
 		}
@@ -378,13 +379,7 @@ class ResourceTree implements IResourceTree {
 					break;
 			}
 		}
-		FileStore projectStore;
-		try {
-			projectStore = localManager.getStore(project);
-		} catch (CoreException e) {
-			failed(e.getStatus());
-			return false;
-		}
+		FileStore projectStore = localManager.getStore(project);
 		// Check to see if the children were deleted ok. If there was a problem
 		// just return as the problem should have been logged by the recursive
 		// call to the child.
@@ -807,9 +802,8 @@ class ResourceTree implements IResourceTree {
 					if (success) {
 						deletedProject(project);
 					} else {
-						FileStore store = localManager.getStoreOrNull(project);
-						String location = store == null ? project.getName() : store.getAbsolutePath();
-						message = NLS.bind(Messages.resources_couldnotDelete, location);
+						FileStore store = localManager.getStore(project);
+						message = NLS.bind(Messages.resources_couldnotDelete, store.getAbsolutePath());
 						IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message);
 						failed(status);
 					}

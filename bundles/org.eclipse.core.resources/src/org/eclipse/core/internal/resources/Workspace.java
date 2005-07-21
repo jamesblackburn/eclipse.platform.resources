@@ -14,8 +14,7 @@ package org.eclipse.core.internal.resources;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import org.eclipse.core.filesystem.FileStore;
-import org.eclipse.core.filesystem.FileStoreFactory;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.events.*;
 import org.eclipse.core.internal.localstore.FileStoreRoot;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
@@ -268,7 +267,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		}
 		return result;
 	}
-
+	
 	/**
 	 * Deletes all the files and directories from the given root down, except for 
 	 * the root itself.
