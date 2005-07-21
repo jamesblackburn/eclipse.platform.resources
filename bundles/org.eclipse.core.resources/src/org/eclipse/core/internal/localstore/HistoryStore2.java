@@ -212,7 +212,7 @@ public class HistoryStore2 implements IHistoryStore {
 	}
 
 	public boolean exists(IFileState target) {
-		return blobStore.fileFor(((FileState) target).getUUID()).exists();
+		return blobStore.fileFor(((FileState) target).getUUID()).fetchInfo().exists();
 	}
 
 	public InputStream getContents(IFileState target) throws CoreException {

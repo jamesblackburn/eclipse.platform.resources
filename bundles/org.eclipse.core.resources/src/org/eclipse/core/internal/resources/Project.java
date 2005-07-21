@@ -154,7 +154,7 @@ public class Project extends Container implements IProject {
 		if (!status.isOK())
 			throw new ResourceException(status);
 		//try infer the device if there isn't one (windows)
-		if (location.isAbsolute())
+		if (location.isAbsolute() && location.getDevice() == null)
 			desc.setLocation(new Path(location.toFile().getAbsolutePath()));
 	}
 
@@ -268,10 +268,14 @@ public class Project extends Container implements IProject {
 				desc.setName(getName());
 				info.setDescription(desc);
 				// see if there potentially are already contents on disk
-				boolean hasContent = getLocalManager().locationFor(this).toFile().exists();
+				final boolean hasSavedDescription = getLocalManager().hasSavedDescription(this);
+				boolean hasContent = hasSavedDescription;
+				//if there is no project description, there might still be content on disk
+				if (!hasSavedDescription)
+					hasContent = getLocalManager().hasSavedContent(this);
 				try {
 					// look for a description on disk
-					if (getLocalManager().hasSavedProject(this)) {
+					if (hasSavedDescription) {
 						updateDescription();
 						//make sure the .location file is written
 						workspace.getMetaArea().writePrivateDescription(this);
@@ -927,7 +931,7 @@ public class Project extends Container implements IProject {
 				//If the file is missing, we want to write the new description then throw an exception.
 				boolean hadSavedDescription = true;
 				if (((updateFlags & IResource.FORCE) == 0)) {
-					hadSavedDescription = getLocalManager().hasSavedProject(this);
+					hadSavedDescription = getLocalManager().hasSavedDescription(this);
 					if (hadSavedDescription && !getLocalManager().isDescriptionSynchronized(this)) {
 						String message = NLS.bind(Messages.resources_projectDescSync, getName());
 						throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, getFullPath(), message, null);

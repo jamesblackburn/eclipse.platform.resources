@@ -234,7 +234,7 @@ public class RefreshLocalVisitor implements IUnifiedTreeVisitor, ILocalStoreCons
 				target = (Resource) genderVariant;
 		}
 		if (target.getType() == IResource.FILE) {
-			if (!node.isFile()) {
+			if (node.isFolder()) {
 				fileToFolder(node, target);
 				resourceChanged = true;
 				return false;
@@ -276,7 +276,7 @@ public class RefreshLocalVisitor implements IUnifiedTreeVisitor, ILocalStoreCons
 					return true;
 				}
 				/* compare file last modified */
-				if (targetType == IResource.FILE && node.isFile()) {
+				if (targetType == IResource.FILE && !node.isFolder()) {
 					ResourceInfo info = target.getResourceInfo(false, false);
 					if (info != null && info.getLocalSyncInfo() == node.getLastModified())
 						return true;

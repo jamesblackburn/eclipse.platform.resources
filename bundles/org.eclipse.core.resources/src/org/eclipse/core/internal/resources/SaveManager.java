@@ -1093,7 +1093,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 	protected IStatus saveMetaInfo(Project project, IProgressMonitor monitor) throws CoreException {
 		long start = System.currentTimeMillis();
 		//if there is nothing on disk, write the description
-		if (!workspace.getFileSystemManager().hasSavedProject(project)) {
+		if (!workspace.getFileSystemManager().hasSavedDescription(project)) {
 			workspace.getFileSystemManager().writeSilently(project);
 			String msg = NLS.bind(Messages.resources_missingProjectMetaRepaired, project.getName());
 			return new ResourceStatus(IResourceStatus.MISSING_DESCRIPTION_REPAIRED, project.getFullPath(), msg);

@@ -61,9 +61,10 @@ class ResourceTree implements IResourceTree {
 			if (!file.exists())
 				return;
 			FileStore store = localManager.getStoreOrNull(file);
-			if (store == null || !store.exists())
+			final IFileInfo fileInfo = store.fetchInfo();
+			if (store == null || !fileInfo.exists())
 				return;
-			long lastModified = store.lastModified();
+			long lastModified = fileInfo.getLastModified();
 			localManager.getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
 		} finally {
 			lock.release();
@@ -100,7 +101,7 @@ class ResourceTree implements IResourceTree {
 			if (!file.getProject().exists())
 				return NULL_TIMESTAMP;
 			FileStore store = localManager.getStoreOrNull(file);
-			return store == null ? NULL_TIMESTAMP : store.lastModified();
+			return store == null ? NULL_TIMESTAMP : store.fetchInfo().getLastModified();
 		} finally {
 			lock.release();
 		}
@@ -256,7 +257,7 @@ class ResourceTree implements IResourceTree {
 			// If the file doesn't exist on disk then signal to the workspace to delete the
 			// file and return.
 			FileStore fileStore = localManager.getStoreOrNull(file);
-			if (fileStore == null || !fileStore.exists()) {
+			if (fileStore == null || !fileStore.fetchInfo().exists()) {
 				deletedFile(file);
 				// Indicate that the delete was successful.
 				return true;
@@ -275,7 +276,7 @@ class ResourceTree implements IResourceTree {
 			if (!force) {
 				boolean inSync = isSynchronized(file, IResource.DEPTH_ZERO);
 				// only want to fail if the file still exists.
-				if (!inSync && fileStore.exists()) {
+				if (!inSync && fileStore.fetchInfo().exists()) {
 					message = NLS.bind(Messages.localstore_resourceIsOutOfSync, file.getFullPath());
 					IStatus status = new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, file.getFullPath(), message);
 					failed(status);
@@ -326,7 +327,7 @@ class ResourceTree implements IResourceTree {
 
 		// If the folder doesn't exist on disk then update the tree and return.
 		FileStore fileStore = localManager.getStoreOrNull(folder);
-		if (fileStore == null || !fileStore.exists()) {
+		if (fileStore == null || !fileStore.fetchInfo().exists()) {
 			deletedFolder(folder);
 			return true;
 		}
@@ -714,7 +715,7 @@ class ResourceTree implements IResourceTree {
 				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException ce) {
 				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.exists();
+				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.fetchInfo().exists();
 				// if not, then rethrow the exception to abort the move operation
 				if (!failedDeletingSource)
 					throw ce;
@@ -896,7 +897,7 @@ class ResourceTree implements IResourceTree {
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?									
-				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.exists();
+				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.fetchInfo().exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
@@ -957,12 +958,12 @@ class ResourceTree implements IResourceTree {
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.exists();
+				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.fetchInfo().exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
 			}
-			boolean success = destStore != null && destStore.exists();
+			boolean success = destStore != null && destStore.fetchInfo().exists();
 			if (success) {
 				movedFolderSubtree(source, destination);
 				updateTimestamps(destination, isDeep);

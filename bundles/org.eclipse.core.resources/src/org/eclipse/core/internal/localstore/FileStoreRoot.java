@@ -33,6 +33,8 @@ public class FileStoreRoot {
 	}
 
 	public FileStore getFileSystemObject(IPath workspacePath) {
+		if (workspacePath.segmentCount() <= chop)
+			return root;
 		return root.getChild(workspacePath.removeFirstSegments(chop).toOSString());
 	}
 }

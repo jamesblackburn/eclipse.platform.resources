@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 
@@ -1313,6 +1314,11 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 */
 	public Object getSessionProperty(QualifiedName key) throws CoreException;
 
+	/**
+	 * Returns the file system store where this resource is stored if it exists.
+	 * 
+	 */
+	public FileStore getStore() throws CoreException;
 	/**
 	 * Returns the type of this resource.
 	 * The returned value will be one of <code>FILE</code>, 

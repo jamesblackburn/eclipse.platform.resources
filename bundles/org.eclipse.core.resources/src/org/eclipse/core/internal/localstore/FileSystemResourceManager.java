@@ -117,7 +117,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public ResourceAttributes attributes(IResource resource) throws CoreException {
 		FileStore store = getStore(resource);
 		ResourceAttributes attributes = new ResourceAttributes();
-		attributes.setReadOnly((store.attributes() & IFileStoreConstants.ATTRIBUTE_READ_ONLY) != 0);
+		attributes.setReadOnly(store.fetchInfo().isReadOnly());
 		return attributes;
 	}
 
@@ -140,7 +140,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			String title = NLS.bind(Messages.localstore_copying, target.getFullPath());
 			monitor.beginTask(title, totalWork);
 			FileStore destinationStore = getStore(destination);
-			if (destinationStore.exists()) {
+			if (destinationStore.fetchInfo().exists()) {
 				String message = NLS.bind(Messages.localstore_resourceExists, destination.getFullPath());
 				throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, destination.getFullPath(), message, null);
 			}
@@ -270,7 +270,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if (target.exists(target.getFlags(info), true)) {
 			FileStore store = getStoreOrNull(target);
 			//TODO - optimize two file system calls here
-			if (store != null && !store.isDirectory() && info.getLocalSyncInfo() == store.lastModified())
+			if (store != null && !store.fetchInfo().isDirectory() && info.getLocalSyncInfo() == store.fetchInfo().getLastModified())
 				return true;
 		}
 		return false;
@@ -287,22 +287,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	/**
-	 * The project description file is the only metadata file stored outside the
-	 * metadata area.  It is stored as a file directly under the project location.
-	 * Returns null if the project location could not be resolved.
-	 */
-	public IPath getDescriptionLocationFor(IProject target) {
-		IPath projectLocation = locationFor(target);
-		return projectLocation == null ? null : projectLocation.append(IProjectDescription.DESCRIPTION_FILE_NAME);
-	}
-
-	/**
 	 * @deprecated
 	 */
 	public int getEncoding(File target) throws CoreException {
 		// thread safety: (the location can be null if the project for this file does not exist)
 		FileStore store = getStore(target);
-		if (!store.exists()) {
+		if (!store.fetchInfo().exists()) {
 			String message = NLS.bind(Messages.localstore_fileNotFound, store.getAbsolutePath());
 			throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, target.getFullPath(), message, null);
 		}
@@ -323,11 +313,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * file exists by that name.  This is useful when dealing with
 	 * case insensitive file systems.
 	 */
-	public String getLocalName(java.io.File target) {
-		java.io.File root = target.getParentFile();
-		String[] list = root.list();
-		if (list == null)
-			return null;
+	public String getLocalName(FileStore target) {
+		FileStore parent = target.getParent();
+		String[] list = parent.childNames(IFileStoreConstants.NONE, null);
 		String targetName = target.getName();
 		for (int i = 0; i < list.length; i++)
 			if (targetName.equalsIgnoreCase(list[i]))
@@ -379,9 +367,24 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		return workspace;
 	}
 
-	public boolean hasSavedProject(IProject project) {
-		IPath location = getDescriptionLocationFor(project);
-		return location == null ? false : location.toFile().exists();
+	/**
+	 * Returns whether the project has a project description file on disk.
+	 */
+	public boolean hasSavedDescription(IProject project) {
+		final FileStore store = getStoreOrNull(project);
+		if (store == null)
+			return false;
+		return store.getChild(IProjectDescription.DESCRIPTION_FILE_NAME).fetchInfo().exists();
+	}
+
+	/**
+	 * Returns whether the project has any local content on disk.
+	 */
+	public boolean hasSavedContent(IProject project) {
+		final FileStore store = getStoreOrNull(project);
+		if (store == null)
+			return false;
+		return store.fetchInfo().exists();
 	}
 
 	/**
@@ -407,8 +410,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * because it was unchanged
 	 */
 	public boolean internalWrite(IProject target, IProjectDescription description, int updateFlags, boolean hasPublicChanges, boolean hasPrivateChanges) throws CoreException {
-		FileStore store = getStore(target);
-		store.create(IFileStoreConstants.FOLDER);
 		//write the project's private description to the metadata area
 		if (hasPrivateChanges)
 			getWorkspace().getMetaArea().writePrivateDescription(target);
@@ -471,7 +472,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		FileStore store = getStoreOrNull(descriptionFile);
 		if (store == null)
 			return false;
-		return projectInfo.getLocalSyncInfo() == store.lastModified();
+		return projectInfo.getLocalSyncInfo() == store.fetchInfo().getLastModified();
 	}
 
 	/* (non-Javadoc)
@@ -521,7 +522,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		FileStoreRoot root = new FileStoreRoot(store, target.getFullPath());
 		ResourceInfo info = target.getResourceInfo(false, true);
 		info.setFileStoreRoot(root);
-		long lastModified = store.lastModified();
+		long lastModified = store.fetchInfo().getLastModified();
 		if (lastModified == 0)
 			info.clearModificationStamp();
 		updateLocalSync(info, lastModified);
@@ -611,12 +612,11 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	public InputStream read(IFile target, boolean force, IProgressMonitor monitor) throws CoreException {
-		// thread safety: (the location can be null if the project for this file does not exist)
-		IPath location = locationFor(target);
-		if (location == null)
-			((Project) target.getProject()).checkExists(NULL_FLAG, true);
 		FileStore store = getStore(target);
-		if (!store.exists()) {
+		final IFileInfo fileInfo = store.fetchInfo();
+		if (!fileInfo.exists()) {
+			// thread safety: (the location can be null if the project for this file does not exist)
+			((Project) target.getProject()).checkExists(NULL_FLAG, true);
 			String message = NLS.bind(Messages.localstore_fileNotFound, store.getAbsolutePath());
 			throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, target.getFullPath(), message, null);
 		}
@@ -624,7 +624,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			ResourceInfo info = ((Resource) target).getResourceInfo(true, false);
 			int flags = ((Resource) target).getFlags(info);
 			((Resource) target).checkExists(flags, true);
-			if (store.lastModified() != info.getLocalSyncInfo()) {
+			if (fileInfo.getLastModified() != info.getLocalSyncInfo()) {
 				String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, target.getFullPath());
 				throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 			}
@@ -663,7 +663,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		FileStore projectStore = initializeStore(target, projectLocation);
 		FileStore descriptionStore = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
 		ProjectDescription description = null;
-		if (!descriptionStore.exists()) {
+		if (!descriptionStore.fetchInfo().exists()) {
 			//try the legacy location in the meta area
 			description = getWorkspace().getMetaArea().readOldDescription(target);
 			if (description == null) {
@@ -702,7 +702,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			if (creation && privateDescription != null)
 				description.setDynamicReferences(privateDescription.getDynamicReferences(false));
 		}
-		long lastModified = descriptionStore.lastModified();
+		long lastModified = descriptionStore.fetchInfo().getLastModified();
 		IFile descriptionFile = target.getFile(IProjectDescription.DESCRIPTION_FILE_NAME);
 		//don't get a mutable copy because we might be in restore which isn't an operation
 		//it doesn't matter anyway because local sync info is not included in deltas
@@ -811,8 +811,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 */
 	public long setLocalTimeStamp(IResource target, ResourceInfo info, long value) throws CoreException {
 		FileStore store = getStore(target);
-		store.setLastModified(value);
-		long actualValue = store.lastModified();
+		IFileInfo fileInfo = store.fetchInfo();
+		fileInfo.setLastModified(value);
+		store.setFileInfo(fileInfo, IFileStoreConstants.NONE, null);
+		//actual value may be different depending on file system granularity
+		fileInfo = store.fetchInfo();
+		long actualValue = fileInfo.getLastModified();
 		updateLocalSync(info, actualValue);
 		return actualValue;
 	}
@@ -822,10 +826,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 */
 	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
 		FileStore store = getStore(resource);
-		int value = 0;
-		if (attributes.isReadOnly())
-			value &= IFileStoreConstants.ATTRIBUTE_READ_ONLY;
-		store.setAttributes(value);
+		IFileInfo fileInfo = store.fetchInfo();
+		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_DIRECTORY, attributes.isReadOnly());
+		store.setFileInfo(fileInfo, IFileStoreConstants.NONE, null);
 	}
 
 	public void shutdown(IProgressMonitor monitor) throws CoreException {
@@ -855,17 +858,18 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * has NOT changed since last synchronization, otherwise a CoreException
 	 * is thrown.
 	 */
-	public void write(IFile target, IPath location, InputStream content, boolean force, boolean keepHistory, boolean append, IProgressMonitor monitor) throws CoreException {
+	public void write(IFile target, InputStream content, boolean force, boolean keepHistory, boolean append, IProgressMonitor monitor) throws CoreException {
 		monitor = Policy.monitorFor(null);
 		try {
 			FileStore store = getStore(target);
-			if ((store.attributes() & IFileStoreConstants.ATTRIBUTE_READ_ONLY) != 0) {
+			IFileInfo fileInfo = store.fetchInfo();
+			if (fileInfo.isReadOnly()) {
 				String message = NLS.bind(Messages.localstore_couldNotWriteReadOnly, target.getFullPath());
 				throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 			}
-			long lastModified = store.lastModified();
+			long lastModified = fileInfo.getLastModified();
 			if (force) {
-				if (append && !target.isLocal(IResource.DEPTH_ZERO) && !store.exists()) {
+				if (append && !target.isLocal(IResource.DEPTH_ZERO) && !fileInfo.exists()) {
 					// force=true, local=false, existsInFileSystem=false
 					String message = NLS.bind(Messages.resources_mustBeLocal, target.getFullPath());
 					throw new ResourceException(IResourceStatus.RESOURCE_NOT_LOCAL, target.getFullPath(), message, null);
@@ -879,7 +883,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 						throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 					}
 				} else {
-					if (store.exists()) {
+					if (fileInfo.exists()) {
 						String message = NLS.bind(Messages.localstore_resourceExists, target.getFullPath());
 						throw new ResourceException(IResourceStatus.EXISTS_LOCAL, target.getFullPath(), message, null);
 					}
@@ -890,14 +894,16 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				}
 			}
 			// add entry to History Store.
-			if (keepHistory && store.exists())
-				//never move to the history store, because then the file is missing if write fails
-				getHistoryStore().addState(target.getFullPath(), location.toFile(), lastModified, false);
-			store.getParent().create(IFileStoreConstants.FOLDER);
+			//TODO HISTORY STORE
+//			if (keepHistory && fileInfo.exists())
+//				//never move to the history store, because then the file is missing if write fails
+//				getHistoryStore().addState(target.getFullPath(), store, lastModified, false);
+			if (!fileInfo.exists())
+				store.getParent().create(IFileStoreConstants.DIRECTORY, null);
 			OutputStream out = store.openOutputStream(IFileStoreConstants.NONE);
 			FileStore.transferStreams(content, out, store.getAbsolutePath(), monitor);
 			// get the new last modified time and stash in the info
-			lastModified = store.lastModified();
+			lastModified = store.fetchInfo().getLastModified();
 			ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
 			updateLocalSync(info, lastModified);
 		} finally {
@@ -916,18 +922,19 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public void write(IFolder target, boolean force, IProgressMonitor monitor) throws CoreException {
 		FileStore store = getStore(target);
 		if (!force) {
-			if (store.isDirectory()) {
+			IFileInfo fileInfo = store.fetchInfo();
+			if (fileInfo.isDirectory()) {
 				String message = NLS.bind(Messages.localstore_resourceExists, target.getFullPath());
 				throw new ResourceException(IResourceStatus.EXISTS_LOCAL, target.getFullPath(), message, null);
 			}
-			if (store.exists()) {
+			if (fileInfo.exists()) {
 				String message = NLS.bind(Messages.localstore_fileExists, target.getFullPath());
 				throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 			}
 		}
-		store.create(IFileStoreConstants.FOLDER);
+		store.create(IFileStoreConstants.DIRECTORY, null);
 		ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
-		updateLocalSync(info, store.lastModified());
+		updateLocalSync(info, store.fetchInfo().getLastModified());
 	}
 
 	/**
@@ -941,7 +948,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if (location == null)
 			return;
 		FileStore projectStore = getStore(target);
-		projectStore.create(IFileStoreConstants.FOLDER);
+		projectStore.create(IFileStoreConstants.DIRECTORY, null);
 		//can't do anything if there's no description
 		IProjectDescription desc = ((Project) target).internalGetDescription();
 		if (desc == null)

@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
@@ -987,6 +988,10 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		checkAccessible(flags);
 		checkLocal(flags, DEPTH_ZERO);
 		return info.getSessionProperty(key);
+	}
+	
+	public FileStore getStore() throws CoreException {
+		return getLocalManager().getStore(this);
 	}
 
 	/* (non-Javadoc)
