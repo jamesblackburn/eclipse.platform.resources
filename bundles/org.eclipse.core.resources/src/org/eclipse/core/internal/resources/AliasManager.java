@@ -44,6 +44,70 @@ import org.eclipse.osgi.util.NLS;
  *  - when linked resources are created, deleted, or moved.
  */
 public class AliasManager implements IManager, ILifecycleListener {
+	public class AddToCollectionDoit implements Doit {
+		Collection collection;
+
+		public void doit(IResource resource) {
+			collection.add(resource);
+		}
+
+		public void setCollection(Collection collection) {
+			this.collection = collection;
+		}
+	}
+
+	interface Doit {
+		public void doit(IResource resource);
+	}
+
+	class FindAliasesDoit implements Doit {
+		private int aliasType;
+		private IPath searchPath;
+
+		public void doit(IResource match) {
+			//don't record the resource we're computing aliases against as a match
+			if (match.getFullPath().isPrefixOf(searchPath))
+				return;
+			IPath aliasPath = null;
+			switch (match.getType()) {
+				case IResource.PROJECT :
+					//first check if there is a linked resource that blocks the project location
+					if (suffix.segmentCount() > 0) {
+						IResource testResource = ((IProject) match).findMember(suffix.segment(0));
+						if (testResource != null && testResource.isLinked())
+							return;
+					}
+					//there is an alias under this project
+					aliasPath = match.getFullPath().append(suffix);
+					break;
+				case IResource.FOLDER :
+					aliasPath = match.getFullPath().append(suffix);
+					break;
+				case IResource.FILE :
+					if (suffix.segmentCount() == 0)
+						aliasPath = match.getFullPath();
+					break;
+			}
+			if (aliasPath != null)
+				if (aliasType == IResource.FILE) {
+					aliases.add(workspace.getRoot().getFile(aliasPath));
+				} else {
+					if (aliasPath.segmentCount() == 1)
+						aliases.add(workspace.getRoot().getProject(aliasPath.lastSegment()));
+					else
+						aliases.add(workspace.getRoot().getFolder(aliasPath));
+				}
+		}
+
+		/**
+		 * Sets the resource that we are searching for aliases for.
+		 */
+		public void setSearchAlias(IResource aliasResource) {
+			this.aliasType = aliasResource.getType();
+			this.searchPath = aliasResource.getFullPath();
+		}
+	}
+
 	/**
 	 * Maintains a mapping of IPath->IResource, such that multiple resources
 	 * mapped from the same path are tolerated.
@@ -195,95 +259,15 @@ public class AliasManager implements IManager, ILifecycleListener {
 		}
 	}
 
-	interface Doit {
-		public void doit(IResource resource);
-	}
-
-	class FindAliasesDoit implements Doit {
-		private IPath searchPath;
-		private int aliasType;
-
-		public void doit(IResource match) {
-			//don't record the resource we're computing aliases against as a match
-			if (match.getFullPath().isPrefixOf(searchPath))
-				return;
-			IPath aliasPath = null;
-			switch (match.getType()) {
-				case IResource.PROJECT :
-					//first check if there is a linked resource that blocks the project location
-					if (suffix.segmentCount() > 0) {
-						IResource testResource = ((IProject) match).findMember(suffix.segment(0));
-						if (testResource != null && testResource.isLinked())
-							return;
-					}
-					//there is an alias under this project
-					aliasPath = match.getFullPath().append(suffix);
-					break;
-				case IResource.FOLDER :
-					aliasPath = match.getFullPath().append(suffix);
-					break;
-				case IResource.FILE :
-					if (suffix.segmentCount() == 0)
-						aliasPath = match.getFullPath();
-					break;
-			}
-			if (aliasPath != null)
-				if (aliasType == IResource.FILE) {
-					aliases.add(workspace.getRoot().getFile(aliasPath));
-				} else {
-					if (aliasPath.segmentCount() == 1)
-						aliases.add(workspace.getRoot().getProject(aliasPath.lastSegment()));
-					else
-						aliases.add(workspace.getRoot().getFolder(aliasPath));
-				}
-		}
-
-		/**
-		 * Sets the resource that we are searching for aliases for.
-		 */
-		public void setSearchAlias(IResource aliasResource) {
-			this.aliasType = aliasResource.getType();
-			this.searchPath = aliasResource.getFullPath();
-		}
-	}
-
-	public class AddToCollectionDoit implements Doit {
-		Collection collection;
-
-		public void setCollection(Collection collection) {
-			this.collection = collection;
-		}
-
-		public void doit(IResource resource) {
-			collection.add(resource);
-		}
-	}
-
 	/**
-	 * This maps IPath->IResource, where the path is an absolute file system
-	 * location, and the resource contains the projects and/or linked resources
-	 * that are rooted at that location.
+	 * Doit convenience class for adding items to a list
 	 */
-	protected final LocationMap locationsMap = new LocationMap();
+	private final AddToCollectionDoit addToCollection = new AddToCollectionDoit();
 
 	/**
 	 * The set of IProjects that have aliases.
 	 */
 	protected final Set aliasedProjects = new HashSet();
-
-	/**
-	 * The set of resources that have had structure changes that might
-	 * invalidate the locations map or aliased projects set.  These will be
-	 * updated incrementally on the next alias request.
-	 */
-	private final Set structureChanges = new HashSet();
-
-	/**
-	 * The total number of linked resources that exist in the workspace.  This
-	 * count includes linked resources that don't currently have valid locations
-	 * (due to an undefined path variable).
-	 */
-	private int linkedResourceCount = 0;
 
 	/**
 	 * A temporary set of aliases.  Used during computeAliases, but maintained
@@ -297,9 +281,25 @@ public class AliasManager implements IManager, ILifecycleListener {
 	private final FindAliasesDoit findAliases = new FindAliasesDoit();
 
 	/**
-	 * Doit convenience class for adding items to a list
+	 * The total number of linked resources that exist in the workspace.  This
+	 * count includes linked resources that don't currently have valid locations
+	 * (due to an undefined path variable).
 	 */
-	private final AddToCollectionDoit addToCollection = new AddToCollectionDoit();
+	private int linkedResourceCount = 0;
+
+	/**
+	 * This maps IPath->IResource, where the path is an absolute file system
+	 * location, and the resource contains the projects and/or linked resources
+	 * that are rooted at that location.
+	 */
+	protected final LocationMap locationsMap = new LocationMap();
+
+	/**
+	 * The set of resources that have had structure changes that might
+	 * invalidate the locations map or aliased projects set.  These will be
+	 * updated incrementally on the next alias request.
+	 */
+	private final Set structureChanges = new HashSet();
 	/**
 	 * The suffix object is also used only during the computeAliases method.
 	 * In this case it is a field because it is referenced from an inner class
@@ -382,51 +382,6 @@ public class AliasManager implements IManager, ILifecycleListener {
 		if (size == 0)
 			return null;
 		return (IResource[]) aliases.toArray(new IResource[size]);
-	}
-
-	/**
-	 * Computes the aliases of the given resource at the given location, and
-	 * adds them to the "aliases" collection.
-	 */
-	private void internalComputeAliases(IResource resource, IPath location) {
-		IPath searchLocation = location == null ? resource.getLocation() : location;
-		//if the location is invalid then there won't be any aliases to update
-		if (searchLocation == null)
-			return;
-
-		suffix = Path.EMPTY;
-		int segmentCount = searchLocation.segmentCount();
-		findAliases.setSearchAlias(resource);
-		/*
-		 * Walk up the location segments for this resource, looking for a
-		 * resource with a matching location.  All matches are then added to the
-		 * "aliases" set.
-		 */
-		for (;;) {
-			locationsMap.matchingResourcesDo(searchLocation, findAliases);
-			if (--segmentCount <= 0)
-				break;
-			suffix = new Path(searchLocation.lastSegment()).append(suffix);
-			searchLocation = searchLocation.removeLastSegments(1);
-		}
-	}
-
-	/**
-	 * Returns true if this resource is guaranteed to have no aliases, and false
-	 * otherwise.
-	 */
-	private boolean hasNoAliases(final IResource resource) {
-		//check if we're in an aliased project or workspace before updating structure changes.  In the 
-		//deletion case, we need to know if the resource was in an aliased project *before* deletion.
-		IProject project = resource.getProject();
-		boolean noAliases = linkedResourceCount <= 0 || !aliasedProjects.contains(project);
-
-		//now update any structure changes and check again if an update is needed
-		if (!structureChanges.isEmpty()) {
-			updateStructureChanges();
-			noAliases &= linkedResourceCount <= 0 || !aliasedProjects.contains(project);
-		}
-		return noAliases;
 	}
 
 	/**
@@ -520,6 +475,51 @@ public class AliasManager implements IManager, ILifecycleListener {
 				removeFromLocationsMap(event.resource);
 				structureChanges.add(event.newResource);
 				break;
+		}
+	}
+
+	/**
+	 * Returns true if this resource is guaranteed to have no aliases, and false
+	 * otherwise.
+	 */
+	private boolean hasNoAliases(final IResource resource) {
+		//check if we're in an aliased project or workspace before updating structure changes.  In the 
+		//deletion case, we need to know if the resource was in an aliased project *before* deletion.
+		IProject project = resource.getProject();
+		boolean noAliases = linkedResourceCount <= 0 || !aliasedProjects.contains(project);
+
+		//now update any structure changes and check again if an update is needed
+		if (!structureChanges.isEmpty()) {
+			updateStructureChanges();
+			noAliases &= linkedResourceCount <= 0 || !aliasedProjects.contains(project);
+		}
+		return noAliases;
+	}
+
+	/**
+	 * Computes the aliases of the given resource at the given location, and
+	 * adds them to the "aliases" collection.
+	 */
+	private void internalComputeAliases(IResource resource, IPath location) {
+		IPath searchLocation = location == null ? resource.getLocation() : location;
+		//if the location is invalid then there won't be any aliases to update
+		if (searchLocation == null)
+			return;
+
+		suffix = Path.EMPTY;
+		int segmentCount = searchLocation.segmentCount();
+		findAliases.setSearchAlias(resource);
+		/*
+		 * Walk up the location segments for this resource, looking for a
+		 * resource with a matching location.  All matches are then added to the
+		 * "aliases" set.
+		 */
+		for (;;) {
+			locationsMap.matchingResourcesDo(searchLocation, findAliases);
+			if (--segmentCount <= 0)
+				break;
+			suffix = new Path(searchLocation.lastSegment()).append(suffix);
+			searchLocation = searchLocation.removeLastSegments(1);
 		}
 	}
 
