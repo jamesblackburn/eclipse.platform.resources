@@ -736,15 +736,10 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		if (exists())
 			getMarkerManager().removeMarkers(this, IResource.DEPTH_INFINITE);
 		// if this is a linked resource, remove the entry from the project description
-		if (isLinked()) {
-			//pre-delete notification to internal infrastructure
+		final boolean wasLinked = isLinked();
+		//pre-delete notification to internal infrastructure
+		if (wasLinked)
 			workspace.broadcastEvent(LifecycleEvent.newEvent(LifecycleEvent.PRE_LINK_DELETE, this));
-			Project project = (Project) getProject();
-			ProjectDescription description = project.internalGetDescription();
-			description.setLinkLocation(getName(), null);
-			project.internalSetDescription(description, true);
-			project.writeDescription(IResource.FORCE);
-		}
 
 		// check if we deleted a preferences file 
 		ProjectPreferences.deleted(this);
@@ -755,6 +750,16 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 			convertToPhantom();
 		else
 			workspace.deleteResource(this);
+
+		//update project description for linked resource
+		if (wasLinked) {
+			Project project = (Project) getProject();
+			ProjectDescription description = project.internalGetDescription();
+			description.setLinkLocation(getName(), null);
+			project.internalSetDescription(description, true);
+			project.writeDescription(IResource.FORCE);
+		}
+
 		// Delete properties after the resource is deleted from the tree. See bug 84584.
 		CoreException err = null;
 		try {

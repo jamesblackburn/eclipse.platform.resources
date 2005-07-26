@@ -117,7 +117,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 		/**
 		 * Map of FileStore->IResource OR FileStore->ArrayList of (IResource)
 		 */
-		private final SortedMap map = new TreeMap();
+		private final SortedMap map = new TreeMap(getComparator());
 
 		/**
 		 * Adds the given resource to the map, keyed by the given location.
@@ -426,8 +426,10 @@ public class AliasManager implements IManager, ILifecycleListener {
 	private Comparator getComparator() {
 		return new Comparator() {
 			public int compare(Object o1, Object o2) {
-				IPath path1 = (IPath)o1;
-				IPath path2 = (IPath)o2;
+				FileStore store1 = (FileStore)o1;
+				FileStore store2 = (FileStore)o2;
+				IPath path1 = new Path(store1.getAbsolutePath());
+				IPath path2 = new Path(store2.getAbsolutePath());
 				int segmentCount1 = path1.segmentCount();
 				int segmentCount2 = path2.segmentCount();
 				for (int i = 0; (i < segmentCount1) && (i < segmentCount2); i++) {

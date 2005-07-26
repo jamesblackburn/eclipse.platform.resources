@@ -640,9 +640,10 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		long nodeid = ((Resource) source).getResourceInfo(true, false).getNodeId();
 		newInfo.setNodeId(nodeid);
 
-		// preserve local sync info
+		// preserve local sync info but not location info
 		ResourceInfo oldInfo = ((Resource) source).getResourceInfo(true, false);
 		newInfo.setFlags(newInfo.getFlags() | (oldInfo.getFlags() & M_LOCAL_EXISTS));
+		newInfo.setFileStoreRoot(null);
 
 		// forget content-related caching flags
 		newInfo.clear(M_CONTENT_CACHE);
@@ -651,8 +652,9 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		if (source.isLinked()) {
 			LinkDescription linkDescription;
 			if ((updateFlags & IResource.SHALLOW) != 0) {
-				//for shallow move the destination is also a linked resource
+				//for shallow move the destination is a linked resource with the same location
 				newInfo.set(ICoreConstants.M_LINK);
+				newInfo.setFileStoreRoot(sourceInfo.getFileStoreRoot());
 				linkDescription = new LinkDescription(destinationResource, source.getRawLocation());
 			} else {
 				//for deep move the destination is not a linked resource
