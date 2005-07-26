@@ -10,12 +10,14 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.Assert;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 
 public class ProjectDescription extends ModelObject implements IProjectDescription {
 	private static final ICommand[] EMPTY_COMMAND_ARRAY = new ICommand[0];
@@ -39,7 +41,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	protected HashMap linkDescriptions = null;
 
 	// fields
-	protected IPath location = null;
+	protected URI location = null;
 	protected String[] natures = EMPTY_STRING_ARRAY;
 	protected IProject[] staticRefs = EMPTY_PROJECT_ARRAY;
 
@@ -168,6 +170,13 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#getLocation()
 	 */
 	public IPath getLocation() {
+		return location == null ? null : new Path(location.toString());
+	}
+
+	/* (non-Javadoc)
+	 * @see IProjectDescription#getLocationURI()
+	 */
+	public URI getLocationURI() {
 		return location;
 	}
 
@@ -321,6 +330,10 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setLocation(IPath)
 	 */
 	public void setLocation(IPath location) {
+		this.location = location.toFile().toURI();
+	}
+	
+	public void setLocationURI(URI location) {
 		this.location = location;
 	}
 

@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
+import java.net.URI;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 
@@ -77,6 +78,14 @@ public interface IProjectDescription {
 	 * @return the location for the described project or <code>null</code>
 	 */
 	public IPath getLocation();
+
+	/**
+	 * Returns the location URI for the described project.  <code>null</code> is
+	 * returned if the default location should be used.
+	 *
+	 * @return the location for the described project or <code>null</code>
+	 */
+	public URI getLocationURI();
 
 	/**
 	 * Returns the name of the described project.
@@ -198,6 +207,29 @@ public interface IProjectDescription {
 	 * @see #getLocation()
 	 */
 	public void setLocation(IPath location);
+
+	/**
+	 * Sets the location for the described project.  
+	 * If <code>null</code> is specified, the default location is used.
+	 * <p>
+	 * Setting the location on a description for a project which already
+	 * exists has no effect; the new project location is ignored when the
+	 * description is set on the already existing project. This method is 
+	 * intended for use on descriptions for new projects or for destination 
+	 * projects for <code>copy</code> and <code>move</code>.
+	 * </p>
+	 * <p>
+	 * This operation maps the root folder of the project to the exact location
+	 * provided.  For example, if the location for project named "P" is set
+	 * to the URI file://c:/my_plugins/Project1, the file resource at workspace path
+	 * /P/index.html  would be stored in the local file system at 
+	 * file://c:/my_plugins/Project1/index.html.
+	 * </p>
+	 *
+	 * @param location the location for the described project or <code>null</code>
+	 * @see #getLocation()
+	 */
+	public void setLocationURI(URI location);
 
 	/**
 	 * Sets the name of the described project.
