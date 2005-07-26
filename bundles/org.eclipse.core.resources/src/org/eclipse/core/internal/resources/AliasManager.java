@@ -11,6 +11,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.util.*;
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.internal.events.ILifecycleListener;
 import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
@@ -109,20 +110,20 @@ public class AliasManager implements IManager, ILifecycleListener {
 	}
 
 	/**
-	 * Maintains a mapping of IPath->IResource, such that multiple resources
-	 * mapped from the same path are tolerated.
+	 * Maintains a mapping of FileStore->IResource, such that multiple resources
+	 * mapped from the same location are tolerated.
 	 */
 	class LocationMap {
 		/**
-		 * Map of IPath->IResource OR IPath->ArrayList of (IResource)
+		 * Map of FileStore->IResource OR FileStore->ArrayList of (IResource)
 		 */
-		private final SortedMap map = new TreeMap(getComparator());
+		private final SortedMap map = new TreeMap();
 
 		/**
 		 * Adds the given resource to the map, keyed by the given location.
 		 * Returns true if a new entry was added, and false otherwise.
 		 */
-		public boolean add(IPath location, IResource resource) {
+		public boolean add(FileStore location, IResource resource) {
 			Object oldValue = map.get(location);
 			if (oldValue == null) {
 				map.put(location, resource);
@@ -155,12 +156,13 @@ public class AliasManager implements IManager, ILifecycleListener {
 		 * Invoke the given doit for every resource whose location has the
 		 * given location as a prefix.
 		 */
-		public void matchingPrefixDo(IPath prefix, Doit doit) {
+		public void matchingPrefixDo(FileStore prefix, Doit doit) {
 			SortedMap matching;
-			if (prefix.segmentCount() > 0) {
+			FileStore prefixParent = prefix.getParent();
+			if (prefixParent != null) {
 				//endPoint is the smallest possible path greater than the prefix that doesn't
 				//match the prefix
-				IPath endPoint = new Path(prefix.removeTrailingSeparator().toString() + "\0");//$NON-NLS-1$
+				FileStore endPoint = prefixParent.getChild(prefix.getName() + "\0"); //$NON-NLS-1$
 				matching = map.subMap(prefix, endPoint);
 			} else {
 				matching = map;
@@ -183,7 +185,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 		 * Invoke the given doit for every resource that matches the given
 		 * location.
 		 */
-		public void matchingResourcesDo(IPath location, Doit doit) {
+		public void matchingResourcesDo(FileStore location, Doit doit) {
 			Object value = map.get(location);
 			if (value == null)
 				return;
@@ -202,12 +204,12 @@ public class AliasManager implements IManager, ILifecycleListener {
 		 */
 		public void overLappingResourcesDo(Doit doit) {
 			Iterator entries = map.entrySet().iterator();
-			IPath previousPath = null;
+			FileStore previousStore = null;
 			IResource previousResource = null;
 			while (entries.hasNext()) {
 				Map.Entry current = (Map.Entry) entries.next();
 				//value is either single resource or List of resources
-				IPath currentPath = (IPath) current.getKey();
+				FileStore currentStore = (FileStore) current.getKey();
 				IResource currentResource = null;
 				Object value = current.getValue();
 				if (value instanceof List) {
@@ -219,10 +221,10 @@ public class AliasManager implements IManager, ILifecycleListener {
 					//value is a single resource
 					currentResource = (IResource) value;
 				}
-				if (previousPath != null) {
+				if (previousStore != null) {
 					//check for overlap with previous
 					//Note: previous is always shorter due to map sorting rules
-					if (previousPath.isPrefixOf(currentPath)) {
+					if (previousStore.isParentOf(currentStore)) {
 						//resources will be null if they were in a list, in which case 
 						//they've already been passed to the doit
 						if (previousResource != null)
@@ -231,7 +233,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 							doit.doit(currentResource.getProject());
 					}
 				}
-				previousPath = currentPath;
+				previousStore = currentStore;
 				previousResource = currentResource;
 			}
 		}
@@ -240,7 +242,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 		 * Removes the given location from the map.  Returns true if anything
 		 * was actually removed, and false otherwise.
 		 */
-		public boolean remove(IPath location, IResource resource) {
+		public boolean remove(FileStore location, IResource resource) {
 			Object oldValue = map.get(location);
 			if (oldValue == null)
 				return false;
@@ -316,7 +318,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	}
 
 	private void addToLocationsMap(IProject project) {
-		IPath location = project.getLocation();
+		FileStore location = project.getStore();
 		if (location != null)
 			locationsMap.add(location, project);
 		try {
@@ -332,7 +334,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	}
 
 	private void addToLocationsMap(IResource linkedResource) {
-		IPath location = linkedResource.getLocation();
+		FileStore location = linkedResource.getStore();
 		if (location != null)
 			if (locationsMap.add(location, linkedResource))
 				linkedResourceCount++;
@@ -371,7 +373,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	/**
 	 * Returns all aliases of the given resource, or null if there are none.
 	 */
-	public IResource[] computeAliases(final IResource resource, IPath location) {
+	public IResource[] computeAliases(final IResource resource, FileStore location) {
 		//nothing to do if we are or were in an alias-free workspace or project
 		if (hasNoAliases(resource))
 			return null;
@@ -388,7 +390,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	 * Returns all aliases of this resource, and any aliases of subtrees of this
 	 * resource.  Returns null if no aliases are found.
 	 */
-	private void computeDeepAliases(IResource resource, IPath location) {
+	private void computeDeepAliases(IResource resource, FileStore location) {
 		//if the location is invalid then there won't be any aliases to update
 		if (location == null)
 			return;
@@ -403,7 +405,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 				IResource[] members = ((IProject) resource).members();
 				for (int i = 0; i < members.length; i++) {
 					if (members[i].isLinked()) {
-						IPath linkLocation = members[i].getLocation();
+						FileStore linkLocation = members[i].getStore();
 						if (linkLocation != null)
 							locationsMap.matchingPrefixDo(linkLocation, addToCollection);
 					}
@@ -421,11 +423,11 @@ public class AliasManager implements IManager, ILifecycleListener {
 	 * strings, with the extra condition that the path separator is ordered
 	 * before all other characters. (Ex: "/foo" < "/foo/zzz" < "/fooaaa").
 	 */
-	protected Comparator getComparator() {
+	private Comparator getComparator() {
 		return new Comparator() {
 			public int compare(Object o1, Object o2) {
-				IPath path1 = (IPath) o1;
-				IPath path2 = (IPath) o2;
+				IPath path1 = (IPath)o1;
+				IPath path2 = (IPath)o2;
 				int segmentCount1 = path1.segmentCount();
 				int segmentCount2 = path2.segmentCount();
 				for (int i = 0; (i < segmentCount1) && (i < segmentCount2); i++) {
@@ -500,14 +502,13 @@ public class AliasManager implements IManager, ILifecycleListener {
 	 * Computes the aliases of the given resource at the given location, and
 	 * adds them to the "aliases" collection.
 	 */
-	private void internalComputeAliases(IResource resource, IPath location) {
-		IPath searchLocation = location == null ? resource.getLocation() : location;
+	private void internalComputeAliases(IResource resource, FileStore location) {
+		FileStore searchLocation = location == null ? resource.getStore() : location;
 		//if the location is invalid then there won't be any aliases to update
 		if (searchLocation == null)
 			return;
 
 		suffix = Path.EMPTY;
-		int segmentCount = searchLocation.segmentCount();
 		findAliases.setSearchAlias(resource);
 		/*
 		 * Walk up the location segments for this resource, looking for a
@@ -516,16 +517,21 @@ public class AliasManager implements IManager, ILifecycleListener {
 		 */
 		for (;;) {
 			locationsMap.matchingResourcesDo(searchLocation, findAliases);
-			if (--segmentCount <= 0)
+			suffix = new Path(searchLocation.getName()).append(suffix);
+			searchLocation = searchLocation.getParent();
+			if (searchLocation == null)
 				break;
-			suffix = new Path(searchLocation.lastSegment()).append(suffix);
-			searchLocation = searchLocation.removeLastSegments(1);
+//			locationsMap.matchingResourcesDo(searchLocation, findAliases);
+//			if (--segmentCount <= 0)
+//				break;
+//			suffix = new Path(searchLocation.lastSegment()).append(suffix);
+//			searchLocation = searchLocation.removeLastSegments(1);
 		}
 	}
 
 	private void removeFromLocationsMap(IProject project) {
 		//remove this project and all linked children from the location table
-		IPath location = project.getLocation();
+		FileStore location = project.getStore();
 		if (location != null)
 			locationsMap.remove(location, project);
 		try {
@@ -541,7 +547,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 
 	private void removeFromLocationsMap(IResource linkedResource) {
 		//this linked resource is being deleted
-		IPath location = linkedResource.getLocation();
+		FileStore location = linkedResource.getStore();
 		if (location != null)
 			if (locationsMap.remove(location, linkedResource))
 				linkedResourceCount--;
@@ -575,7 +581,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	 * @param depth whether to search for aliases on all children of the given
 	 * resource.  Only depth ZERO and INFINITE are used.
 	 */
-	public void updateAliases(IResource resource, IPath location, int depth, IProgressMonitor monitor) throws CoreException {
+	public void updateAliases(IResource resource, FileStore location, int depth, IProgressMonitor monitor) throws CoreException {
 		if (hasNoAliases(resource))
 			return;
 		aliases.clear();

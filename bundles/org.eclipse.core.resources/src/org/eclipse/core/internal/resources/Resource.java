@@ -657,7 +657,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				if (!exists())
 					return;
 				workspace.beginOperation(true);
-				IPath originalLocation = getLocation();
+				final FileStore originalStore = getStore();
 				boolean wasLinked = isLinked();
 				message = Messages.resources_deleteProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
@@ -683,7 +683,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				//update any aliases of this resource
 				//note that deletion of a linked resource cannot affect other resources
 				if (!wasLinked)
-					workspace.getAliasManager().updateAliases(this, originalLocation, IResource.DEPTH_INFINITE, monitor);
+					workspace.getAliasManager().updateAliases(this, originalStore, IResource.DEPTH_INFINITE, monitor);
 				//make sure the rule factory is cleared on project deletion
 				if (getType() == PROJECT)
 					((Rules) workspace.getRuleFactory()).setRuleFactory((IProject) this, null);
@@ -1198,7 +1198,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				// and assert for programming errors. See checkMoveRequirements for more information.
 				assertMoveRequirements(destination, getType(), updateFlags);
 				workspace.beginOperation(true);
-				IPath originalLocation = getLocation();
+				FileStore originalStore = getStore();
 				message = Messages.resources_moveProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
 				WorkManager workManager = workspace.getWorkManager();
@@ -1215,8 +1215,8 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				tree.makeInvalid();
 				//update any aliases of this resource and the destination
 				if (success) {
-					workspace.getAliasManager().updateAliases(this, originalLocation, IResource.DEPTH_INFINITE, monitor);
-					workspace.getAliasManager().updateAliases(destResource, destResource.getLocation(), IResource.DEPTH_INFINITE, monitor);
+					workspace.getAliasManager().updateAliases(this, originalStore, IResource.DEPTH_INFINITE, monitor);
+					workspace.getAliasManager().updateAliases(destResource, destResource.getStore(), IResource.DEPTH_INFINITE, monitor);
 				}
 				if (!tree.getStatus().isOK())
 					throw new ResourceException(tree.getStatus());

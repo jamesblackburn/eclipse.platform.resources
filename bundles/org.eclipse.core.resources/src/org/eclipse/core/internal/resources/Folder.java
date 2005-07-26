@@ -97,7 +97,7 @@ public class Folder extends Container implements IFolder {
 					}
 				}
 				internalCreate(force, local, Policy.subMonitorFor(monitor, Policy.opWork));
-				workspace.getAliasManager().updateAliases(this, getLocation(), IResource.DEPTH_ZERO, monitor);
+				workspace.getAliasManager().updateAliases(this, getStore(), IResource.DEPTH_ZERO, monitor);
 			} catch (OperationCanceledException e) {
 				workspace.getWorkManager().operationCanceled();
 				throw e;

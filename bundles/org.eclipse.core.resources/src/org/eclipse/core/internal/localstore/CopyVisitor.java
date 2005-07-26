@@ -82,7 +82,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 			localManager.updateLocalSync(info, destinationStore.fetchInfo().getLastModified());
 			localManager.getHistoryStore().copyHistory(source, destination, false);
 			//update timestamps on aliases
-//			getWorkspace().getAliasManager().updateAliases(destination, destinationLocation, IResource.DEPTH_ZERO, monitor);
+			getWorkspace().getAliasManager().updateAliases(destination, destinationStore, IResource.DEPTH_ZERO, monitor);
 		} catch (CoreException e) {
 			status.add(e.getStatus());
 		}

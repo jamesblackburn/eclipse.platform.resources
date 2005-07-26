@@ -324,7 +324,7 @@ public class File extends Resource implements IFile {
 		info.clear(M_CONTENT_CACHE);
 		workspace.updateModificationStamp(info);
 		updateMetadataFiles();
-//		workspace.getAliasManager().updateAliases(this, IResource.DEPTH_ZERO, monitor);
+		workspace.getAliasManager().updateAliases(this, getStore(), IResource.DEPTH_ZERO, monitor);
 	}
 
 	/**

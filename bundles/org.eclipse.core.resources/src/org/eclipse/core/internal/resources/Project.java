@@ -665,7 +665,7 @@ public class Project extends Container implements IProject {
 	 * @see IResource#isLocal(int)
 	 */
 	public boolean isLocal(int depth) {
-		// the flags parm is ignored for projects so pass anything
+		// the flags parameter is ignored for projects so pass anything
 		return isLocal(-1, depth);
 	}
 

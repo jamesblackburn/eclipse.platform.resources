@@ -30,7 +30,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 		FileStore store = node.getStore();
 		if (store == null)
 			return;
-		IResource[] aliases = workspace.getAliasManager().computeAliases(target, new Path(store.getAbsolutePath()));
+		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
 		if (aliases != null)
 			for (int i = 0; i < aliases.length; i++)
 				super.createResource(node, (Resource) aliases[i]);
@@ -41,7 +41,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 		FileStore store = node.getStore();
 		if (store == null)
 			return;
-		IResource[] aliases = workspace.getAliasManager().computeAliases(target, new Path(store.getAbsolutePath()));
+		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
 		if (aliases != null)
 			for (int i = 0; i < aliases.length; i++)
 				super.deleteResource(node, (Resource) aliases[i]);
@@ -52,7 +52,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 		FileStore store = node.getStore();
 		if (store == null)
 			return;
-		IResource[] aliases = workspace.getAliasManager().computeAliases(target, new Path(store.getAbsolutePath()));
+		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
 		if (aliases != null)
 			for (int i = 0; i < aliases.length; i++)
 				super.resourceChanged(node, (Resource) aliases[i]);
@@ -63,7 +63,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 		FileStore store = node.getStore();
 		if (store == null)
 			return;
-		IResource[] aliases = workspace.getAliasManager().computeAliases(target, new Path(store.getAbsolutePath()));
+		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
 		if (aliases != null)
 			for (int i = 0; i < aliases.length; i++)
 				super.fileToFolder(node, (Resource) aliases[i]);
@@ -74,7 +74,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 		FileStore store = node.getStore();
 		if (store == null)
 			return;
-		IResource[] aliases = workspace.getAliasManager().computeAliases(target, new Path(store.getAbsolutePath()));
+		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
 		if (aliases != null)
 			for (int i = 0; i < aliases.length; i++)
 				super.folderToFile(node, (Resource) aliases[i]);
