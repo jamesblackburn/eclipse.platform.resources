@@ -14,7 +14,6 @@ import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import org.eclipse.core.filesystem.FileStore;
-import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -28,6 +27,7 @@ public class IProjectTest extends ResourceTest {
 		//	suite.addTest(new IProjectTest("testCopy"));
 		//	return suite;
 	}
+
 	public IProjectTest() {
 		super();
 	}
@@ -1039,197 +1039,184 @@ public class IProjectTest extends ResourceTest {
 		IFile file = project.getFile("myfile.txt");
 		FileStore projectStore, fileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
-		Set pathsToDelete = new HashSet(6);
 
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("1.2", project.exists());
+		assertTrue("1.3", file.exists());
 		try {
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("1.2", project.exists());
-			assertTrue("1.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("1.4", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("1.5", e);
-			}
-			assertTrue("1.6", !project.exists());
-			assertTrue("1.7", !file.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("1.8", projectStore.fetchInfo().exists());
-			assertTrue("1.9", !fileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("2.2", project.exists());
-			assertTrue("2.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("2.4", e);
-			}
-			try {
-				int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("2.5", e);
-			}
-			assertTrue("2.6", !project.exists());
-			assertTrue("2.7", !file.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("2.8", projectStore.fetchInfo().exists());
-			assertTrue("2.9", !fileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("3.2", project.exists());
-			assertTrue("3.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("3.4", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("3.5", e);
-			}
-			assertTrue("3.6", !project.exists());
-			assertTrue("3.7", !file.exists());
-			assertTrue("3.8", projectStore.fetchInfo().exists());
-			assertTrue("3.9", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("4.2", project.exists());
-			assertTrue("4.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("4.4", e);
-			}
-			try {
-				int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("4.5", e);
-			}
-			assertTrue("4.6", !project.exists());
-			assertTrue("4.7", !file.exists());
-			assertTrue("4.8", projectStore.fetchInfo().exists());
-			assertTrue("4.9", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(new IResource[] {project, file}, true);
-			fileStore = file.getStore();
-			assertTrue("5.2", project.exists());
-			assertTrue("5.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("5.4", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("5.5", e);
-			}
-			assertTrue("5.6", !project.exists());
-			assertTrue("5.7", !file.exists());
-			assertTrue("5.8", projectStore.fetchInfo().exists());
-			assertTrue("5.9", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("6.2", project.exists());
-			assertTrue("6.3", file.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("6.4", e);
-			}
-			try {
-				int updateFlags = IResource.NONE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("6.5", e);
-			}
-			assertTrue("6.6", !project.exists());
-			assertTrue("6.7", !file.exists());
-			assertTrue("6.8", projectStore.fetchInfo().exists());
-			assertTrue("6.9", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-		} finally {
-			for (Iterator i = pathsToDelete.iterator(); i.hasNext();) {
-				Workspace.clear(((IPath) i.next()).toFile());
-			}
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("1.4", e);
 		}
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("1.5", e);
+		}
+		assertTrue("1.6", !project.exists());
+		assertTrue("1.7", !file.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("1.8", projectStore.fetchInfo().exists());
+		assertTrue("1.9", !fileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("2.2", project.exists());
+		assertTrue("2.3", file.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("2.4", e);
+		}
+		try {
+			int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("2.5", e);
+		}
+		assertTrue("2.6", !project.exists());
+		assertTrue("2.7", !file.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("2.8", projectStore.fetchInfo().exists());
+		assertTrue("2.9", !fileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("3.2", project.exists());
+		assertTrue("3.3", file.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("3.4", e);
+		}
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("3.5", e);
+		}
+		assertTrue("3.6", !project.exists());
+		assertTrue("3.7", !file.exists());
+		assertTrue("3.8", projectStore.fetchInfo().exists());
+		assertTrue("3.9", fileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("4.2", project.exists());
+		assertTrue("4.3", file.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("4.4", e);
+		}
+		try {
+			int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("4.5", e);
+		}
+		assertTrue("4.6", !project.exists());
+		assertTrue("4.7", !file.exists());
+		assertTrue("4.8", projectStore.fetchInfo().exists());
+		assertTrue("4.9", fileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(new IResource[] {project, file}, true);
+		fileStore = file.getStore();
+		assertTrue("5.2", project.exists());
+		assertTrue("5.3", file.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("5.4", e);
+		}
+		try {
+			int updateFlags = IResource.FORCE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("5.5", e);
+		}
+		assertTrue("5.6", !project.exists());
+		assertTrue("5.7", !file.exists());
+		assertTrue("5.8", projectStore.fetchInfo().exists());
+		assertTrue("5.9", fileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("6.2", project.exists());
+		assertTrue("6.3", file.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("6.4", e);
+		}
+		try {
+			int updateFlags = IResource.NONE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("6.5", e);
+		}
+		assertTrue("6.6", !project.exists());
+		assertTrue("6.7", !file.exists());
+		assertTrue("6.8", projectStore.fetchInfo().exists());
+		assertTrue("6.9", fileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
 	}
 
 	/**
@@ -1244,230 +1231,213 @@ public class IProjectTest extends ResourceTest {
 		IFile otherFile = project.getFile("myotherfile.txt");
 		FileStore projectStore, fileStore, otherFileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
-		Set pathsToDelete = new HashSet(6);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("1.0", project.exists());
+		assertTrue("1.1", file.exists());
+		assertTrue("1.2", !otherFile.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("1.3", e);
+		}
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("1.4", e);
+		}
+		assertTrue("1.5", !project.exists());
+		assertTrue("1.6", !file.exists());
+		assertTrue("1.7", !otherFile.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("1.8", projectStore.fetchInfo().exists());
+		assertTrue("1.9", !fileStore.fetchInfo().exists());
+		assertTrue("1.10", !otherFileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("2.0", project.exists());
+		assertTrue("2.1", file.exists());
+		assertTrue("2.2", !otherFile.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("2.3", e);
+		}
+		try {
+			int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("2.4", e);
+		}
+		assertTrue("2.5", !project.exists());
+		assertTrue("2.6", !file.exists());
+		assertTrue("2.7", !otherFile.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("2.8", projectStore.fetchInfo().exists());
+		assertTrue("2.9", !fileStore.fetchInfo().exists());
+		assertTrue("2.10", !otherFileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("3.0", project.exists());
+		assertTrue("3.1", file.exists());
+		assertTrue("3.2", !otherFile.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("3.3", e);
+		}
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("3.4", e);
+		}
+		assertTrue("3.5", !project.exists());
+		assertTrue("3.6", !file.exists());
+		assertTrue("3.7", !otherFile.exists());
+		assertTrue("3.8", projectStore.fetchInfo().exists());
+		assertTrue("3.9", fileStore.fetchInfo().exists());
+		assertTrue("3.10", otherFileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("4.0", project.exists());
+		assertTrue("4.1", file.exists());
+		assertTrue("4.2", !otherFile.exists());
 
 		try {
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("1.0", project.exists());
-			assertTrue("1.1", file.exists());
-			assertTrue("1.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("1.3", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("1.4", e);
-			}
-			assertTrue("1.5", !project.exists());
-			assertTrue("1.6", !file.exists());
-			assertTrue("1.7", !otherFile.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("1.8", projectStore.fetchInfo().exists());
-			assertTrue("1.9", !fileStore.fetchInfo().exists());
-			assertTrue("1.10", !otherFileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("2.0", project.exists());
-			assertTrue("2.1", file.exists());
-			assertTrue("2.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("2.3", e);
-			}
-			try {
-				int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("2.4", e);
-			}
-			assertTrue("2.5", !project.exists());
-			assertTrue("2.6", !file.exists());
-			assertTrue("2.7", !otherFile.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("2.8", projectStore.fetchInfo().exists());
-			assertTrue("2.9", !fileStore.fetchInfo().exists());
-			assertTrue("2.10", !otherFileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("3.0", project.exists());
-			assertTrue("3.1", file.exists());
-			assertTrue("3.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("3.3", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("3.4", e);
-			}
-			assertTrue("3.5", !project.exists());
-			assertTrue("3.6", !file.exists());
-			assertTrue("3.7", !otherFile.exists());
-			assertTrue("3.8", projectStore.fetchInfo().exists());
-			assertTrue("3.9", fileStore.fetchInfo().exists());
-			assertTrue("3.10", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("4.0", project.exists());
-			assertTrue("4.1", file.exists());
-			assertTrue("4.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("4.3", e);
-			}
-			try {
-				int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("4.4", e);
-			}
-			assertTrue("4.5", !project.exists());
-			assertTrue("4.6", !file.exists());
-			assertTrue("4.7", !otherFile.exists());
-			assertTrue("4.8", projectStore.fetchInfo().exists());
-			assertTrue("4.9", fileStore.fetchInfo().exists());
-			assertTrue("4.10", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(new IResource[] {project, file}, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("5.0", project.exists());
-			assertTrue("5.1", file.exists());
-			assertTrue("5.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("5.3", e);
-			}
-			try {
-				int updateFlags = IResource.FORCE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("5.4", e);
-			}
-			assertTrue("5.5", !project.exists());
-			assertTrue("5.6", !file.exists());
-			assertTrue("5.7", !otherFile.exists());
-			// don't delete the directory itself since the location is user-defined, but delete the contents
-			assertTrue("5.8", projectStore.fetchInfo().exists());
-			assertTrue("5.9", fileStore.fetchInfo().exists());
-			assertTrue("5.10", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("6.0", project.exists());
-			assertTrue("6.1", file.exists());
-			assertTrue("6.2", !otherFile.exists());
-			try {
-				project.close(getMonitor());
-			} catch (CoreException e) {
-				fail("6.3", e);
-			}
-			try {
-				int updateFlags = IResource.NONE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("6.4", e);
-			}
-			assertTrue("6.5", !project.exists());
-			// delete was best effort so this file should be gone.
-			assertTrue("6.6", !file.exists());
-			assertTrue("6.7", !otherFile.exists());
-			// don't delete the directory itself since its user-defined, but delete the contents
-			assertTrue("6.8", projectStore.fetchInfo().exists());
-			assertTrue("6.9", fileStore.fetchInfo().exists());
-			assertTrue("6.10", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-		} finally {
-			for (Iterator i = pathsToDelete.iterator(); i.hasNext();) {
-				Workspace.clear(((IPath) i.next()).toFile());
-			}
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("4.3", e);
 		}
+		try {
+			int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("4.4", e);
+		}
+		assertTrue("4.5", !project.exists());
+		assertTrue("4.6", !file.exists());
+		assertTrue("4.7", !otherFile.exists());
+		assertTrue("4.8", projectStore.fetchInfo().exists());
+		assertTrue("4.9", fileStore.fetchInfo().exists());
+		assertTrue("4.10", otherFileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(new IResource[] {project, file}, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("5.0", project.exists());
+		assertTrue("5.1", file.exists());
+		assertTrue("5.2", !otherFile.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("5.3", e);
+		}
+		try {
+			int updateFlags = IResource.FORCE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("5.4", e);
+		}
+		assertTrue("5.5", !project.exists());
+		assertTrue("5.6", !file.exists());
+		assertTrue("5.7", !otherFile.exists());
+		// don't delete the directory itself since the location is user-defined, but delete the contents
+		assertTrue("5.8", projectStore.fetchInfo().exists());
+		assertTrue("5.9", fileStore.fetchInfo().exists());
+		assertTrue("5.10", otherFileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("6.0", project.exists());
+		assertTrue("6.1", file.exists());
+		assertTrue("6.2", !otherFile.exists());
+		try {
+			project.close(getMonitor());
+		} catch (CoreException e) {
+			fail("6.3", e);
+		}
+		try {
+			int updateFlags = IResource.NONE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("6.4", e);
+		}
+		assertTrue("6.5", !project.exists());
+		// delete was best effort so this file should be gone.
+		assertTrue("6.6", !file.exists());
+		assertTrue("6.7", !otherFile.exists());
+		// don't delete the directory itself since its user-defined, but delete the contents
+		assertTrue("6.8", projectStore.fetchInfo().exists());
+		assertTrue("6.9", fileStore.fetchInfo().exists());
+		assertTrue("6.10", otherFileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
 	}
 
 	/**
@@ -1542,8 +1512,6 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("3.4", !file.exists());
 		assertTrue("3.5", projectStore.fetchInfo().exists());
 		assertTrue("3.6", fileStore.fetchInfo().exists());
-		// cleanup
-		clear(projectStore);
 
 		/* ======================================================================
 		 * Force = FALSE
@@ -1564,8 +1532,6 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("4.4", !file.exists());
 		assertTrue("4.5", projectStore.fetchInfo().exists());
 		assertTrue("4.6", fileStore.fetchInfo().exists());
-		// cleanup
-		clear(projectStore);
 
 		/* ======================================================================
 		 * Force = TRUE
@@ -1764,169 +1730,147 @@ public class IProjectTest extends ResourceTest {
 		IFile file = project.getFile("myfile.txt");
 		FileStore projectStore, fileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
-		Set pathsToDelete = new HashSet(6);
-
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("1.2", project.exists());
+		assertTrue("1.3", file.exists());
 		try {
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("1.2", project.exists());
-			assertTrue("1.3", file.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("1.4", e);
-			}
-			assertTrue("1.5", !project.exists());
-			assertTrue("1.6", !file.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("1.7", projectStore.fetchInfo().exists());
-			assertTrue("1.8", !fileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("2.2", project.exists());
-			assertTrue("2.3", file.exists());
-			try {
-				int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("2.4", e);
-			}
-			assertTrue("2.5", !project.exists());
-			assertTrue("2.6", !file.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("2.7", projectStore.fetchInfo().exists());
-			assertTrue("2.8", !fileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("3.2", project.exists());
-			assertTrue("3.3", file.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("3.4", e);
-			}
-			assertTrue("3.5", !project.exists());
-			assertTrue("3.6", !file.exists());
-			assertTrue("3.7", projectStore.fetchInfo().exists());
-			assertTrue("3.8", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("4.2", project.exists());
-			assertTrue("4.3", file.exists());
-			try {
-				int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("4.4", e);
-			}
-			assertTrue("4.5", !project.exists());
-			assertTrue("4.6", !file.exists());
-			assertTrue("4.7", projectStore.fetchInfo().exists());
-			assertTrue("4.8", fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(new IResource[] {project, file}, true);
-			fileStore = file.getStore();
-			assertTrue("5.2", project.exists());
-			assertTrue("5.3", file.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("5.4", e);
-			}
-			assertTrue("5.5", !project.exists());
-			assertTrue("5.6", !file.exists());
-			// don't delete the directory itself since the location is user-defined, but delete the contents
-			assertTrue("5.7", projectStore.fetchInfo().exists());
-			assertTrue("5.8", !fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			fileStore = file.getStore();
-			assertTrue("6.2", project.exists());
-			assertTrue("6.3", file.exists());
-			try {
-				int updateFlags = IResource.NONE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("6.4", e);
-			}
-			assertTrue("6.5", !project.exists());
-			assertTrue("6.6", !file.exists());
-			// don't delete the directory itself since its user-defined, but delete the contents
-			assertTrue("6.7", projectStore.fetchInfo().exists());
-			assertTrue("6.8", !fileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-		} finally {
-			for (Iterator i = pathsToDelete.iterator(); i.hasNext();) {
-				Workspace.clear(((IPath) i.next()).toFile());
-			}
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("1.4", e);
 		}
+		assertTrue("1.5", !project.exists());
+		assertTrue("1.6", !file.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("1.7", projectStore.fetchInfo().exists());
+		assertTrue("1.8", !fileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("2.2", project.exists());
+		assertTrue("2.3", file.exists());
+		try {
+			int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("2.4", e);
+		}
+		assertTrue("2.5", !project.exists());
+		assertTrue("2.6", !file.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("2.7", projectStore.fetchInfo().exists());
+		assertTrue("2.8", !fileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("3.2", project.exists());
+		assertTrue("3.3", file.exists());
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("3.4", e);
+		}
+		assertTrue("3.5", !project.exists());
+		assertTrue("3.6", !file.exists());
+		assertTrue("3.7", projectStore.fetchInfo().exists());
+		assertTrue("3.8", fileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("4.2", project.exists());
+		assertTrue("4.3", file.exists());
+		try {
+			int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("4.4", e);
+		}
+		assertTrue("4.5", !project.exists());
+		assertTrue("4.6", !file.exists());
+		assertTrue("4.7", projectStore.fetchInfo().exists());
+		assertTrue("4.8", fileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(new IResource[] {project, file}, true);
+		fileStore = file.getStore();
+		assertTrue("5.2", project.exists());
+		assertTrue("5.3", file.exists());
+		try {
+			int updateFlags = IResource.FORCE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("5.4", e);
+		}
+		assertTrue("5.5", !project.exists());
+		assertTrue("5.6", !file.exists());
+		// don't delete the directory itself since the location is user-defined, but delete the contents
+		assertTrue("5.7", projectStore.fetchInfo().exists());
+		assertTrue("5.8", !fileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		fileStore = file.getStore();
+		assertTrue("6.2", project.exists());
+		assertTrue("6.3", file.exists());
+		try {
+			int updateFlags = IResource.NONE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("6.4", e);
+		}
+		assertTrue("6.5", !project.exists());
+		assertTrue("6.6", !file.exists());
+		// don't delete the directory itself since its user-defined, but delete the contents
+		assertTrue("6.7", projectStore.fetchInfo().exists());
+		assertTrue("6.8", !fileStore.fetchInfo().exists());
 	}
 
 	/**
@@ -1941,201 +1885,182 @@ public class IProjectTest extends ResourceTest {
 		IFile otherFile = project.getFile("myotherfile.txt");
 		FileStore projectStore, fileStore, otherFileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
-		Set pathsToDelete = new HashSet(6);
 
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("1.0", project.exists());
+		assertTrue("1.1", file.exists());
+		assertTrue("1.2", !otherFile.exists());
 		try {
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("1.0", project.exists());
-			assertTrue("1.1", file.exists());
-			assertTrue("1.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("1.3", e);
-			}
-			assertTrue("1.4", !project.exists());
-			assertTrue("1.5", !file.exists());
-			assertTrue("1.6", !otherFile.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("1.7", projectStore.fetchInfo().exists());
-			assertTrue("1.8", !fileStore.fetchInfo().exists());
-			assertTrue("1.9", !otherFileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = ALWAYS
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("2.0", project.exists());
-			assertTrue("2.1", file.exists());
-			assertTrue("2.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("2.3", e);
-			}
-			assertTrue("2.4", !project.exists());
-			assertTrue("2.5", !file.exists());
-			assertTrue("2.6", !otherFile.exists());
-			// don't want to delete the actual directory when its user-defined, but the files in
-			// it should be deleted
-			assertTrue("2.7", projectStore.fetchInfo().exists());
-			assertTrue("2.8", !fileStore.fetchInfo().exists());
-			assertTrue("2.9", !otherFileStore.fetchInfo().exists());
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("3.0", project.exists());
-			assertTrue("3.1", file.exists());
-			assertTrue("3.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("3.3", e);
-			}
-			assertTrue("3.4", !project.exists());
-			assertTrue("3.5", !file.exists());
-			assertTrue("3.6", !otherFile.exists());
-			assertTrue("3.7", projectStore.fetchInfo().exists());
-			assertTrue("3.8", fileStore.fetchInfo().exists());
-			assertTrue("3.9", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = NEVER
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("4.0", project.exists());
-			assertTrue("4.1", file.exists());
-			assertTrue("4.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("4.3", e);
-			}
-			assertTrue("4.4", !project.exists());
-			assertTrue("4.5", !file.exists());
-			assertTrue("4.6", !otherFile.exists());
-			assertTrue("4.7", projectStore.fetchInfo().exists());
-			assertTrue("4.8", fileStore.fetchInfo().exists());
-			assertTrue("4.9", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = TRUE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(new IResource[] {project, file}, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("5.0", project.exists());
-			assertTrue("5.1", file.exists());
-			assertTrue("5.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.FORCE;
-				project.delete(updateFlags, getMonitor());
-			} catch (CoreException e) {
-				fail("5.3", e);
-			}
-			assertTrue("5.4", !project.exists());
-			assertTrue("5.5", !file.exists());
-			assertTrue("5.6", !otherFile.exists());
-			// don't delete the directory itself since the location is user-defined, but delete the contents
-			assertTrue("5.7", projectStore.fetchInfo().exists());
-			assertTrue("5.8", !fileStore.fetchInfo().exists());
-			assertTrue("5.9", !otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-
-			/* ======================================================================
-			 * Force = FALSE
-			 * Delete content = DEFAULT
-			 * =======================================================================*/
-			projectStore = getTempDir().append(Long.toString(System.currentTimeMillis()));
-			pathsToDelete.add(projectStore);
-			description.setLocation(projectStore);
-			ensureExistsInWorkspace(project, description);
-			ensureExistsInWorkspace(file, true);
-			ensureExistsInFileSystem(otherFile);
-			fileStore = file.getStore();
-			otherFileStore = otherFile.getStore();
-			assertTrue("6.0", project.exists());
-			assertTrue("6.1", file.exists());
-			assertTrue("6.2", !otherFile.exists());
-			try {
-				int updateFlags = IResource.NONE;
-				project.delete(updateFlags, getMonitor());
-				fail("6.3");
-			} catch (CoreException e) {
-				// expected
-			}
-			assertTrue("6.4", project.exists());
-			// delete was best effort so this file should be gone.
-			assertTrue("6.5", !file.exists());
-			assertTrue("6.6", !otherFile.exists());
-			// don't delete the directory itself since its user-defined, but delete the contents
-			assertTrue("6.7", projectStore.fetchInfo().exists());
-			assertTrue("6.8", !fileStore.fetchInfo().exists());
-			assertTrue("6.9", otherFileStore.fetchInfo().exists());
-			// cleanup
-			clear(projectStore);
-		} finally {
-			for (Iterator i = pathsToDelete.iterator(); i.hasNext();) {
-				Workspace.clear(((IPath) i.next()).toFile());
-			}
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("1.3", e);
 		}
+		assertTrue("1.4", !project.exists());
+		assertTrue("1.5", !file.exists());
+		assertTrue("1.6", !otherFile.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("1.7", projectStore.fetchInfo().exists());
+		assertTrue("1.8", !fileStore.fetchInfo().exists());
+		assertTrue("1.9", !otherFileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = ALWAYS
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("2.0", project.exists());
+		assertTrue("2.1", file.exists());
+		assertTrue("2.2", !otherFile.exists());
+		try {
+			int updateFlags = IResource.ALWAYS_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("2.3", e);
+		}
+		assertTrue("2.4", !project.exists());
+		assertTrue("2.5", !file.exists());
+		assertTrue("2.6", !otherFile.exists());
+		// don't want to delete the actual directory when its user-defined, but the files in
+		// it should be deleted
+		assertTrue("2.7", projectStore.fetchInfo().exists());
+		assertTrue("2.8", !fileStore.fetchInfo().exists());
+		assertTrue("2.9", !otherFileStore.fetchInfo().exists());
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("3.0", project.exists());
+		assertTrue("3.1", file.exists());
+		assertTrue("3.2", !otherFile.exists());
+		try {
+			int updateFlags = IResource.FORCE;
+			updateFlags |= IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("3.3", e);
+		}
+		assertTrue("3.4", !project.exists());
+		assertTrue("3.5", !file.exists());
+		assertTrue("3.6", !otherFile.exists());
+		assertTrue("3.7", projectStore.fetchInfo().exists());
+		assertTrue("3.8", fileStore.fetchInfo().exists());
+		assertTrue("3.9", otherFileStore.fetchInfo().exists());
+		// cleanup
+		clear(projectStore);
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = NEVER
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("4.0", project.exists());
+		assertTrue("4.1", file.exists());
+		assertTrue("4.2", !otherFile.exists());
+		try {
+			int updateFlags = IResource.NEVER_DELETE_PROJECT_CONTENT;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("4.3", e);
+		}
+		assertTrue("4.4", !project.exists());
+		assertTrue("4.5", !file.exists());
+		assertTrue("4.6", !otherFile.exists());
+		assertTrue("4.7", projectStore.fetchInfo().exists());
+		assertTrue("4.8", fileStore.fetchInfo().exists());
+		assertTrue("4.9", otherFileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = TRUE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(new IResource[] {project, file}, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("5.0", project.exists());
+		assertTrue("5.1", file.exists());
+		assertTrue("5.2", !otherFile.exists());
+		try {
+			int updateFlags = IResource.FORCE;
+			project.delete(updateFlags, getMonitor());
+		} catch (CoreException e) {
+			fail("5.3", e);
+		}
+		assertTrue("5.4", !project.exists());
+		assertTrue("5.5", !file.exists());
+		assertTrue("5.6", !otherFile.exists());
+		// don't delete the directory itself since the location is user-defined, but delete the contents
+		assertTrue("5.7", projectStore.fetchInfo().exists());
+		assertTrue("5.8", !fileStore.fetchInfo().exists());
+		assertTrue("5.9", !otherFileStore.fetchInfo().exists());
+
+		/* ======================================================================
+		 * Force = FALSE
+		 * Delete content = DEFAULT
+		 * =======================================================================*/
+		projectStore = getTempStore();
+		description.setLocationURI(projectStore.toURI());
+		ensureExistsInWorkspace(project, description);
+		ensureExistsInWorkspace(file, true);
+		ensureExistsInFileSystem(otherFile);
+		fileStore = file.getStore();
+		otherFileStore = otherFile.getStore();
+		assertTrue("6.0", project.exists());
+		assertTrue("6.1", file.exists());
+		assertTrue("6.2", !otherFile.exists());
+		try {
+			int updateFlags = IResource.NONE;
+			project.delete(updateFlags, getMonitor());
+			fail("6.3");
+		} catch (CoreException e) {
+			// expected
+		}
+		assertTrue("6.4", project.exists());
+		// delete was best effort so this file should be gone.
+		assertTrue("6.5", !file.exists());
+		assertTrue("6.6", !otherFile.exists());
+		// don't delete the directory itself since its user-defined, but delete the contents
+		assertTrue("6.7", projectStore.fetchInfo().exists());
+		assertTrue("6.8", !fileStore.fetchInfo().exists());
+		assertTrue("6.9", otherFileStore.fetchInfo().exists());
 	}
 
 	/**
@@ -2208,6 +2133,7 @@ public class IProjectTest extends ResourceTest {
 		assertEquals("3.2", project1, result[0]);
 		assertEquals("3.3", project2, result[1]);
 	}
+
 	public void testProjectLocationValidation() {
 
 		// validation of the initial project should be ok
@@ -2263,6 +2189,7 @@ public class IProjectTest extends ResourceTest {
 			fail("20.1", e);
 		}
 	}
+
 	/**
 	 * Tests creating a project at a location that contains URL escape sequences or spaces.
 	 */
@@ -2275,12 +2202,12 @@ public class IProjectTest extends ResourceTest {
 		try {
 			project1.create(desc, getMonitor());
 			project1.open(null);
-			
+
 			assertTrue("1.0", project1.exists());
 			assertTrue("1.1", project1.isAccessible());
 			assertEquals("1.2", location, project1.getLocation());
 			assertEquals("1.3", location, project1.getRawLocation());
-			
+
 			project1.delete(IResource.FORCE, getMonitor());
 		} catch (CoreException e) {
 			fail("1.99", e);

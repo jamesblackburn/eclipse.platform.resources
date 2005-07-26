@@ -362,11 +362,7 @@ public class HistoryStoreTest extends ResourceTest {
 
 		// location of the data on disk
 		IPath path = getRandomLocation();
-		try {
-			createFileInFileSystem(path, getRandomContents());
-		} catch (IOException e) {
-			fail("1.0", e);
-		}
+		createFileInFileSystem(path, getRandomContents());
 
 		// add the data to the history store
 		store.addState(file.getFullPath(), path.toFile(), System.currentTimeMillis(), true);
@@ -1368,8 +1364,6 @@ public class HistoryStoreTest extends ResourceTest {
 				file.refreshLocal(IResource.DEPTH_INFINITE, null);
 			} catch (CoreException e) {
 				fail("1.1." + i, e);
-			} catch (IOException e) {
-				fail("1.2." + i, e);
 			}
 		}
 
@@ -1383,8 +1377,6 @@ public class HistoryStoreTest extends ResourceTest {
 				secondValidFile.refreshLocal(IResource.DEPTH_INFINITE, null);
 			} catch (CoreException e) {
 				fail("2.1." + i, e);
-			} catch (IOException e) {
-				fail("2.2." + i, e);
 			}
 		}
 

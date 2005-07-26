@@ -14,9 +14,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.internal.filesystem.local.CoreFileSystemLibrary;
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.resources.*;
-import org.eclipse.core.runtime.*;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.tests.resources.ResourceTest;
 
 /**
@@ -304,10 +305,10 @@ public class Bug_32076 extends ResourceTest {
 	}
 
 	public void testFileBugOnLinux() {
-		if (!(Platform.getOS().equals(Platform.OS_LINUX) && CoreFileSystemLibrary.usingNatives()))
+		if (!(Platform.getOS().equals(Platform.OS_LINUX) && usingNatives()))
 			return;
 
-		IPath roFolderLocation = null;
+		FileStore roFolderStore = null;
 		IProject project = null;
 		try {
 			IWorkspace workspace = getWorkspace();
@@ -321,7 +322,7 @@ public class Bug_32076 extends ResourceTest {
 
 			ensureExistsInWorkspace(new IResource[] {sourceFile, destinationParent}, true);
 
-			roFolderLocation = roFolder.getLocation();
+			roFolderStore = roFolder.getStore();
 
 			// add a marker to a file to ensure the move operation is not losing anything
 			String attributeKey = getRandomString();
@@ -376,19 +377,18 @@ public class Bug_32076 extends ResourceTest {
 			assertTrue("4.7", sourceFile.exists());
 
 		} finally {
-			if (roFolderLocation != null)
-				CoreFileSystemLibrary.setReadOnly(roFolderLocation.toOSString(), false);
+			if (roFolderStore != null)
+				setReadOnly(roFolderStore, false);
 			if (project != null)
 				ensureDoesNotExistInFileSystem(project);
 		}
 	}
 
 	public void testFolderBugOnLinux() {
-		if (!(Platform.getOS().equals(Platform.OS_LINUX) && CoreFileSystemLibrary.usingNatives()))
+		if (!(Platform.getOS().equals(Platform.OS_LINUX) && usingNatives()))
 			return;
 
-		IPath roFolderLocation = null;
-		IPath destinationROFolderLocation = null;
+		FileStore roFolderLocation = null, destinationROFolderLocation = null;
 		IProject project = null;
 		try {
 			IWorkspace workspace = getWorkspace();
@@ -403,8 +403,8 @@ public class Bug_32076 extends ResourceTest {
 
 			ensureExistsInWorkspace(new IResource[] {file1, file2, destinationParent}, true);
 
-			roFolderLocation = roFolder.getLocation();
-			destinationROFolderLocation = destinationROFolder.getLocation();
+			roFolderLocation = roFolder.getStore();
+			destinationROFolderLocation = destinationROFolder.getStore();
 
 			// add a marker to a file to ensure the move operation is not losing anything
 			String attributeKey = getRandomString();
@@ -473,26 +473,26 @@ public class Bug_32076 extends ResourceTest {
 
 		} finally {
 			if (roFolderLocation != null)
-				CoreFileSystemLibrary.setReadOnly(roFolderLocation.toOSString(), false);
+				setReadOnly(roFolderLocation, false);
 			if (destinationROFolderLocation != null)
-				CoreFileSystemLibrary.setReadOnly(destinationROFolderLocation.toOSString(), false);
+				setReadOnly(destinationROFolderLocation, false);
 			if (project != null)
 				ensureDoesNotExistInFileSystem(project);
 		}
 	}
 
 	public void testProjectBugOnLinux() {
-		if (!(Platform.getOS().equals(Platform.OS_LINUX) && CoreFileSystemLibrary.usingNatives()))
+		if (!(Platform.getOS().equals(Platform.OS_LINUX) && usingNatives()))
 			return;
 
-		IProject sourceProject = null;
+		IWorkspace workspace = getWorkspace();
+		IProject sourceProject = workspace.getRoot().getProject("SourceProject");
 		IProject destinationProject = null;
-		IPath projectLocationParent = getRandomLocation();
+		FileStore projectParentStore = getTempStore();
+		FileStore projectStore = projectParentStore.getChild(sourceProject.getName());
 		try {
-			IWorkspace workspace = getWorkspace();
-			sourceProject = workspace.getRoot().getProject("SourceProject");
 			IProjectDescription sourceDescription = workspace.newProjectDescription(sourceProject.getName());
-			sourceDescription.setLocation(projectLocationParent.append(sourceProject.getName()));
+			sourceDescription.setLocationURI(projectStore.toURI());
 
 			destinationProject = workspace.getRoot().getProject("DestinationProject");
 			IProjectDescription destinationDescription = workspace.newProjectDescription(destinationProject.getName());
@@ -527,7 +527,7 @@ public class Bug_32076 extends ResourceTest {
 			}
 
 			// mark sub-folder as read-only so its immediate children cannot be removed on Linux
-			assertTrue("0.7", CoreFileSystemLibrary.setReadOnly(projectLocationParent.toOSString(), true));
+			setReadOnly(projectParentStore, true);
 
 			try {
 				sourceProject.move(destinationDescription, IResource.FORCE, getMonitor());
@@ -554,16 +554,15 @@ public class Bug_32076 extends ResourceTest {
 				fail("3.8", e);
 			}
 			// project's content area still exists in file system
-			assertTrue("4.0", projectLocationParent.append(sourceProject.getName()).toFile().exists());
+			assertTrue("4.0", projectStore.fetchInfo().exists());
 
 			assertTrue("5.0", workspace.getRoot().isSynchronized(IResource.DEPTH_INFINITE));
 
 		} finally {
-			CoreFileSystemLibrary.setReadOnly(projectLocationParent.toOSString(), false);
-			ensureDoesNotExistInFileSystem(projectLocationParent.toFile());
+			setReadOnly(projectParentStore, false);
+			ensureDoesNotExistInFileSystem(sourceProject);
 			if (destinationProject != null)
 				ensureDoesNotExistInFileSystem(destinationProject);
 		}
 	}
-
 }

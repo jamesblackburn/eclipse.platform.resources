@@ -11,13 +11,14 @@
 package org.eclipse.core.tests.resources;
 
 import java.io.*;
+import java.util.HashSet;
+import java.util.Set;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.filesystem.Policy;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
-import org.eclipse.core.tests.harness.CoreTest;
-import org.eclipse.core.tests.harness.EclipseTestHarnessApplication;
+import org.eclipse.core.tests.harness.*;
 
 /**
  * Tests that use the Eclipse Platform workspace.
@@ -28,16 +29,17 @@ public class ResourceTest extends CoreTest {
 
 	//nature that installs and runs a builder (regression test for bug 29116)
 	protected static final String NATURE_29116 = "org.eclipse.core.tests.resources.nature29116";
+
 	//cycle1 requires: cycle2
 	protected static final String NATURE_CYCLE1 = "org.eclipse.core.tests.resources.cycle1";
+	//cycle2 requires: cycle3
+	protected static final String NATURE_CYCLE2 = "org.eclipse.core.tests.resources.cycle2";
 
 	//constants for nature ids
 
-	//cycle2 requires: cycle3
-	protected static final String NATURE_CYCLE2 = "org.eclipse.core.tests.resources.cycle2";
 	//cycle3 requires: cycle1
 	protected static final String NATURE_CYCLE3 = "org.eclipse.core.tests.resources.cycle3";
-	//earthNature, oneof: stateSet
+	//earthNature, one-of: stateSet
 	protected static final String NATURE_EARTH = "org.eclipse.core.tests.resources.earthNature";
 	//invalidNature
 	protected static final String NATURE_INVALID = "org.eclipse.core.tests.resources.invalidNature";
@@ -51,13 +53,19 @@ public class ResourceTest extends CoreTest {
 	protected static final String NATURE_SIMPLE = "org.eclipse.core.tests.resources.simpleNature";
 	//snowNature, requires: waterNature, one-of: otherSet
 	protected static final String NATURE_SNOW = "org.eclipse.core.tests.resources.snowNature";
-	//waterNature, oneof: stateSet
+	//waterNature, one-of: stateSet
 	protected static final String NATURE_WATER = "org.eclipse.core.tests.resources.waterNature";
 	public static final String PI_RESOURCES_TESTS = "org.eclipse.core.tests.resources"; //$NON-NLS-1$	
 	protected static final String SET_OTHER = "org.eclipse.core.tests.resources.otherSet";
-
 	//constants for nature sets	
 	protected static final String SET_STATE = "org.eclipse.core.tests.resources.stateSet";
+
+	/**
+	 * Set of FileStore instances that must be deleted when the
+	 * test is complete
+	 * @see #getTempStore
+	 */
+	private final Set storesToDelete = new HashSet();
 
 	/**
 	 * Does some garbage collections to free unused resources
@@ -77,7 +85,7 @@ public class ResourceTest extends CoreTest {
 	/**
 	 * Convenience method to copy contents from one stream to another.
 	 */
-	protected static void transferStreams(InputStream source, OutputStream destination, String path, IProgressMonitor monitor) throws CoreException {
+	protected static void transferStreams(InputStream source, OutputStream destination, String path, IProgressMonitor monitor) {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			byte[] buffer = new byte[8192];
@@ -307,7 +315,7 @@ public class ResourceTest extends CoreTest {
 	}
 
 	/**
-	 * Return a collection of resources the hierarcy defined by defineHeirarchy().
+	 * Return a collection of resources the hierarchy defined by defineHeirarchy().
 	 */
 	public IResource[] buildResources() {
 		return buildResources(getWorkspace().getRoot(), defineHierarchy());
@@ -341,10 +349,23 @@ public class ResourceTest extends CoreTest {
 	}
 
 	protected void cleanup() throws CoreException {
+		FileStore[] toDelete = (FileStore[])storesToDelete.toArray(new FileStore[0]);
+		storesToDelete.clear();
+		for (int i = 0; i < toDelete.length; i++) {
+			clear(toDelete[i]);
+		}
 		ensureDoesNotExistInWorkspace(getWorkspace().getRoot());
 		getWorkspace().save(true, null);
 		//don't leak builder jobs, since they may affect subsequent tests
 		waitForBuild();
+	}
+
+	protected void clear(FileStore store) {
+		try {
+			store.delete(IFileStoreConstants.NONE, null);
+		} catch (CoreException e) {
+			fail("IResourceTest#clear.99", e);
+		}
 	}
 
 	/**
@@ -436,8 +457,19 @@ public class ResourceTest extends CoreTest {
 	/**
 	 * Create the given file in the file system. 
 	 */
-	public void createFileInFileSystem(IPath path, InputStream contents) throws IOException {
-		createFileInFileSystem(path.toFile(), contents);
+	public void createFileInFileSystem(IPath path) {
+		createFileInFileSystem(path, getRandomContents());
+	}
+
+	/**
+	 * Create the given file in the file system. 
+	 */
+	public void createFileInFileSystem(IPath path, InputStream contents) {
+		try {
+			createFileInFileSystem(path.toFile(), contents);
+		} catch (IOException e) {
+			fail("ResourceTest#createFileInFileSystem", e);
+		}
 	}
 
 	public IResource[] createHierarchy() {
@@ -608,7 +640,7 @@ public class ResourceTest extends CoreTest {
 	}
 
 	/**
-	 * Modifies the resource in the filesystem so that it is out of sync
+	 * Modifies the resource in the file system so that it is out of sync
 	 * with the workspace.
 	 */
 	public void ensureOutOfSync(final IResource resource) {
@@ -639,7 +671,7 @@ public class ResourceTest extends CoreTest {
 	}
 
 	/** 
-	 * Returns the unqualified class name of the receiver (ie. without the package prefix).
+	 * Returns the unqualified class name of the receiver (i.e. without the package prefix).
 	 */
 	protected String getClassName() {
 		String fullClassName = getClass().getName();
@@ -654,7 +686,7 @@ public class ResourceTest extends CoreTest {
 				{NATURE_WATER, NATURE_EARTH}, //duplicates from state-set
 				{NATURE_WATER, NATURE_MUD}, //missing earth pre-req
 				{NATURE_WATER, NATURE_EARTH, NATURE_MUD}, //duplicates from state-set
-				{NATURE_SIMPLE, NATURE_SNOW, NATURE_WATER, NATURE_MUD}, //dups from other-set, missing pre-req
+				{NATURE_SIMPLE, NATURE_SNOW, NATURE_WATER, NATURE_MUD}, //duplicates from other-set, missing pre-req
 				{NATURE_MISSING}, //doesn't exist
 				{NATURE_SIMPLE, NATURE_MISSING}, //missing doesn't exist
 				{NATURE_MISSING_PREREQ}, //requires nature that doesn't exist
@@ -663,6 +695,18 @@ public class ResourceTest extends CoreTest {
 				{NATURE_CYCLE2, NATURE_CYCLE3}, //missing pre-req
 				{NATURE_CYCLE1, NATURE_SIMPLE, NATURE_CYCLE2, NATURE_CYCLE3}, //cycle
 		};
+	}
+
+	/**
+	 * Returns a FileStore instance backed by storage in a temporary location.
+	 * The returned store will not exist, but will belong to an existing parent.
+	 * The tearDown method in this class will ensure the location is deleted after
+	 * the test is completed.
+	 */
+	protected FileStore getTempStore() {
+		FileStore store = FileStoreFactory.create(FileSystemHelper.getRandomLocation(getTempDir()));
+		storesToDelete.add(store);
+		return store;
 	}
 
 	public String getUniqueString() {
@@ -804,6 +848,11 @@ public class ResourceTest extends CoreTest {
 		cleanup();
 	}
 
+	protected boolean usingNatives() {
+		return false;
+		//return CoreFileSystemLibrary.usingNatives();
+	}
+
 	/**
 	 * Blocks the calling thread until autobuild completes.
 	 */
@@ -830,16 +879,14 @@ public class ResourceTest extends CoreTest {
 		}
 	}
 
-	protected boolean usingNatives() {
-		return false;
-		//return CoreFileSystemLibrary.usingNatives();
-	}
-
-	protected void clear(FileStore store) {
+	protected void setReadOnly(FileStore target, boolean value) {
+		assertTrue("setReadOnly.1", usingNatives());
+		IFileInfo fileInfo = target.fetchInfo();
+		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY, value);
 		try {
-			store.delete(NONE, null);
+			target.setFileInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES	, null);
 		} catch (CoreException e) {
-			fail("IResourceTest#clear.99", e);
+			fail("ResourceTest#setReadOnly", e);
 		}
 	}
 }

@@ -14,8 +14,8 @@ import java.io.File;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.eclipse.core.filesystem.FileStoreFactory;
 import org.eclipse.core.filesystem.IFileStoreConstants;
-import org.eclipse.core.internal.filesystem.local.CoreFileSystemLibrary;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -507,8 +507,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 			case S_FOLDER_TO_FILE :
 				ensureExistsInWorkspace(target, true);
 				ensureDoesNotExistInFileSystem(target);
-				IPath location = target.getLocation();
-				createFileInFileSystem(location);
+				ensureExistsInFileSystem(target);
 				if (addVerifier) {
 					verifier.reset();
 					// we only get a delta if the receiver of refreshLocal
@@ -1498,7 +1497,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 			project.open(getMonitor());
 			ensureDoesNotExistInWorkspace(topFolder);
 			ensureDoesNotExistInWorkspace(topFile);
-			createFileInFileSystem(fileLocation);
+			createFileInFileSystem(FileStoreFactory.create(fileLocation));
 			folderLocation.toFile().mkdirs();
 			topFolder.createLink(folderLocation, IResource.NONE, getMonitor());
 			topFile.createLink(fileLocation, IResource.NONE, getMonitor());
@@ -1526,7 +1525,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 			IPath variableFileLocation = new Path(variableName).append("/VarFileName");
 			ensureDoesNotExistInWorkspace(topFolder);
 			ensureDoesNotExistInWorkspace(topFile);
-			createFileInFileSystem(varMan.resolvePath(variableFileLocation));
+			createFileInFileSystem(FileStoreFactory.create(varMan.resolvePath(variableFileLocation)));
 			varMan.resolvePath(variableFolderLocation).toFile().mkdirs();
 			topFolder.createLink(variableFolderLocation, IResource.NONE, getMonitor());
 			topFile.createLink(variableFileLocation, IResource.NONE, getMonitor());
@@ -1738,7 +1737,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	public void testReadOnly() {
 		// We need to know whether or not we can unset the read-only flag
 		// in order to perform this test.
-		if (!CoreFileSystemLibrary.usingNatives())
+		if (!usingNatives())
 			return;
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("target");

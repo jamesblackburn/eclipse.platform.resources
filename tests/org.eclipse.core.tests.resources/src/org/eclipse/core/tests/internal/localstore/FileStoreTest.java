@@ -175,16 +175,6 @@ public class FileStoreTest extends LocalStoreTest {
 	}
 
 	/**
-	 * Toggles the read-only state of the given store
-	 */
-	private void setReadOnly(FileStore target, boolean value) throws CoreException {
-		assertTrue("setReadOnly.1", usingNatives());
-		IFileInfo fileInfo = target.fetchInfo();
-		fileInfo.setAttribute(ATTRIBUTE_READ_ONLY, value);
-		target.setFileInfo(fileInfo, SET_ATTRIBUTES	, null);
-	}
-
-	/**
 	 * Basically this is a test for the Windows Platform.
 	 */
 	public void testCopyFileAcrossVolumes() throws Throwable {
