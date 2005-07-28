@@ -10,7 +10,6 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
-import java.io.File;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
@@ -39,25 +38,24 @@ public class BlobStore {
 	 * This number must be power of 2 and do not exceed 256. The location
 	 * should be an existing valid directory.
 	 */
-	public BlobStore(IPath location, int limit) {
-		Assert.isNotNull(location);
-		Assert.isTrue(!location.equals(Path.EMPTY));
-		localStore = FileStoreFactory.create(location);
+	public BlobStore(FileStore store, int limit) {
+		Assert.isNotNull(store);
+		localStore = store;
 		Assert.isTrue(localStore.fetchInfo().isDirectory());
 		Assert.isTrue(limit == 256 || limit == 128 || limit == 64 || limit == 32 || limit == 16 || limit == 8 || limit == 4 || limit == 2 || limit == 1);
 		mask = (byte) (limit - 1);
 	}
 
-	public UniversalUniqueIdentifier addBlob(File target, boolean moveContents) throws CoreException {
+	public UniversalUniqueIdentifier addBlob(FileStore target, boolean moveContents) throws CoreException {
 		UniversalUniqueIdentifier uuid = new UniversalUniqueIdentifier();
 		FileStore dir = folderFor(uuid);
 		if (!dir.fetchInfo().exists())
 			dir.create(IFileStoreConstants.DIRECTORY, null);
 		FileStore destination = fileFor(uuid);
 		if (moveContents)
-			localStore.move(destination, IFileStoreConstants.NONE, null);
+			target.move(destination, IFileStoreConstants.NONE, null);
 		else
-			localStore.copy(destination, IFileStoreConstants.NONE, null);
+			target.copy(destination, IFileStoreConstants.NONE, null);
 		return uuid;
 	}
 
@@ -88,15 +86,14 @@ public class BlobStore {
 	}
 
 	/**
-	 * Deletes a blobFile. Returns true if the blob was deleted.
+	 * Deletes a blobFile.
 	 */
-	public boolean deleteBlob(UniversalUniqueIdentifier uuid) {
+	public void deleteBlob(UniversalUniqueIdentifier uuid) {
 		Assert.isNotNull(uuid);
 		try {
 			fileFor(uuid).delete(IFileStoreConstants.NONE, null);
-			return true;
 		} catch (CoreException e) {
-			return false;
+			//ignore
 		}
 	}
 

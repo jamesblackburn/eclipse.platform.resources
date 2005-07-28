@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.*;
 import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.localstore.Bucket.Entry;
 import org.eclipse.core.internal.localstore.HistoryBucket.HistoryEntry;
 import org.eclipse.core.internal.resources.*;
@@ -67,19 +68,24 @@ public class HistoryStore2 implements IHistoryStore {
 	BucketTree tree;
 	private Workspace workspace;
 
-	public HistoryStore2(Workspace workspace, IPath location, int limit) {
+	public HistoryStore2(Workspace workspace, FileStore store, int limit) {
 		this.workspace = workspace;
-		location.toFile().mkdirs();
-		this.blobStore = new BlobStore(location, limit);
+		try {
+			store.create(IFileStoreConstants.DIRECTORY, null);
+		} catch (CoreException e) {
+			//ignore the failure here because there is no way to surface it.
+			//any attempt to write to the store will throw an appropriate exception
+		}
+		this.blobStore = new BlobStore(store, limit);
 		this.tree = new BucketTree(workspace, new HistoryBucket());
 	}
 
 	/**
-	 * @see IHistoryStore#addState(IPath, File, long, boolean)
+	 * @see IHistoryStore#addState(IPath, FileStore, long, boolean)
 	 */
-	public synchronized IFileState addState(IPath key, java.io.File localFile, long lastModified, boolean moveContents) {
+	public synchronized IFileState addState(IPath key, FileStore localFile, long lastModified, boolean moveContents) {
 		if (Policy.DEBUG_HISTORY)
-			System.out.println("History: Adding state for key: " + key + ", file: " + localFile + ", timestamp: " + lastModified + ", size: " + localFile.length()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+			System.out.println("History: Adding state for key: " + key + ", file: " + localFile + ", timestamp: " + lastModified + ", size: " + localFile.fetchInfo().getLength()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 		if (!isValid(localFile))
 			return null;
 		UniversalUniqueIdentifier uuid = null;
@@ -113,7 +119,7 @@ public class HistoryStore2 implements IHistoryStore {
 	/**
 	 * Applies the clean-up policy to an entry.
 	 */
-	private void applyPolicy(HistoryEntry fileEntry, int maxStates, long minTimeStamp) {
+	protected void applyPolicy(HistoryEntry fileEntry, int maxStates, long minTimeStamp) {
 		for (int i = 0; i < fileEntry.getOccurrences(); i++) {
 			if (i < maxStates && fileEntry.getTimestamp(i) >= minTimeStamp)
 				continue;
@@ -259,12 +265,13 @@ public class HistoryStore2 implements IHistoryStore {
 	 * @return <code>true</code> if this file should be added to the history
 	 * 	store and <code>false</code> otherwise
 	 */
-	private boolean isValid(java.io.File localFile) {
+	private boolean isValid(FileStore localFile) {
 		WorkspaceDescription description = workspace.internalGetDescription();
-		boolean result = localFile.length() <= description.getMaxFileStateSize();
+		long length = localFile.fetchInfo().getLength();
+		boolean result = length <= description.getMaxFileStateSize();
 		if (Policy.DEBUG_HISTORY && !result)
 			System.out.println("History: Ignoring file (too large). File: " + localFile.getAbsolutePath() + //$NON-NLS-1$
-					", size: " + localFile.length() + //$NON-NLS-1$
+					", size: " + length + //$NON-NLS-1$
 					", max: " + description.getMaxFileStateSize()); //$NON-NLS-1$
 		return result;
 	}

@@ -407,13 +407,13 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 		if (Policy.DEBUG_SAVE) {
 			switch (kind) {
 				case ISaveContext.FULL_SAVE :
-					System.out.println(DEBUG_FULL_SAVE + DEBUG_START ); //$NON-NLS-1$
+					System.out.println(DEBUG_FULL_SAVE + DEBUG_START );
 					break;
 				case ISaveContext.SNAPSHOT :
-					System.out.println(DEBUG_SNAPSHOT + DEBUG_START); //$NON-NLS-1$ 
+					System.out.println(DEBUG_SNAPSHOT + DEBUG_START);
 					break;
 				case ISaveContext.PROJECT_SAVE :
-					System.out.println(DEBUG_PROJECT_SAVE + project.getFullPath() + DEBUG_START); //$NON-NLS-1$ 
+					System.out.println(DEBUG_PROJECT_SAVE + project.getFullPath() + DEBUG_START);
 					break;
 			}
 		}
@@ -703,7 +703,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			if (projects[i].isAccessible())
 				markerManager.restore(projects[i], generateDeltas, monitor);
 		if (Policy.DEBUG_RESTORE_MARKERS) {
-			System.out.println("Restore Markers for workspace: " + (System.currentTimeMillis() - start) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			System.out.println("Restore Markers for workspace: " + (System.currentTimeMillis() - start) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$ 
 		}
 	}
 
@@ -867,7 +867,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 			if (projects[i].isAccessible())
 				synchronizer.restore(projects[i], monitor);
 		if (Policy.DEBUG_RESTORE_SYNCINFO) {
-			System.out.println("Restore SyncInfo for workspace: " + (System.currentTimeMillis() - start) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			System.out.println("Restore SyncInfo for workspace: " + (System.currentTimeMillis() - start) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 

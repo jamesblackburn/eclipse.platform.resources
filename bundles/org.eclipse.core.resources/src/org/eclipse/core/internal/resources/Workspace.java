@@ -1228,7 +1228,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		} catch (CoreException e) {
 			//ignore the failure if we are shutting down (expected since extension
 			//provider plugin has probably already shut down
-			if (canCreateExtensions()) {//$NON-NLS-1$
+			if (canCreateExtensions()) {
 				IStatus status = new ResourceStatus(IStatus.ERROR, 1, null, Messages.resources_initValidator, e);
 				ResourcesPlugin.getPlugin().getLog().log(status);
 			}
@@ -1264,7 +1264,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			} catch (CoreException e) {
 				//ignore the failure if we are shutting down (expected since extension
 				//provider plugin has probably already shut down
-				if (canCreateExtensions()) {//$NON-NLS-1$
+				if (canCreateExtensions()) {
 					IStatus status = new ResourceStatus(IStatus.ERROR, 1, null, Messages.resources_initHook, e);
 					ResourcesPlugin.getPlugin().getLog().log(status);
 				}
@@ -1305,7 +1305,7 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 			} catch (CoreException e) {
 				//ignore the failure if we are shutting down (expected since extension
 				//provider plugin has probably already shut down
-				if (canCreateExtensions()) {//$NON-NLS-1$
+				if (canCreateExtensions()) {
 					IStatus status = new ResourceStatus(IStatus.ERROR, 1, null, Messages.resources_initTeamHook, e);
 					ResourcesPlugin.getPlugin().getLog().log(status);
 				}

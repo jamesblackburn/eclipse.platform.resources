@@ -65,7 +65,7 @@ class ResourceTree implements IResourceTree {
 			if (!fileInfo.exists())
 				return;
 			long lastModified = fileInfo.getLastModified();
-			localManager.getHistoryStore().addState(file.getFullPath(), new java.io.File(store.getAbsolutePath()), lastModified, false);
+			localManager.getHistoryStore().addState(file.getFullPath(), store, lastModified, false);
 		} finally {
 			lock.release();
 		}

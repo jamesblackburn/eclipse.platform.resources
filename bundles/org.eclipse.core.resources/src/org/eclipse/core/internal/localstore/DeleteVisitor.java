@@ -67,7 +67,7 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 			for (Iterator children = node.getChildren(); children.hasNext();)
 				recursiveKeepHistory(store, (UnifiedTreeNode) children.next());
 		} else {
-			store.addState(node.getResource().getFullPath(), new java.io.File(node.getStore().getAbsolutePath()), node.getLastModified(), true);
+			store.addState(node.getResource().getFullPath(), node.getStore(), node.getLastModified(), true);
 		}
 	}
 

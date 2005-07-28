@@ -346,11 +346,8 @@ public class AliasManager implements IManager, ILifecycleListener {
 	private void buildAliasedProjectsSet() {
 		aliasedProjects.clear();
 		//if there are no linked resources then there can't be any aliased projects
-		if (linkedResourceCount <= 0) {
-			//paranoid check -- count should never be below zero
-			//			Assert.isTrue(linkedResourceCount == 0, "Linked resource count below zero");//$NON-NLS-1$
+		if (linkedResourceCount <= 0)
 			return;
-		}
 		//for every resource that overlaps another, marked its project as aliased
 		addToCollection.setCollection(aliasedProjects);
 		locationsMap.overLappingResourcesDo(addToCollection);
