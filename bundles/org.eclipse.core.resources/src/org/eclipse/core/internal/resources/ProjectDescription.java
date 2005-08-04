@@ -329,8 +329,8 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	/* (non-Javadoc)
 	 * @see IProjectDescription#setLocation(IPath)
 	 */
-	public void setLocation(IPath location) {
-		this.location = location.toFile().toURI();
+	public void setLocation(IPath path) {
+		this.location = path == null ? null : path.toFile().toURI();
 	}
 	
 	public void setLocationURI(URI location) {
