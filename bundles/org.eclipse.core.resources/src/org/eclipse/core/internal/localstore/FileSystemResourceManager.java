@@ -161,7 +161,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 			Resource resource = (Resource) target;
 			int totalWork = resource.countResources(IResource.DEPTH_INFINITE, false);
 			boolean force = (flags & IResource.FORCE) != 0;
-			if (force)
+			if (!force)
 				totalWork *= 2;
 			String title = NLS.bind(Messages.localstore_deleting, resource.getFullPath());
 			monitor.beginTask(title, totalWork);
@@ -174,6 +174,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				sub.beginTask("", 1000); //$NON-NLS-1$
 				try {
 					CollectSyncStatusVisitor refreshVisitor = new CollectSyncStatusVisitor(Messages.localstore_deleteProblem, sub);
+					refreshVisitor.setIgnoreLocalDeletions(true);
 					tree.accept(refreshVisitor, IResource.DEPTH_INFINITE);
 					status.merge(refreshVisitor.getSyncStatus());
 					skipList = refreshVisitor.getAffectedResources();
@@ -880,10 +881,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				}
 			}
 			// add entry to History Store.
-			//TODO HISTORY STORE
-//			if (keepHistory && fileInfo.exists())
-//				//never move to the history store, because then the file is missing if write fails
-//				getHistoryStore().addState(target.getFullPath(), store, lastModified, false);
+			if (keepHistory && fileInfo.exists())
+				//never move to the history store, because then the file is missing if write fails
+				getHistoryStore().addState(target.getFullPath(), store, lastModified, false);
 			if (!fileInfo.exists())
 				store.getParent().create(IFileStoreConstants.DIRECTORY, null);
 			OutputStream out = store.openOutputStream(IFileStoreConstants.NONE);

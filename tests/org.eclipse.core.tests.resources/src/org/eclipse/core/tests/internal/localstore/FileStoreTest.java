@@ -246,7 +246,7 @@ public class FileStoreTest extends LocalStoreTest {
 		FileStore target = temp.getChild("target");
 		long stat;
 
-		/* test stat with an inexisting file */
+		/* test stat with an nexisting file */
 		stat = target.fetchInfo().getLastModified();
 		assertTrue("1.0", stat == 0);
 

@@ -170,7 +170,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#getLocation()
 	 */
 	public IPath getLocation() {
-		return location == null ? null : new Path(location.toString());
+		return location == null ? null : new Path(location.getPath());
 	}
 
 	/* (non-Javadoc)

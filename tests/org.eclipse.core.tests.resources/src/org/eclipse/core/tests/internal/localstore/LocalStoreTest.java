@@ -167,7 +167,6 @@ public abstract class LocalStoreTest extends ResourceTest implements IFileStoreC
 	}
 
 	protected void tearDown() throws Exception {
-		getWorkspace().getRoot().delete(true, true, getMonitor());
 		super.tearDown();
 	}
 

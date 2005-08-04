@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.tests.internal.localstore;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Hashtable;
 import junit.framework.Test;
@@ -37,8 +38,18 @@ public class UnifiedTreeTest extends LocalStoreTest {
 	protected void createFiles(FileStore folder, Hashtable set) throws Exception {
 		for (int i = 0; i < limit; i++) {
 			FileStore child = folder.getChild("fsFile" + i);
-			OutputStream out = child.openOutputStream(NONE);
-			out.write("contents".getBytes());
+			OutputStream out = null;
+			try {
+				out = child.openOutputStream(NONE);
+				out.write("contents".getBytes());
+			} finally {
+				try {
+					if (out != null)
+						out.close();
+				} catch (IOException e) {
+					//ignore
+				}
+			}
 			String location = child.getAbsolutePath();
 			set.put(location, "");
 		}
@@ -116,12 +127,13 @@ public class UnifiedTreeTest extends LocalStoreTest {
 			public boolean visit(UnifiedTreeNode node) {
 
 				/* test the node.getLocalName() method */
-				String key = node.getLocalName();
-				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
-				assertEquals("1.0", node.getResource().getStore(), node.getStore());
+				final IResource resource = node.getResource();
+				if (node.existsInFileSystem())
+					assertEquals("1.0", resource.getStore().fetchInfo().getName(), node.getLocalName());
+				assertEquals("1.1", resource.getStore(), node.getStore());
 
 				/* remove from the hash table the resource we're visiting */
-				set.remove(key);
+				set.remove(resource.getLocation().toOSString());
 				return true;
 			}
 		};
@@ -160,19 +172,21 @@ public class UnifiedTreeTest extends LocalStoreTest {
 			public boolean visit(UnifiedTreeNode node) {
 
 				/* test the node.getLocalName() method */
-				String key = node.getLocalName();
-				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
-				assertEquals("1.1", node.getResource().getStore(), node.getStore());
+				final IResource resource = node.getResource();
+				String key = resource.getStore().fetchInfo().getName();
+				if (node.existsInFileSystem())
+					assertEquals("1.0", key, node.getLocalName());
+				assertEquals("1.1", resource.getStore(), node.getStore());
 
 				/* force children to be added to the queue */
 				node.getChildren();
 
 				/* skip some resources */
-				if (node.getResource().getName().startsWith("fsFolder"))
+				if (resource.getName().startsWith("fsFolder"))
 					return false;
 
 				/* remove from the hash table the resource we're visiting */
-				set.remove(key);
+				set.remove(resource.getLocation().toOSString());
 				return true;
 			}
 		};
@@ -210,14 +224,14 @@ public class UnifiedTreeTest extends LocalStoreTest {
 
 		/* create a visitor */
 		IUnifiedTreeVisitor visitor = new IUnifiedTreeVisitor() {
-			public boolean visit(UnifiedTreeNode node) throws CoreException {
-
+			public boolean visit(UnifiedTreeNode node) {
 				/* test the node.getLocalName() method */
-				String key = node.getLocalName();
-				assertEquals("1.0", node.getResource().getStore().fetchInfo().getName(), key);
-				assertEquals("1.1", node.getResource().getStore(), node.getStore());
+				final IResource resource = node.getResource();
+				if (node.existsInFileSystem())
+					assertEquals("1.0", resource.getStore().fetchInfo().getName(), node.getLocalName());
+				assertEquals("1.1", resource.getStore(), node.getStore());
 				/* remove from the hash table the resource we're visiting */
-				set.remove(key);
+				set.remove(resource.getLocation().toOSString());
 				return true;
 			}
 		};

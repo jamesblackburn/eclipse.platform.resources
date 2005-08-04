@@ -79,7 +79,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	 * @return Returns a String
 	 */
 	public String getLocalName() {
-		return fileInfo.getName();
+		return fileInfo == null ? null : fileInfo.getName();
 	}
 
 	public IResource getResource() {
