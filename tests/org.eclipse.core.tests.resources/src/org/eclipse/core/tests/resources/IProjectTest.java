@@ -793,11 +793,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("1.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("1.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("1.5", otherFileStore.fetchInfo().exists());
 		assertTrue("1.6", project.exists());
 		assertTrue("1.7", !project.isOpen());
@@ -834,11 +830,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("2.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("2.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("2.5", otherFileStore.fetchInfo().exists());
 		assertTrue("2.6", project.exists());
 		assertTrue("2.7", !project.isOpen());
@@ -874,11 +866,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("3.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("3.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("3.5", otherFileStore.fetchInfo().exists());
 		assertTrue("3.6", project.exists());
 		assertTrue("3.7", !project.isOpen());
@@ -917,11 +905,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("4.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("4.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("4.5", otherFileStore.fetchInfo().exists());
 		assertTrue("4.6", project.exists());
 		assertTrue("4.7", !project.isOpen());
@@ -959,11 +943,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("5.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("5.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("5.5", otherFileStore.fetchInfo().exists());
 		assertTrue("5.6", project.exists());
 		assertTrue("5.7", !project.isOpen());
@@ -1001,11 +981,7 @@ public class IProjectTest extends ResourceTest {
 		} catch (CoreException e) {
 			fail("6.3", e);
 		}
-		try {
-			createFileInFileSystem(otherFileStore);
-		} catch (CoreException e) {
-			fail("6.4", e);
-		}
+		createFileInFileSystem(otherFileStore);
 		assertTrue("6.5", otherFileStore.fetchInfo().exists());
 		assertTrue("6.6", project.exists());
 		assertTrue("6.7", !project.isOpen());

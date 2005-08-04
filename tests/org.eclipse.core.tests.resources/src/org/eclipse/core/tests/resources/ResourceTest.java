@@ -349,7 +349,7 @@ public class ResourceTest extends CoreTest {
 	}
 
 	protected void cleanup() throws CoreException {
-		FileStore[] toDelete = (FileStore[])storesToDelete.toArray(new FileStore[0]);
+		FileStore[] toDelete = (FileStore[]) storesToDelete.toArray(new FileStore[0]);
 		storesToDelete.clear();
 		for (int i = 0; i < toDelete.length; i++) {
 			clear(toDelete[i]);
@@ -436,14 +436,16 @@ public class ResourceTest extends CoreTest {
 	/**
 	 * Create the given file in the local store. 
 	 */
-	public void createFileInFileSystem(FileStore file) throws CoreException {
-		file.getParent().create(IFileStoreConstants.NONE, null);
+	public void createFileInFileSystem(FileStore file) {
 		OutputStream output = null;
 		try {
+			file.getParent().create(IFileStoreConstants.DIRECTORY, null);
 			output = file.openOutputStream(IFileStoreConstants.NONE);
-			output.write("".getBytes("UTF8"));
+			output.write(getRandomString().getBytes("UTF8"));
 		} catch (IOException e) {
-			throw new CoreException(new Status(IStatus.ERROR, "foo", 2, "Failed during write: " + file.getAbsolutePath(), e));
+			fail("ResourceTest#createFileInFileSystem.1", e);
+		} catch (CoreException e) {
+			fail("ResourceTest#createFileInFileSystem.2", e);
 		} finally {
 			try {
 				if (output != null)
@@ -546,11 +548,7 @@ public class ResourceTest extends CoreTest {
 	 * to ensure that we have a correct Path -> File mapping.
 	 */
 	public void ensureExistsInFileSystem(IFile file) {
-		try {
-			createFileInFileSystem(file.getStore());
-		} catch (CoreException e) {
-			fail("#ensureExistsInFileSystem(IFile): " + file.getFullPath(), e);
-		}
+		createFileInFileSystem(file.getStore());
 	}
 
 	/**
@@ -561,9 +559,11 @@ public class ResourceTest extends CoreTest {
 		if (resource instanceof IFile)
 			ensureExistsInFileSystem((IFile) resource);
 		else {
-			IPath path = resource.getLocation();
-			if (path != null)
-				path.toFile().mkdirs();
+			try {
+				resource.getStore().create(IFileStoreConstants.DIRECTORY, null);
+			} catch (CoreException e) {
+				fail("ensureExistsInFileSystem.1", e);
+			}
 		}
 	}
 
@@ -884,7 +884,7 @@ public class ResourceTest extends CoreTest {
 		IFileInfo fileInfo = target.fetchInfo();
 		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY, value);
 		try {
-			target.setFileInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES	, null);
+			target.setFileInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES, null);
 		} catch (CoreException e) {
 			fail("ResourceTest#setReadOnly", e);
 		}

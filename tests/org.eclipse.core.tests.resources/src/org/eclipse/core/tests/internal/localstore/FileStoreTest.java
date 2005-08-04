@@ -34,7 +34,7 @@ public class FileStoreTest extends LocalStoreTest {
 	private FileStore createDir(FileStore store, boolean clear) throws CoreException {
 		if (clear && store.fetchInfo().exists())
 			store.delete(NONE, null);
-		store.create(NONE, null);
+		store.create(DIRECTORY, null);
 		IFileInfo info = store.fetchInfo();
 		assertTrue("createDir.1", info.exists());
 		assertTrue("createDir.1", info.isDirectory());
@@ -373,11 +373,7 @@ public class FileStoreTest extends LocalStoreTest {
 		IPath root = getWorkspace().getRoot().getLocation().append("" + new Date().getTime());
 		FileStore targetFolder = createDir(root.toString(), true);
 		FileStore targetFile = targetFolder.getChild("targetFile");
-		try {
-			createFileInFileSystem(targetFile);
-		} catch (CoreException e) {
-			fail("0.0", e);
-		}
+		createFileInFileSystem(targetFile);
 
 		// file
 		assertTrue("1.0", !targetFile.fetchInfo().isReadOnly());

@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.internal.localstore.IHistoryStore;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
@@ -361,11 +362,11 @@ public class HistoryStoreTest extends ResourceTest {
 		IHistoryStore store = ((Resource) getWorkspace().getRoot()).getLocalManager().getHistoryStore();
 
 		// location of the data on disk
-		IPath path = getRandomLocation();
-		createFileInFileSystem(path, getRandomContents());
+		FileStore fileStore = getTempStore();
+		createFileInFileSystem(fileStore);
 
 		// add the data to the history store
-		store.addState(file.getFullPath(), path.toFile(), System.currentTimeMillis(), true);
+		store.addState(file.getFullPath(), fileStore, System.currentTimeMillis(), true);
 		IFileState[] states = store.getStates(file.getFullPath(), getMonitor());
 		assertEquals("2.0", 1, states.length);
 
@@ -1356,7 +1357,7 @@ public class HistoryStoreTest extends ResourceTest {
 
 		/* Add multiple editions for one file location. */
 		for (int i = 0; i < ITERATIONS; i++, myLong++) {
-			historyStore.addState(file.getFullPath(), file.getLocation().toFile(), myLong, true);
+			historyStore.addState(file.getFullPath(), file.getStore(), myLong, true);
 			try {
 				contents = "This file has some contents in testGetContents.";
 				InputStream is = new ByteArrayInputStream(contents.getBytes());
@@ -1369,7 +1370,7 @@ public class HistoryStoreTest extends ResourceTest {
 
 		/* Add multiple editions for second file location. */
 		for (int i = 0; i < ITERATIONS; i++, myLong++) {
-			historyStore.addState(secondValidFile.getFullPath(), secondValidFile.getLocation().toFile(), myLong, true);
+			historyStore.addState(secondValidFile.getFullPath(), secondValidFile.getStore(), myLong, true);
 			try {
 				contents = "A file with some other contents in testGetContents.";
 				InputStream is = new ByteArrayInputStream(contents.getBytes());
