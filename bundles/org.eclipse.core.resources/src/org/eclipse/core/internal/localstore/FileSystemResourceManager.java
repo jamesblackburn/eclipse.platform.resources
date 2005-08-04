@@ -886,7 +886,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				getHistoryStore().addState(target.getFullPath(), store, lastModified, false);
 			if (!fileInfo.exists())
 				store.getParent().create(IFileStoreConstants.DIRECTORY, null);
-			OutputStream out = store.openOutputStream(IFileStoreConstants.NONE);
+			OutputStream out = store.openOutputStream(append ? IFileStoreConstants.APPEND : IFileStoreConstants.NONE);
 			FileStore.transferStreams(content, out, store.getAbsolutePath(), monitor);
 			// get the new last modified time and stash in the info
 			lastModified = store.fetchInfo().getLastModified();
