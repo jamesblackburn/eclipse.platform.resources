@@ -243,6 +243,7 @@ class ResourceTree implements IResourceTree {
 		try {
 			String message = NLS.bind(Messages.resources_deleting, file.getFullPath());
 			monitor.beginTask(message, Policy.totalWork);
+			Policy.checkCanceled(monitor);
 
 			// Do nothing if the file doesn't exist in the workspace.
 			if (!file.exists()) {
@@ -315,6 +316,7 @@ class ResourceTree implements IResourceTree {
 	private boolean internalDeleteFolder(IFolder folder, int flags, IProgressMonitor monitor) {
 		String message = NLS.bind(Messages.resources_deleting, folder.getFullPath());
 		monitor.beginTask(message, Policy.totalWork);
+		Policy.checkCanceled(monitor);
 
 		// Do nothing if the folder doesn't exist in the workspace.
 		if (!folder.exists())
@@ -383,29 +385,37 @@ class ResourceTree implements IResourceTree {
 		// Check to see if the children were deleted ok. If there was a problem
 		// just return as the problem should have been logged by the recursive
 		// call to the child.
-		if (deletedChildren) {
-			IResource file = project.findMember(IProjectDescription.DESCRIPTION_FILE_NAME);
-			if (file == null) {
-				//the .project have may have been recreated on disk automatically by snapshot
-				FileStore dotProject = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
-				try {
-					dotProject.delete(IFileStoreConstants.NONE, null);
-				} catch (CoreException e) {
-					failed(e.getStatus());
-				}
-			} else {
-				boolean deletedProjectFile = internalDeleteFile((IFile) file, flags, Policy.monitorFor(null));
-				if (!deletedProjectFile) {
-					String message = NLS.bind(Messages.resources_couldnotDelete, file.getFullPath());
-					IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
-					failed(status);
-					// Indicate that the delete was unsuccessful.
-					return false;
-				}
-			}
-		} else {
+		if (!deletedChildren)
 			// Indicate that the delete was unsuccessful.
 			return false;
+		
+		//Check if there are any undiscovered children of the project on disk other than description file
+		String[] children = projectStore.childNames(IFileStoreConstants.NONE, null);
+		if (children.length != 1 || !IProjectDescription.DESCRIPTION_FILE_NAME.equals(children[0])) {
+			String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, project.getName());
+			failed(new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, project.getFullPath(), message));
+			return false;
+		}
+		
+		//Now delete the project description file
+		IResource file = project.findMember(IProjectDescription.DESCRIPTION_FILE_NAME);
+		if (file == null) {
+			//the .project have may have been recreated on disk automatically by snapshot
+			FileStore dotProject = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
+			try {
+				dotProject.delete(IFileStoreConstants.NONE, null);
+			} catch (CoreException e) {
+				failed(e.getStatus());
+			}
+		} else {
+			boolean deletedProjectFile = internalDeleteFile((IFile) file, flags, Policy.monitorFor(null));
+			if (!deletedProjectFile) {
+				String message = NLS.bind(Messages.resources_couldnotDelete, file.getFullPath());
+				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message);
+				failed(status);
+				// Indicate that the delete was unsuccessful.
+				return false;
+			}
 		}
 
 		//children are deleted, so now delete the parent
@@ -783,8 +793,10 @@ class ResourceTree implements IResourceTree {
 				return;
 
 			boolean alwaysDeleteContent = (flags & IResource.ALWAYS_DELETE_PROJECT_CONTENT) != 0;
-			// don't take force into account if we are always deleting the content
-			boolean force = alwaysDeleteContent ? true : (flags & IResource.FORCE) != 0;
+			//force is implied if alwaysDeleteContent is true
+			if (alwaysDeleteContent)
+				flags |= IResource.FORCE;
+			boolean force = (flags & IResource.FORCE) != 0;
 			boolean neverDeleteContent = (flags & IResource.NEVER_DELETE_PROJECT_CONTENT) != 0;
 			boolean success = true;
 
