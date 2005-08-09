@@ -148,7 +148,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 		return new TestSuite(IResourceTest.class);
 
 //		TestSuite suite = new TestSuite();
-//		suite.addTest(new IResourceTest("testAccept2"));
+//		suite.addTest(new IResourceTest("testDelete"));
 //		return suite;
 	}
 
@@ -885,7 +885,10 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 
 			public boolean shouldFail(Object[] args, int count) {
 				Boolean force = (Boolean) args[0];
+				IProgressMonitor monitor = (IProgressMonitor) args[1];
 				IResource resource = (IResource) args[2];
+				if (monitor instanceof CancelingProgressMonitor)
+					return false;
 				if (force.booleanValue() || !resource.exists())
 					return false;
 				if (resource.getType() == IResource.PROJECT) {
