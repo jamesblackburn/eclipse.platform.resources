@@ -23,9 +23,9 @@ public class IProjectTest extends ResourceTest {
 	public static Test suite() {
 		return new TestSuite(IProjectTest.class);
 
-		//	TestSuite suite = new TestSuite();
-		//	suite.addTest(new IProjectTest("testCopy"));
-		//	return suite;
+//			TestSuite suite = new TestSuite();
+//			suite.addTest(new IProjectTest("testProjectDeletionOpenDefaultOutOfSync"));
+//			return suite;
 	}
 
 	public IProjectTest() {
@@ -1041,9 +1041,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("1.6", !project.exists());
 		assertTrue("1.7", !file.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("1.8", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("1.8", !projectStore.fetchInfo().exists());
 		assertTrue("1.9", !fileStore.fetchInfo().exists());
 		clear(projectStore);
 
@@ -1071,9 +1070,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("2.6", !project.exists());
 		assertTrue("2.7", !file.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("2.8", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("2.8", !projectStore.fetchInfo().exists());
 		assertTrue("2.9", !fileStore.fetchInfo().exists());
 		clear(projectStore);
 
@@ -1237,9 +1235,8 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("1.5", !project.exists());
 		assertTrue("1.6", !file.exists());
 		assertTrue("1.7", !otherFile.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("1.8", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("1.8", !projectStore.fetchInfo().exists());
 		assertTrue("1.9", !fileStore.fetchInfo().exists());
 		assertTrue("1.10", !otherFileStore.fetchInfo().exists());
 		clear(projectStore);
@@ -1272,9 +1269,8 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("2.5", !project.exists());
 		assertTrue("2.6", !file.exists());
 		assertTrue("2.7", !otherFile.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("2.8", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("2.8", !projectStore.fetchInfo().exists());
 		assertTrue("2.9", !fileStore.fetchInfo().exists());
 		assertTrue("2.10", !otherFileStore.fetchInfo().exists());
 		clear(projectStore);
@@ -1726,9 +1722,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("1.5", !project.exists());
 		assertTrue("1.6", !file.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("1.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("1.7", !projectStore.fetchInfo().exists());
 		assertTrue("1.8", !fileStore.fetchInfo().exists());
 
 		/* ======================================================================
@@ -1750,9 +1745,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("2.5", !project.exists());
 		assertTrue("2.6", !file.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("2.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("2.7", !projectStore.fetchInfo().exists());
 		assertTrue("2.8", !fileStore.fetchInfo().exists());
 
 		/* ======================================================================
@@ -1821,8 +1815,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("5.5", !project.exists());
 		assertTrue("5.6", !file.exists());
-		// don't delete the directory itself since the location is user-defined, but delete the contents
-		assertTrue("5.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("5.7", !projectStore.fetchInfo().exists());
 		assertTrue("5.8", !fileStore.fetchInfo().exists());
 
 		/* ======================================================================
@@ -1844,8 +1838,8 @@ public class IProjectTest extends ResourceTest {
 		}
 		assertTrue("6.5", !project.exists());
 		assertTrue("6.6", !file.exists());
-		// don't delete the directory itself since its user-defined, but delete the contents
-		assertTrue("6.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("6.7", !projectStore.fetchInfo().exists());
 		assertTrue("6.8", !fileStore.fetchInfo().exists());
 	}
 
@@ -1886,9 +1880,8 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("1.4", !project.exists());
 		assertTrue("1.5", !file.exists());
 		assertTrue("1.6", !otherFile.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("1.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("1.7", !projectStore.fetchInfo().exists());
 		assertTrue("1.8", !fileStore.fetchInfo().exists());
 		assertTrue("1.9", !otherFileStore.fetchInfo().exists());
 		clear(projectStore);
@@ -1916,9 +1909,8 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("2.4", !project.exists());
 		assertTrue("2.5", !file.exists());
 		assertTrue("2.6", !otherFile.exists());
-		// don't want to delete the actual directory when its user-defined, but the files in
-		// it should be deleted
-		assertTrue("2.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("2.7", !projectStore.fetchInfo().exists());
 		assertTrue("2.8", !fileStore.fetchInfo().exists());
 		assertTrue("2.9", !otherFileStore.fetchInfo().exists());
 		clear(projectStore);
@@ -2003,8 +1995,8 @@ public class IProjectTest extends ResourceTest {
 		assertTrue("5.4", !project.exists());
 		assertTrue("5.5", !file.exists());
 		assertTrue("5.6", !otherFile.exists());
-		// don't delete the directory itself since the location is user-defined, but delete the contents
-		assertTrue("5.7", projectStore.fetchInfo().exists());
+		// ensure the project directory and files no longer exist
+		assertTrue("5.7", !projectStore.fetchInfo().exists());
 		assertTrue("5.8", !fileStore.fetchInfo().exists());
 		assertTrue("5.9", !otherFileStore.fetchInfo().exists());
 
