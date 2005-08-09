@@ -10,15 +10,10 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import java.net.URI;
 import java.util.HashMap;
-import org.eclipse.core.filesystem.FileStore;
-import org.eclipse.core.filesystem.FileStoreFactory;
 import org.eclipse.core.internal.events.BuildCommand;
-import org.eclipse.core.internal.localstore.FileStoreRoot;
 import org.eclipse.core.resources.ICommand;
 import org.eclipse.core.resources.IProjectNature;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.content.IContentTypeMatcher;
 
 public class ProjectInfo extends ResourceInfo {
@@ -91,15 +86,6 @@ public class ProjectInfo extends ResourceInfo {
 			value.setBuildSpec(newSpec);
 		}
 		description = value;
-		//set root location info if applicable
-		URI location = description.getLocationURI();
-		if (location != null) {
-			FileStore projectStore = FileStoreFactory.create(location);
-			setFileStoreRoot(new FileStoreRoot(projectStore, Path.ROOT.append(description.getName())));
-		} else {
-			//project is in default location so clear the store root
-			setFileStoreRoot(null);
-		}
 	}
 
 	/**

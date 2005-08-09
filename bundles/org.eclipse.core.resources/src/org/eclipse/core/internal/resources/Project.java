@@ -266,7 +266,7 @@ public class Project extends Container implements IProject {
 					desc = (ProjectDescription) ((ProjectDescription) description).clone();
 				}
 				desc.setName(getName());
-				info.setDescription(desc);
+				internalSetDescription(desc, false);
 				// see if there potentially are already contents on disk
 				final boolean hasSavedDescription = getLocalManager().hasSavedDescription(this);
 				boolean hasContent = hasSavedDescription;
@@ -633,6 +633,7 @@ public class Project extends Container implements IProject {
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
+		getLocalManager().setLocation(path, info, value.getLocationURI());
 		if (incrementContentId) {
 			info.incrementContentId();
 			//if the project is not accessible, stamp will be null and should remain null

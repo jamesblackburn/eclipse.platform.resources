@@ -66,7 +66,7 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 	protected ObjectMap sessionProperties = null;
 
 	/** 
-	 * The table of sync infos. 
+	 * The table of sync information. 
 	 * <p>
 	 * This field is declared as the implementing class rather than the
 	 * interface so we ensure that we get it right since we are making certain
@@ -308,7 +308,7 @@ public class ResourceInfo implements IElementTreeData, ICoreConstants, IStringPo
 	protected void setBits(int mask, int start, int value) {
 		int baseMask = mask >> start;
 		int newValue = (value & baseMask) << start;
-		// thread safety: (guarantee atomicity)
+		// thread safety: (guarantee atomic assignment)
 		int temp = flags;
 		temp &= ~mask;
 		temp |= newValue;

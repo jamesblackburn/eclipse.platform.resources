@@ -11,6 +11,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import org.eclipse.core.internal.events.BuildCommand;
@@ -170,7 +171,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#getLocation()
 	 */
 	public IPath getLocation() {
-		return location == null ? null : new Path(location.getPath());
+		return location == null ? null : new Path(location.getSchemeSpecificPart());
 	}
 
 	/* (non-Javadoc)
@@ -330,7 +331,12 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setLocation(IPath)
 	 */
 	public void setLocation(IPath path) {
-		this.location = path == null ? null : path.toFile().toURI();
+		try {
+			this.location = path == null ? null : path.toURI();
+		} catch (URISyntaxException e) {
+			//can't happen
+			throw new IllegalArgumentException(e.getMessage());
+		}
 	}
 	
 	public void setLocationURI(URI location) {

@@ -11,6 +11,8 @@
 package org.eclipse.core.internal.localstore;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.resources.*;
@@ -199,7 +201,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	private boolean descriptionChanged(IFile descriptionFile, byte[] newContents) {
 		InputStream stream = null;
 		try {
-			stream = new BufferedInputStream(descriptionFile.getContents());
+			stream = new BufferedInputStream(descriptionFile.getContents(true));
 			int newLength = newContents.length;
 			byte[] oldContents = new byte[newLength];
 			int read = stream.read(oldContents);
@@ -210,6 +212,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				return true;
 			return !Arrays.equals(newContents, oldContents);
 		} catch (Exception e) {
+			System.out.println(e);
 			//if we failed to compare, just write the new contents
 		} finally {
 			try {
@@ -331,7 +334,6 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * Never returns null
 	 * @param target
 	 * @return The file store for this resource
-	 * @throws CoreException
 	 */
 	public FileStore getStore(IResource target) {
 		FileStoreRoot root = getStoreRoot(target);
@@ -346,14 +348,27 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	private FileStoreRoot getStoreRoot(IResource target) {
-		final ResourceInfo info = workspace.getResourceInfo(target.getFullPath(), true, false);
+		ResourceInfo info = workspace.getResourceInfo(target.getFullPath(), true, false);
 		FileStoreRoot root;
 		if (info != null) {
 			root = info.getFileStoreRoot();
-			if (root != null)
+			if (root != null && root.isValid())
 				return root;
 		}
-		root = getStoreRoot(target.getParent());
+		final IContainer parent = target.getParent();
+		if (parent == null) {
+			//this is the root, so we know where this must be located
+			//initialize root location
+			try {
+				info = workspace.getResourceInfo(Path.ROOT, false, true);
+				setLocation(Path.ROOT, info, Platform.getLocation().toURI());
+				return info.getFileStoreRoot();
+			} catch (URISyntaxException e) {
+				//this means the platform location cannot be expressed as a URI - can this happen?
+				throw new Error(e);
+			}
+		}
+		root = getStoreRoot(parent);
 		if (info != null)
 			info.setFileStoreRoot(root);
 		return root;
@@ -364,17 +379,17 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	/**
-	 * Returns whether the project has a project description file on disk.
-	 */
-	public boolean hasSavedDescription(IProject project) {
-		return getStore(project).getChild(IProjectDescription.DESCRIPTION_FILE_NAME).fetchInfo().exists();
-	}
-
-	/**
 	 * Returns whether the project has any local content on disk.
 	 */
 	public boolean hasSavedContent(IProject project) {
 		return getStore(project).fetchInfo().exists();
+	}
+
+	/**
+	 * Returns whether the project has a project description file on disk.
+	 */
+	public boolean hasSavedDescription(IProject project) {
+		return getStore(project).getChild(IProjectDescription.DESCRIPTION_FILE_NAME).fetchInfo().exists();
 	}
 
 	/**
@@ -800,12 +815,32 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		FileStore store = getStore(target);
 		IFileInfo fileInfo = store.fetchInfo();
 		fileInfo.setLastModified(value);
-		store.setFileInfo(fileInfo, IFileStoreConstants.NONE, null);
+		store.setFileInfo(fileInfo, IFileStoreConstants.SET_LAST_MODIFIED, null);
 		//actual value may be different depending on file system granularity
 		fileInfo = store.fetchInfo();
 		long actualValue = fileInfo.getLastModified();
 		updateLocalSync(info, actualValue);
 		return actualValue;
+	}
+
+	/**
+	 * The storage location for a resource has changed; update the location.
+	 * @param workspacePath
+	 * @param info
+	 * @param location
+	 */
+	public void setLocation(IPath workspacePath, ResourceInfo info, URI location) {
+		FileStoreRoot oldRoot = info.getFileStoreRoot();
+		if (location != null) {
+			location = ResourcesPlugin.getWorkspace().getPathVariableManager().resolveURI(location);
+			FileStore projectStore = FileStoreFactory.create(location);
+			info.setFileStoreRoot(new FileStoreRoot(projectStore, workspacePath));
+		} else {
+			//project is in default location so clear the store root
+			info.setFileStoreRoot(null);
+		}
+		if (oldRoot != null)
+			oldRoot.setValid(false);
 	}
 
 	/* (non-javadoc)

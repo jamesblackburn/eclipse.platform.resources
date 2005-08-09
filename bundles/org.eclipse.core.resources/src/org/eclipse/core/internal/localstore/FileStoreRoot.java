@@ -17,8 +17,13 @@ import org.eclipse.core.runtime.IPath;
  * A file system can be rooted on any resource.
  */
 public class FileStoreRoot {
-	private FileStore root;
 	private int chop;
+	/**
+	 * When a root is changed, the old root object is marked invalid
+	 * so that other resources with a cache of the root will know they need to update.
+	 */
+	private boolean isValid = true;
+	private FileStore root;
 
 	/**
 	 * Defines the root of a file system within the workspace tree.
@@ -27,14 +32,22 @@ public class FileStoreRoot {
 	 * @param workspacePath The workspace path at which this file
 	 * system has been mounted
 	 */
-	public FileStoreRoot(FileStore root, IPath workspacePath) {
+	FileStoreRoot(FileStore root, IPath workspacePath) {
 		this.root = root;
 		this.chop = workspacePath.segmentCount();
 	}
 
-	public FileStore getFileSystemObject(IPath workspacePath) {
+	FileStore getFileSystemObject(IPath workspacePath) {
 		if (workspacePath.segmentCount() <= chop)
 			return root;
 		return root.getChild(workspacePath.removeFirstSegments(chop).toOSString());
+	}
+
+	boolean isValid() {
+		return isValid;
+	}
+
+	void setValid(boolean isValid) {
+		this.isValid = isValid;
 	}
 }
