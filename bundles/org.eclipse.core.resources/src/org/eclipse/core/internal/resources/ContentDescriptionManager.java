@@ -394,7 +394,7 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 		if (Policy.DEBUG_CONTENT_TYPE)
 			Policy.debug("reading contents of " + file); //$NON-NLS-1$		
 		// tries to obtain a description for this file contents
-		InputStream contents = new LazyFileInputStream(workspace.getFileSystemManager().getStore(file));
+		InputStream contents = new LazyFileInputStream(file.getStore());
 		try {
 			IContentTypeMatcher matcher = getContentTypeMatcher((Project) file.getProject());
 			return matcher.getDescriptionFor(contents, file.getName(), IContentDescription.ALL);

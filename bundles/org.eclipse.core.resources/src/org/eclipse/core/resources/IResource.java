@@ -11,7 +11,7 @@
  *******************************************************************************/
 package org.eclipse.core.resources;
 
-import org.eclipse.core.filesystem.FileStore;
+import java.net.URI;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 
@@ -1093,6 +1093,48 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	public IPath getLocation();
 
 	/**
+	 * Returns the absolute URI of this resource, 
+	 * or <code>null</code> if no URI can be determined.
+	 * <p>
+	 * If this resource is the workspace root, this method returns
+	 * the absolute location of the platform working area.
+	 * </p><p>
+	 * If this resource is a project that exists in the workspace, this method
+	 * returns the URI to the project's local content area. This is true regardless
+	 * of whether the project is open or closed. This value will be null in the case
+	 * where the location is relative to an undefined workspace path variable.
+	 * </p><p>
+	 * If this resource is a linked resource under a project that is open, this
+	 * method returns the resolved URI to the linked resource's local contents.
+	 * This value will be null in the case where the location is relative to an
+	 * undefined workspace path variable.
+	 * </p><p>
+	 * If this resource is a file or folder under a project that exists, or a
+	 * linked resource under a closed project, this method returns a (non-
+	 * <code>null</code>) URI computed from the location of the project's local
+	 * content area and the project- relative path of the file or folder. This is
+	 * true regardless of whether the file or folders exists, or whether the project
+	 * is open or closed. In the case of linked resources, the location of a linked resource
+	 * within a closed project is computed from the location of the
+	 * project's local content area and the project-relative path of the resource. If the
+	 * linked resource resides in an open project then its location is computed
+	 * according to the link.
+	 * </p><p>
+	 * If this resource is a project that does not exist in the workspace,
+	 * or a file or folder below such a project, this method returns
+	 * <code>null</code>.
+	 * </p>
+	 * 
+	 * @return the absolute URI of this resource,
+	 *  or <code>null</code> if no URI can be determined
+	 * @see #getRawLocation()
+	 * @see  IProjectDescription#setLocation(IPath)
+	 * @see Platform#getLocation()
+	 * @see java.net.URI
+	 */
+	public URI getLocationURI();
+
+	/**
 	 * Returns a marker handle with the given id on this resource.
 	 * This resource is not checked to see if it has such a marker.
 	 * The returned marker need not exist.
@@ -1314,10 +1356,6 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 */
 	public Object getSessionProperty(QualifiedName key) throws CoreException;
 
-	/**
-	 * Returns the file system store where this resource is stored.
-	 */
-	public FileStore getStore();
 	/**
 	 * Returns the type of this resource.
 	 * The returned value will be one of <code>FILE</code>, 

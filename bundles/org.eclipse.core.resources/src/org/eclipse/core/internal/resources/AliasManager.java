@@ -318,7 +318,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	}
 
 	private void addToLocationsMap(IProject project) {
-		FileStore location = project.getStore();
+		FileStore location = ((Resource)project).getStore();
 		if (location != null)
 			locationsMap.add(location, project);
 		try {
@@ -334,7 +334,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 	}
 
 	private void addToLocationsMap(IResource linkedResource) {
-		FileStore location = linkedResource.getStore();
+		FileStore location = ((Resource)linkedResource).getStore();
 		if (location != null)
 			if (locationsMap.add(location, linkedResource))
 				linkedResourceCount++;
@@ -400,9 +400,10 @@ public class AliasManager implements IManager, ILifecycleListener {
 		if (resource.getType() == IResource.PROJECT) {
 			try {
 				IResource[] members = ((IProject) resource).members();
+				final FileSystemResourceManager localManager = workspace.getFileSystemManager();
 				for (int i = 0; i < members.length; i++) {
 					if (members[i].isLinked()) {
-						FileStore linkLocation = members[i].getStore();
+						FileStore linkLocation = localManager.getStore(members[i]);
 						if (linkLocation != null)
 							locationsMap.matchingPrefixDo(linkLocation, addToCollection);
 					}
@@ -502,7 +503,9 @@ public class AliasManager implements IManager, ILifecycleListener {
 	 * adds them to the "aliases" collection.
 	 */
 	private void internalComputeAliases(IResource resource, FileStore location) {
-		FileStore searchLocation = location == null ? resource.getStore() : location;
+		FileStore searchLocation = location;
+		if (searchLocation == null)
+			searchLocation = ((Resource)resource).getStore();
 		//if the location is invalid then there won't be any aliases to update
 		if (searchLocation == null)
 			return;
@@ -530,7 +533,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 
 	private void removeFromLocationsMap(IProject project) {
 		//remove this project and all linked children from the location table
-		FileStore location = project.getStore();
+		FileStore location = ((Resource)project).getStore();
 		if (location != null)
 			locationsMap.remove(location, project);
 		try {
@@ -546,7 +549,7 @@ public class AliasManager implements IManager, ILifecycleListener {
 
 	private void removeFromLocationsMap(IResource linkedResource) {
 		//this linked resource is being deleted
-		FileStore location = linkedResource.getStore();
+		FileStore location = ((Resource)linkedResource).getStore();
 		if (location != null)
 			if (locationsMap.remove(location, linkedResource))
 				linkedResourceCount--;

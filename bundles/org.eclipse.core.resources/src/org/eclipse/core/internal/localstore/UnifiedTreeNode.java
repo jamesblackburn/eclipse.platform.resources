@@ -70,7 +70,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	public FileStore getStore() {
 		//initialize store lazily, because it is not always needed
 		if (store == null)
-			store = ((Resource)resource).getLocalManager().getStore(resource);
+			store = ((Resource)resource).getStore();
 		return store;
 	}
 

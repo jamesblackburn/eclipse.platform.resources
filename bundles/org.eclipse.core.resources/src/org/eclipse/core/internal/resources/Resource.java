@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import java.net.URI;
 import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
@@ -884,6 +885,15 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		if (project != null && !project.exists())
 			return null;
 		return getLocalManager().locationFor(this);
+	}
+
+	/* (non-Javadoc)
+	 * @see IResource#getLocation()
+	 */
+	public URI getLocationURI() {
+		//todo this can be optimized to avoid create the store object
+		// see the code in FileStoreRoot
+		return getStore().toURI();
 	}
 
 	/* (non-Javadoc)

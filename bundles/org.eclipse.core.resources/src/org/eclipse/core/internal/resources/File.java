@@ -111,7 +111,7 @@ public class File extends Resource implements IFile {
 				parent.checkAccessible(getFlags(info));
 
 				workspace.beginOperation(true);
-				FileStore store = getLocalManager().getStore(this);
+				FileStore store = getStore();
 				IFileInfo localInfo = store.fetchInfo();
 				if (force) {
 					if (!Workspace.caseSensitive) {
