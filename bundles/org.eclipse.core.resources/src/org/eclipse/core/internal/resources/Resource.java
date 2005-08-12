@@ -264,7 +264,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * Helper method that considers case insensitive file systems.
 	 */
 	protected void checkDoesNotExist() throws CoreException {
-		// should consider getting the ResourceInfo as a paramenter to reduce tree lookups
+		// should consider getting the ResourceInfo as a parameter to reduce tree lookups
 
 		//first check the tree for an exact case match
 		checkDoesNotExist(getFlags(getResourceInfo(false, false)), false);
@@ -588,10 +588,9 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				workspace.broadcastEvent(LifecycleEvent.newEvent(LifecycleEvent.PRE_LINK_CREATE, this));
 				workspace.beginOperation(true);
 				// resolve any variables used in the location path
-				IPath resolvedLocation = workspace.getPathVariableManager().resolvePath(localLocation);
 				ResourceInfo info = workspace.createResource(this, false);
 				info.set(M_LINK);
-				getLocalManager().link(this, resolvedLocation);
+				getLocalManager().link(this, URIUtil.toURI(localLocation));
 				monitor.worked(Policy.opWork * 5 / 100);
 				//save the location in the project description
 				Project project = (Project) getProject();

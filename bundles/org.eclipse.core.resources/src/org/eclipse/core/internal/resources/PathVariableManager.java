@@ -11,10 +11,10 @@
 package org.eclipse.core.internal.resources;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 import org.eclipse.core.internal.events.PathVariableChangeEvent;
 import org.eclipse.core.internal.utils.Messages;
+import org.eclipse.core.internal.utils.URIUtil;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 import org.eclipse.osgi.util.NLS;
@@ -176,12 +176,7 @@ public class PathVariableManager implements IPathVariableManager, IManager {
 			return uri;
 		IPath raw = new Path(uri.getSchemeSpecificPart());
 		IPath resolved = resolvePath(raw);
-		try {
-			return resolved.toURI();
-		} catch (URISyntaxException e) {
-			//cannot happen because the path variable and suffix are both valid URIs
-			throw new Error(e);
-		}
+		return URIUtil.toURI(resolved);
 	}
 
 	/**

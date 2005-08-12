@@ -633,7 +633,7 @@ public class Project extends Container implements IProject {
 	void internalSetDescription(IProjectDescription value, boolean incrementContentId) {
 		ProjectInfo info = (ProjectInfo) getResourceInfo(false, true);
 		info.setDescription((ProjectDescription) value);
-		getLocalManager().setLocation(path, info, value.getLocationURI());
+		getLocalManager().setLocation(this, info, value.getLocationURI());
 		if (incrementContentId) {
 			info.incrementContentId();
 			//if the project is not accessible, stamp will be null and should remain null

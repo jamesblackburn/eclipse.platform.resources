@@ -12,13 +12,11 @@ package org.eclipse.core.internal.localstore;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.resources.File;
-import org.eclipse.core.internal.utils.Messages;
-import org.eclipse.core.internal.utils.Policy;
+import org.eclipse.core.internal.utils.*;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 import org.eclipse.osgi.util.NLS;
@@ -344,7 +342,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 //			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
 //			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 		}
-		return root.getFileSystemObject(target.getFullPath());
+		return root.createStore(target.getFullPath());
 	}
 
 	private FileStoreRoot getStoreRoot(IResource target) {
@@ -359,14 +357,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if (parent == null) {
 			//this is the root, so we know where this must be located
 			//initialize root location
-			try {
-				info = workspace.getResourceInfo(Path.ROOT, false, true);
-				setLocation(Path.ROOT, info, Platform.getLocation().toURI());
-				return info.getFileStoreRoot();
-			} catch (URISyntaxException e) {
-				//this means the platform location cannot be expressed as a URI - can this happen?
-				throw new Error(e);
-			}
+			info = workspace.getResourceInfo(Path.ROOT, false, true);
+			setLocation(workspace.getRoot(), info, URIUtil.toURI(Platform.getLocation()));
+			return info.getFileStoreRoot();
 		}
 		root = getStoreRoot(parent);
 		if (info != null)
@@ -399,9 +392,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 * @param location the File system location of this resource on disk
 	 * @return The file store for the provided resource
 	 */
-	private FileStore initializeStore(IResource target, IPath location) {
-		FileStore store = FileStoreFactory.create(location);
-		FileStoreRoot root = new FileStoreRoot(store, target.getFullPath());
+	private FileStore initializeStore(IResource target, URI location) {
+		FileStoreRoot root = new FileStoreRoot(location, target.getFullPath());
+		FileStore store = root.createStore(target.getFullPath());
 		ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
 		info.setFileStoreRoot(root);
 		return store;
@@ -519,11 +512,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		return true;
 	}
 
-	public void link(Resource target, IPath localLocation) {
-		FileStore store = FileStoreFactory.create(localLocation);
-		FileStoreRoot root = new FileStoreRoot(store, target.getFullPath());
+	public void link(Resource target, URI location) {
+		FileStore store = initializeStore(target, location);
 		ResourceInfo info = target.getResourceInfo(false, true);
-		info.setFileStoreRoot(root);
 		long lastModified = store.fetchInfo().getLastModified();
 		if (lastModified == 0)
 			info.clearModificationStamp();
@@ -662,7 +653,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if (isDefaultLocation) {
 			projectLocation = getProjectDefaultLocation(target);
 		}
-		FileStore projectStore = initializeStore(target, projectLocation);
+		FileStore projectStore = initializeStore(target, URIUtil.toURI(projectLocation));
 		FileStore descriptionStore = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
 		ProjectDescription description = null;
 		if (!descriptionStore.fetchInfo().exists()) {
@@ -825,16 +816,14 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 
 	/**
 	 * The storage location for a resource has changed; update the location.
-	 * @param workspacePath
+	 * @param target
 	 * @param info
 	 * @param location
 	 */
-	public void setLocation(IPath workspacePath, ResourceInfo info, URI location) {
+	public void setLocation(IResource target, ResourceInfo info, URI location) {
 		FileStoreRoot oldRoot = info.getFileStoreRoot();
 		if (location != null) {
-			location = ResourcesPlugin.getWorkspace().getPathVariableManager().resolveURI(location);
-			FileStore projectStore = FileStoreFactory.create(location);
-			info.setFileStoreRoot(new FileStoreRoot(projectStore, workspacePath));
+			info.setFileStoreRoot(new FileStoreRoot(location, target.getFullPath()));
 		} else {
 			//project is in default location so clear the store root
 			info.setFileStoreRoot(null);

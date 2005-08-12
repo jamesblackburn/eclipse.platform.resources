@@ -11,11 +11,11 @@
 package org.eclipse.core.internal.resources;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.Assert;
+import org.eclipse.core.internal.utils.URIUtil;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
@@ -331,12 +331,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setLocation(IPath)
 	 */
 	public void setLocation(IPath path) {
-		try {
-			this.location = path == null ? null : path.toURI();
-		} catch (URISyntaxException e) {
-			//can't happen
-			throw new IllegalArgumentException(e.getMessage());
-		}
+		this.location = path == null ? null : URIUtil.toURI(path);
 	}
 	
 	public void setLocationURI(URI location) {
