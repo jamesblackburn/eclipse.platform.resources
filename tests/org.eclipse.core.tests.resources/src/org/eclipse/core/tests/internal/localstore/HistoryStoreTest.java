@@ -1357,7 +1357,7 @@ public class HistoryStoreTest extends ResourceTest {
 
 		/* Add multiple editions for one file location. */
 		for (int i = 0; i < ITERATIONS; i++, myLong++) {
-			historyStore.addState(file.getFullPath(), file.getStore(), myLong, true);
+			historyStore.addState(file.getFullPath(), ((Resource)file).getStore(), myLong, true);
 			try {
 				contents = "This file has some contents in testGetContents.";
 				InputStream is = new ByteArrayInputStream(contents.getBytes());
@@ -1370,7 +1370,7 @@ public class HistoryStoreTest extends ResourceTest {
 
 		/* Add multiple editions for second file location. */
 		for (int i = 0; i < ITERATIONS; i++, myLong++) {
-			historyStore.addState(secondValidFile.getFullPath(), secondValidFile.getStore(), myLong, true);
+			historyStore.addState(secondValidFile.getFullPath(), ((Resource)secondValidFile).getStore(), myLong, true);
 			try {
 				contents = "A file with some other contents in testGetContents.";
 				InputStream is = new ByteArrayInputStream(contents.getBytes());

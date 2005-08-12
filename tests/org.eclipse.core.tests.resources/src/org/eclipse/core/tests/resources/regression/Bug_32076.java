@@ -15,6 +15,7 @@ import java.io.InputStream;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
@@ -322,7 +323,7 @@ public class Bug_32076 extends ResourceTest {
 
 			ensureExistsInWorkspace(new IResource[] {sourceFile, destinationParent}, true);
 
-			roFolderStore = roFolder.getStore();
+			roFolderStore = ((Resource)roFolder).getStore();
 
 			// add a marker to a file to ensure the move operation is not losing anything
 			String attributeKey = getRandomString();
@@ -403,8 +404,8 @@ public class Bug_32076 extends ResourceTest {
 
 			ensureExistsInWorkspace(new IResource[] {file1, file2, destinationParent}, true);
 
-			roFolderLocation = roFolder.getStore();
-			destinationROFolderLocation = destinationROFolder.getStore();
+			roFolderLocation = ((Resource)roFolder).getStore();
+			destinationROFolderLocation = ((Resource)destinationROFolder).getStore();
 
 			// add a marker to a file to ensure the move operation is not losing anything
 			String attributeKey = getRandomString();

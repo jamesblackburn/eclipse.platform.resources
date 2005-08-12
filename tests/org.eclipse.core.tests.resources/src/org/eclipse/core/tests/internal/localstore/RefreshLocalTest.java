@@ -259,7 +259,7 @@ public class RefreshLocalTest extends LocalStoreTest implements ICoreConstants {
 
 		/* test changes of a child (child is file) */
 		file = project.getFile("file");
-		FileStore fileStore = file.getStore();
+		FileStore fileStore = ((Resource)file).getStore();
 		ensureExistsInWorkspace(file, true);
 		assertTrue("4.1", file.exists());
 		assertTrue("4.2", file.isLocal(IResource.DEPTH_ZERO));
@@ -286,7 +286,7 @@ public class RefreshLocalTest extends LocalStoreTest implements ICoreConstants {
 
 		/* test root and children creation */
 		IFolder folder = project.getFolder("folder");
-		FileStore target = folder.getStore();
+		FileStore target = ((Resource)folder).getStore();
 		createTree(getTree(target));
 		assertTrue("2.0", !folder.exists());
 		folder.refreshLocal(IResource.DEPTH_INFINITE, null);

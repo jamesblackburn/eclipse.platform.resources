@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.filesystem.Policy;
+import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -548,7 +549,7 @@ public class ResourceTest extends CoreTest {
 	 * to ensure that we have a correct Path -> File mapping.
 	 */
 	public void ensureExistsInFileSystem(IFile file) {
-		createFileInFileSystem(file.getStore());
+		createFileInFileSystem(((Resource)file).getStore());
 	}
 
 	/**
@@ -560,7 +561,7 @@ public class ResourceTest extends CoreTest {
 			ensureExistsInFileSystem((IFile) resource);
 		else {
 			try {
-				resource.getStore().create(IFileStoreConstants.DIRECTORY, null);
+				((Resource)resource).getStore().create(IFileStoreConstants.DIRECTORY, null);
 			} catch (CoreException e) {
 				fail("ensureExistsInFileSystem.1", e);
 			}
