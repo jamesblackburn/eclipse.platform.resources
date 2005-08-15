@@ -10,7 +10,6 @@
 package org.eclipse.core.internal.utils;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import org.eclipse.core.runtime.IPath;
 
 /**
@@ -29,11 +28,6 @@ public class URIUtil {
 	public static URI toURI(IPath path) {
 		if (path.isAbsolute())
 			return path.toFile().toURI();
-		try {
-			return new URI(path.toString());
-		} catch (URISyntaxException e) {
-			//is it possible that a path can't be represented as a URI?
-			throw new Error(e);
-		}
+		return URI.create(path.toString());
 	}
 }

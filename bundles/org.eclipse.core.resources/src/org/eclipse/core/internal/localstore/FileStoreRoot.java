@@ -29,7 +29,7 @@ public class FileStoreRoot {
 	 */
 	private boolean isValid = true;
 	private final URI root;
-	private final String rootString;
+	private final String rawRootPath;
 	private final IPathVariableManager variableManager;
 
 	/**
@@ -41,11 +41,11 @@ public class FileStoreRoot {
 	 */
 	FileStoreRoot(URI root, IPath workspacePath) {
 		this.root = root;
-		String raw = root.toString();
+		String raw = root.getPath();
 		//make sure root has trailing slash
 		if (raw.charAt(raw.length() - 1) != '/')
 			raw += '/';
-		this.rootString = raw;
+		this.rawRootPath = raw;
 		this.chop = workspacePath.segmentCount();
 		this.variableManager = ResourcesPlugin.getWorkspace().getPathVariableManager();
 	}
@@ -54,13 +54,13 @@ public class FileStoreRoot {
 		int count = workspacePath.segmentCount();
 		if (count <= chop)
 			return root;
-		StringBuffer result = new StringBuffer(rootString);
+		StringBuffer result = new StringBuffer(rawRootPath);
 		for (int i = chop; i < count; i++) {
 			result.append(workspacePath.segment(i));
 			result.append('/');
 		}
 		try {
-			return new URI(result.toString());
+			return new URI(root.getScheme(), root.getHost(), result.toString(), null);
 		} catch (URISyntaxException e) {
 			//this workspace path could not be represented as a URI - is this possible?
 			throw new Error(e);
