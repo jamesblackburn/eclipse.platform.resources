@@ -24,7 +24,7 @@ import org.eclipse.core.runtime.*;
  * the blobs are split among 255 directories with the names 00 to FF.
  */
 public class BlobStore {
-	protected FileStore localStore;
+	protected IFileStore localStore;
 
 	/** Limits the range of directories' names. */
 	protected byte mask;
@@ -38,7 +38,7 @@ public class BlobStore {
 	 * This number must be power of 2 and do not exceed 256. The location
 	 * should be an existing valid directory.
 	 */
-	public BlobStore(FileStore store, int limit) {
+	public BlobStore(IFileStore store, int limit) {
 		Assert.isNotNull(store);
 		localStore = store;
 		Assert.isTrue(localStore.fetchInfo().isDirectory());
@@ -46,12 +46,12 @@ public class BlobStore {
 		mask = (byte) (limit - 1);
 	}
 
-	public UniversalUniqueIdentifier addBlob(FileStore target, boolean moveContents) throws CoreException {
+	public UniversalUniqueIdentifier addBlob(IFileStore target, boolean moveContents) throws CoreException {
 		UniversalUniqueIdentifier uuid = new UniversalUniqueIdentifier();
-		FileStore dir = folderFor(uuid);
+		IFileStore dir = folderFor(uuid);
 		if (!dir.fetchInfo().exists())
 			dir.create(IFileStoreConstants.DIRECTORY, null);
-		FileStore destination = fileFor(uuid);
+		IFileStore destination = fileFor(uuid);
 		if (moveContents)
 			target.move(destination, IFileStoreConstants.NONE, null);
 		else
@@ -105,15 +105,15 @@ public class BlobStore {
 			deleteBlob((UniversalUniqueIdentifier) i.next());
 	}
 
-	public FileStore fileFor(UniversalUniqueIdentifier uuid) {
-		FileStore root = folderFor(uuid);
+	public IFileStore fileFor(UniversalUniqueIdentifier uuid) {
+		IFileStore root = folderFor(uuid);
 		return root.getChild(bytesToHexString(uuid.toBytes()));
 	}
 
 	/**
 	 * Find out the name of the directory that fits better to this UUID.
 	 */
-	public FileStore folderFor(UniversalUniqueIdentifier uuid) {
+	public IFileStore folderFor(UniversalUniqueIdentifier uuid) {
 		byte hash = hashUUIDbytes(uuid);
 		hash &= mask; // limit the range of the directory
 		String dirName = Integer.toHexString(hash + (128 & mask)); // +(128 & mask) makes sure 00h is the lower value
@@ -121,7 +121,7 @@ public class BlobStore {
 	}
 
 	public InputStream getBlob(UniversalUniqueIdentifier uuid) throws CoreException {
-		FileStore blobFile = fileFor(uuid);
+		IFileStore blobFile = fileFor(uuid);
 		return blobFile.openInputStream(IFileStoreConstants.NONE);
 	}
 

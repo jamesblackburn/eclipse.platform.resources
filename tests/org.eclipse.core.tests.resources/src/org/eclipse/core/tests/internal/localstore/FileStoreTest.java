@@ -31,7 +31,7 @@ public class FileStoreTest extends LocalStoreTest {
 		super(name);
 	}
 
-	private FileStore createDir(FileStore store, boolean clear) throws CoreException {
+	private IFileStore createDir(IFileStore store, boolean clear) throws CoreException {
 		if (clear && store.fetchInfo().exists())
 			store.delete(NONE, null);
 		store.create(DIRECTORY, null);
@@ -41,7 +41,7 @@ public class FileStoreTest extends LocalStoreTest {
 		return store;
 	}
 
-	private FileStore createDir(String string, boolean clear) throws CoreException {
+	private IFileStore createDir(String string, boolean clear) throws CoreException {
 		return createDir(FileStoreFactory.create(new Path(string)), clear);
 	}
 
@@ -56,16 +56,16 @@ public class FileStoreTest extends LocalStoreTest {
 
 		/* build scenario */
 		// create source root folder
-		FileStore tempC = createDir("c:/temp", false);
+		IFileStore tempC = createDir("c:/temp", false);
 		// create destination root folder
-		FileStore tempD = createDir("d:/temp", false);
+		IFileStore tempD = createDir("d:/temp", false);
 		// create tree
-		FileStore target = tempC.getChild("target");
+		IFileStore target = tempC.getChild("target");
 		createDir(target, true);
 		createTree(getTree(target));
 
 		/* c:\temp\target -> d:\temp\target */
-		FileStore destination = tempD.getChild("target");
+		IFileStore destination = tempD.getChild("target");
 		target.copy(destination, NONE, null);
 		assertTrue("3.1", verifyTree(getTree(destination)));
 		destination.delete(NONE, null);
@@ -103,16 +103,16 @@ public class FileStoreTest extends LocalStoreTest {
 
 	public void testCopyDirectory() throws Throwable {
 		/* build scenario */
-		FileStore temp = FileStoreFactory.create(getWorkspace().getRoot().getLocation().append("temp"));
+		IFileStore temp = FileStoreFactory.create(getWorkspace().getRoot().getLocation().append("temp"));
 		temp.create(DIRECTORY, null);
 		assertTrue("1.1", temp.fetchInfo().isDirectory());
 		// create tree
-		FileStore target = temp.getChild("target");
+		IFileStore target = temp.getChild("target");
 		target.delete(NONE, null);
 		createTree(getTree(target));
 
 		/* temp\target -> temp\copy of target */
-		FileStore copyOfTarget = temp.getChild("copy of target");
+		IFileStore copyOfTarget = temp.getChild("copy of target");
 		target.copy(copyOfTarget, NONE, null);
 		assertTrue("2.1", verifyTree(getTree(copyOfTarget)));
 
@@ -123,17 +123,17 @@ public class FileStoreTest extends LocalStoreTest {
 
 	public void testCopyFile() throws Throwable {
 		/* build scenario */
-		FileStore temp = createDir(getWorkspace().getRoot().getLocation().append("temp").toString(), true);
+		IFileStore temp = createDir(getWorkspace().getRoot().getLocation().append("temp").toString(), true);
 		// create target
 		String content = "this is just a simple content \n to a simple file \n to test a 'simple' copy";
-		FileStore target = temp.getChild("target");
+		IFileStore target = temp.getChild("target");
 		target.delete(IFileStoreConstants.NONE, null);
 		createFile(target, content);
 		assertTrue("1.3", target.fetchInfo().exists());
 		assertTrue("1.4", compareContent(getContents(content), target.openInputStream(NONE)));
 
 		/* temp\target -> temp\copy of target */
-		FileStore copyOfTarget = temp.getChild("copy of target");
+		IFileStore copyOfTarget = temp.getChild("copy of target");
 		target.copy(copyOfTarget, IResource.DEPTH_INFINITE, null);
 		assertTrue("2.1", compareContent(getContents(content), copyOfTarget.openInputStream(NONE)));
 		copyOfTarget.delete(NONE, null);
@@ -159,11 +159,11 @@ public class FileStoreTest extends LocalStoreTest {
 		StringBuffer sb = new StringBuffer();
 		for (int i = 0; i < 1000; i++)
 			sb.append("asdjhasldhaslkfjhasldkfjhasdlkfjhasdlfkjhasdflkjhsdaf");
-		FileStore bigFile = temp.getChild("bigFile");
+		IFileStore bigFile = temp.getChild("bigFile");
 		createFile(bigFile, sb.toString());
 		assertTrue("7.1", bigFile.fetchInfo().exists());
 		assertTrue("7.2", compareContent(getContents(sb.toString()), bigFile.openInputStream(NONE)));
-		FileStore destination = temp.getChild("copy of bigFile");
+		IFileStore destination = temp.getChild("copy of bigFile");
 		//IProgressMonitor monitor = new LoggingProgressMonitor(System.out);
 		IProgressMonitor monitor = getMonitor();
 		bigFile.copy(destination, NONE, monitor);
@@ -184,19 +184,19 @@ public class FileStoreTest extends LocalStoreTest {
 
 		/* build scenario */
 		// create source
-		FileStore tempC = createDir("c:\\temp", false);
+		IFileStore tempC = createDir("c:\\temp", false);
 		// create destination
-		FileStore tempD = createDir("d:\\temp", false);
+		IFileStore tempD = createDir("d:\\temp", false);
 		// create target
 		String content = "this is just a simple content \n to a simple file \n to test a 'simple' copy";
-		FileStore target = tempC.getChild("target");
+		IFileStore target = tempC.getChild("target");
 		target.delete(IFileStoreConstants.NONE, null);
 		createFile(target, content);
 		assertTrue("1.3", target.fetchInfo().exists());
 		assertTrue("1.4", compareContent(getContents(content), target.openInputStream(NONE)));
 
 		/* c:\temp\target -> d:\temp\target */
-		FileStore destination = tempD.getChild("target");
+		IFileStore destination = tempD.getChild("target");
 		target.copy(destination, IResource.DEPTH_INFINITE, null);
 		assertTrue("3.1", compareContent(getContents(content), destination.openInputStream(NONE)));
 		destination.delete(NONE, null);
@@ -240,10 +240,10 @@ public class FileStoreTest extends LocalStoreTest {
 	public void testGetStat() throws CoreException {
 		/* evaluate test environment */
 		IPath root = getWorkspace().getRoot().getLocation().append("" + new Date().getTime());
-		FileStore temp = createDir(root.toString(), true);
+		IFileStore temp = createDir(root.toString(), true);
 
 		/* create common objects */
-		FileStore target = temp.getChild("target");
+		IFileStore target = temp.getChild("target");
 		long stat;
 
 		/* test stat with an nexisting file */
@@ -261,19 +261,19 @@ public class FileStoreTest extends LocalStoreTest {
 
 	public void testMove() throws Throwable {
 		/* build scenario */
-		FileStore tempC = createDir(getWorkspace().getRoot().getLocation().append("temp").toString(), true);
+		IFileStore tempC = createDir(getWorkspace().getRoot().getLocation().append("temp").toString(), true);
 		// create target file
-		FileStore target = tempC.getChild("target");
+		IFileStore target = tempC.getChild("target");
 		String content = "just a content.....tnetnoc a tsuj";
 		createFile(target, content);
 		assertTrue("1.3", target.fetchInfo().exists());
 		// create target tree
-		FileStore tree = tempC.getChild("tree");
+		IFileStore tree = tempC.getChild("tree");
 		createDir(tree, true);
 		createTree(getTree(tree));
 
 		/* rename file */
-		FileStore destination = tempC.getChild("destination");
+		IFileStore destination = tempC.getChild("destination");
 		target.move(destination, NONE, null);
 		assertTrue("2.1", !destination.fetchInfo().isDirectory());
 		assertTrue("2.2", !target.fetchInfo().exists());
@@ -328,21 +328,21 @@ public class FileStoreTest extends LocalStoreTest {
 
 		/* build scenario */
 		// create source
-		FileStore tempC = createDir("c:\\temp", false);
+		IFileStore tempC = createDir("c:\\temp", false);
 		// create destination
-		FileStore tempD = createDir("d:\\temp", false);
+		IFileStore tempD = createDir("d:\\temp", false);
 		// create target file
-		FileStore target = tempC.getChild("target");
+		IFileStore target = tempC.getChild("target");
 		String content = "just a content.....tnetnoc a tsuj";
 		createFile(target, content);
 		assertTrue("1.3", target.fetchInfo().exists());
 		// create target tree
-		FileStore tree = tempC.getChild("tree");
+		IFileStore tree = tempC.getChild("tree");
 		createDir(tree, true);
 		createTree(getTree(tree));
 
 		/* move file across volumes */
-		FileStore destination = tempD.getChild("target");
+		IFileStore destination = tempD.getChild("target");
 		target.move(destination, NONE, null);
 		assertTrue("5.1", !destination.fetchInfo().isDirectory());
 		assertTrue("5.2", !target.fetchInfo().exists());
@@ -371,8 +371,8 @@ public class FileStoreTest extends LocalStoreTest {
 			return;
 
 		IPath root = getWorkspace().getRoot().getLocation().append("" + new Date().getTime());
-		FileStore targetFolder = createDir(root.toString(), true);
-		FileStore targetFile = targetFolder.getChild("targetFile");
+		IFileStore targetFolder = createDir(root.toString(), true);
+		IFileStore targetFile = targetFolder.getChild("targetFile");
 		createFileInFileSystem(targetFile);
 
 		// file

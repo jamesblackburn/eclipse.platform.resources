@@ -350,7 +350,7 @@ public class ResourceTest extends CoreTest {
 	}
 
 	protected void cleanup() throws CoreException {
-		FileStore[] toDelete = (FileStore[]) storesToDelete.toArray(new FileStore[0]);
+		IFileStore[] toDelete = (IFileStore[]) storesToDelete.toArray(new IFileStore[0]);
 		storesToDelete.clear();
 		for (int i = 0; i < toDelete.length; i++) {
 			clear(toDelete[i]);
@@ -361,7 +361,7 @@ public class ResourceTest extends CoreTest {
 		waitForBuild();
 	}
 
-	protected void clear(FileStore store) {
+	protected void clear(IFileStore store) {
 		try {
 			store.delete(IFileStoreConstants.NONE, null);
 		} catch (CoreException e) {
@@ -437,7 +437,7 @@ public class ResourceTest extends CoreTest {
 	/**
 	 * Create the given file in the local store. 
 	 */
-	public void createFileInFileSystem(FileStore file) {
+	public void createFileInFileSystem(IFileStore file) {
 		OutputStream output = null;
 		try {
 			file.getParent().create(IFileStoreConstants.DIRECTORY, null);
@@ -704,8 +704,8 @@ public class ResourceTest extends CoreTest {
 	 * The tearDown method in this class will ensure the location is deleted after
 	 * the test is completed.
 	 */
-	protected FileStore getTempStore() {
-		FileStore store = FileStoreFactory.create(FileSystemHelper.getRandomLocation(getTempDir()));
+	protected IFileStore getTempStore() {
+		IFileStore store = FileStoreFactory.create(FileSystemHelper.getRandomLocation(getTempDir()));
 		storesToDelete.add(store);
 		return store;
 	}
@@ -880,7 +880,7 @@ public class ResourceTest extends CoreTest {
 		}
 	}
 
-	protected void setReadOnly(FileStore target, boolean value) {
+	protected void setReadOnly(IFileStore target, boolean value) {
 		assertTrue("setReadOnly.1", usingNatives());
 		IFileInfo fileInfo = target.fetchInfo();
 		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY, value);

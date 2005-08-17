@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.localstore;
 
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.resources.Container;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.resources.IResource;
@@ -27,7 +27,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 
 	protected void createResource(UnifiedTreeNode node, Resource target) throws CoreException {
 		super.createResource(node, target);
-		FileStore store = node.getStore();
+		IFileStore store = node.getStore();
 		if (store == null)
 			return;
 		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
@@ -38,7 +38,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 
 	protected void deleteResource(UnifiedTreeNode node, Resource target) throws CoreException {
 		super.deleteResource(node, target);
-		FileStore store = node.getStore();
+		IFileStore store = node.getStore();
 		if (store == null)
 			return;
 		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
@@ -49,7 +49,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 
 	protected void resourceChanged(UnifiedTreeNode node, Resource target) {
 		super.resourceChanged(node, target);
-		FileStore store = node.getStore();
+		IFileStore store = node.getStore();
 		if (store == null)
 			return;
 		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
@@ -60,7 +60,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 
 	protected void fileToFolder(UnifiedTreeNode node, Resource target) throws CoreException {
 		super.fileToFolder(node, target);
-		FileStore store = node.getStore();
+		IFileStore store = node.getStore();
 		if (store == null)
 			return;
 		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);
@@ -71,7 +71,7 @@ public class RefreshLocalAliasVisitor extends RefreshLocalVisitor {
 
 	protected void folderToFile(UnifiedTreeNode node, Resource target) throws CoreException {
 		super.folderToFile(node, target);
-		FileStore store = node.getStore();
+		IFileStore store = node.getStore();
 		if (store == null)
 			return;
 		IResource[] aliases = workspace.getAliasManager().computeAliases(target, store);

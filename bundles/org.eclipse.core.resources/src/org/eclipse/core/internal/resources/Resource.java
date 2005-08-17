@@ -13,7 +13,7 @@
 package org.eclipse.core.internal.resources;
 
 import java.net.URI;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.events.LifecycleEvent;
 import org.eclipse.core.internal.localstore.FileSystemResourceManager;
 import org.eclipse.core.internal.properties.IPropertyManager;
@@ -591,7 +591,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				// resolve any variables used in the location path
 				ResourceInfo info = workspace.createResource(this, false);
 				info.set(M_LINK);
-				getLocalManager().link(this, URIUtil.toURI(localLocation));
+				getLocalManager().link(this, FileUtil.toURI(localLocation));
 				monitor.worked(Policy.opWork * 5 / 100);
 				//save the location in the project description
 				Project project = (Project) getProject();
@@ -657,7 +657,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				if (!exists())
 					return;
 				workspace.beginOperation(true);
-				final FileStore originalStore = getStore();
+				final IFileStore originalStore = getStore();
 				boolean wasLinked = isLinked();
 				message = Messages.resources_deleteProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
@@ -1004,7 +1004,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		return info.getSessionProperty(key);
 	}
 	
-	public FileStore getStore() {
+	public IFileStore getStore() {
 		return getLocalManager().getStore(this);
 	}
 
@@ -1212,7 +1212,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				// and assert for programming errors. See checkMoveRequirements for more information.
 				assertMoveRequirements(destination, getType(), updateFlags);
 				workspace.beginOperation(true);
-				FileStore originalStore = getStore();
+				IFileStore originalStore = getStore();
 				message = Messages.resources_moveProblem;
 				MultiStatus status = new MultiStatus(ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, null);
 				WorkManager workManager = workspace.getWorkManager();

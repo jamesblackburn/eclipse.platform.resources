@@ -13,7 +13,7 @@ package org.eclipse.core.internal.resources;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.events.ILifecycleListener;
 import org.eclipse.core.internal.events.LifecycleEvent;
@@ -127,9 +127,9 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 	 */
 	class LazyFileInputStream extends InputStream {
 		private InputStream actual;
-		private FileStore target;
+		private IFileStore target;
 
-		LazyFileInputStream(FileStore target) {
+		LazyFileInputStream(IFileStore target) {
 			this.target = target;
 		}
 

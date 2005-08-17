@@ -351,12 +351,7 @@ public class ProjectPreferences extends EclipsePreferences {
 			log(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, e));
 			throw new BackingStoreException(message);
 		} finally {
-			if (input != null)
-				try {
-					input.close();
-				} catch (IOException e) {
-					// ignore
-				}
+			FileUtil.safeClose(input);
 		}
 		convertFromProperties(this, fromDisk, true);
 	}
@@ -378,12 +373,7 @@ public class ProjectPreferences extends EclipsePreferences {
 			log(new Status(IStatus.ERROR, ResourcesPlugin.PI_RESOURCES, IStatus.ERROR, message, e));
 			throw new BackingStoreException(message);
 		} finally {
-			if (input != null)
-				try {
-					input.close();
-				} catch (IOException e) {
-					// ignore
-				}
+			FileUtil.safeClose(input);
 		}
 		return result;
 	}

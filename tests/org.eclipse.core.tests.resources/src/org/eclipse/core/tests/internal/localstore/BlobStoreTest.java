@@ -35,7 +35,7 @@ public class BlobStoreTest extends LocalStoreTest {
 
 	public void testConstructor() {
 		/* build scenario */
-		FileStore root = createStore();
+		IFileStore root = createStore();
 
 		/* null location */
 		boolean ok = false;
@@ -95,8 +95,8 @@ public class BlobStoreTest extends LocalStoreTest {
 		assertTrue("4.4", ok);
 	}
 
-	private FileStore createStore() {
-		FileStore root = getTempStore();
+	private IFileStore createStore() {
+		IFileStore root = getTempStore();
 		try {
 			root.create(IFileStoreConstants.DIRECTORY, null);
 		} catch (CoreException e1) {
@@ -110,7 +110,7 @@ public class BlobStoreTest extends LocalStoreTest {
 
 	public void testDeleteBlob() {
 		/* initialize common objects */
-		FileStore root = createStore();
+		IFileStore root = createStore();
 		BlobStore store = new BlobStore(root, 64);
 
 		/* delete blob that does not exist */
@@ -120,7 +120,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		assertTrue("2.2", !store.fileFor(uuid).fetchInfo().exists());
 
 		/* delete existing blob */
-		FileStore target = root.getChild("target");
+		IFileStore target = root.getChild("target");
 		try {
 			createFile(target, "bla bla bla");
 			uuid = store.addBlob(target, true);
@@ -134,7 +134,7 @@ public class BlobStoreTest extends LocalStoreTest {
 
 	public void testGetBlob() {
 		/* initialize common objects */
-		FileStore root = createStore();
+		IFileStore root = createStore();
 		BlobStore store = new BlobStore(root, 64);
 
 		/* null UUID */
@@ -149,7 +149,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		assertTrue("2.1", ok);
 
 		/* get existing blob */
-		FileStore target = root.getChild("target");
+		IFileStore target = root.getChild("target");
 		UniversalUniqueIdentifier uuid = null;
 		String content = "nothing important........tnatropmi gnihton";
 		try {
@@ -169,11 +169,11 @@ public class BlobStoreTest extends LocalStoreTest {
 
 	public void testSetBlob() {
 		/* initialize common objects */
-		FileStore root = createStore();
+		IFileStore root = createStore();
 		BlobStore store = new BlobStore(root, 64);
 
 		/* normal conditions */
-		FileStore target = root.getChild("target");
+		IFileStore target = root.getChild("target");
 		UniversalUniqueIdentifier uuid = null;
 		String content = "nothing important........tnatropmi gnihton";
 		try {

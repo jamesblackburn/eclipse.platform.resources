@@ -14,7 +14,7 @@ import java.io.*;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.localstore.IHistoryStore;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.internal.utils.UniversalUniqueIdentifier;
@@ -362,7 +362,7 @@ public class HistoryStoreTest extends ResourceTest {
 		IHistoryStore store = ((Resource) getWorkspace().getRoot()).getLocalManager().getHistoryStore();
 
 		// location of the data on disk
-		FileStore fileStore = getTempStore();
+		IFileStore fileStore = getTempStore();
 		createFileInFileSystem(fileStore);
 
 		// add the data to the history store

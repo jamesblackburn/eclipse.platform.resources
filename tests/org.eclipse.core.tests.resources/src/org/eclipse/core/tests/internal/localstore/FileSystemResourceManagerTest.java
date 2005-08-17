@@ -13,7 +13,7 @@ package org.eclipse.core.tests.internal.localstore;
 import java.io.InputStream;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -414,7 +414,7 @@ public class FileSystemResourceManagerTest extends LocalStoreTest implements ICo
 		/* initialize common objects */
 		final IProject project = projects[0];
 		IFile dotProject = project.getFile(IProjectDescription.DESCRIPTION_FILE_NAME);
-		final FileStore fileStore = ((Resource)project).getStore();
+		final IFileStore fileStore = ((Resource)project).getStore();
 		// create project and then delete from file system
 		// wrap in runnable to prevent snapshot from occurring in the middle.
 		getWorkspace().run(new IWorkspaceRunnable() {

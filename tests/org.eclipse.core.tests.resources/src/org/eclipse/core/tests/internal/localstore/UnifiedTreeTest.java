@@ -15,7 +15,7 @@ import java.io.OutputStream;
 import java.util.Hashtable;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.localstore.*;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.internal.resources.Workspace;
@@ -36,9 +36,9 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		super(name);
 	}
 
-	protected void createFiles(FileStore folder, Hashtable set) throws Exception {
+	protected void createFiles(IFileStore folder, Hashtable set) throws Exception {
 		for (int i = 0; i < limit; i++) {
-			FileStore child = folder.getChild("fsFile" + i);
+			IFileStore child = folder.getChild("fsFile" + i);
 			OutputStream out = null;
 			try {
 				out = child.openOutputStream(NONE);
@@ -71,10 +71,10 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		workspace.run(operation, null);
 	}
 
-	protected void createResourcesInFileSystem(FileStore folder, Hashtable set) throws Exception {
+	protected void createResourcesInFileSystem(IFileStore folder, Hashtable set) throws Exception {
 		createFiles(folder, set);
 		for (int i = 0; i < limit; i++) {
-			FileStore child = folder.getChild("fsFolder" + i);
+			IFileStore child = folder.getChild("fsFolder" + i);
 			child.create(DIRECTORY, null);
 			String location = child.getAbsolutePath();
 			set.put(location, "");
@@ -128,7 +128,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 			public boolean visit(UnifiedTreeNode node) {
 				/* test the node.getLocalName() method */
 				final IResource resource = node.getResource();
-				final FileStore store = ((Resource)resource).getStore();
+				final IFileStore store = ((Resource)resource).getStore();
 				if (node.existsInFileSystem())
 					assertEquals("1.0", store.fetchInfo().getName(), node.getLocalName());
 				assertEquals("1.1", store, node.getStore());
@@ -174,7 +174,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 
 				/* test the node.getLocalName() method */
 				final IResource resource = node.getResource();
-				FileStore store = ((Resource)resource).getStore();
+				IFileStore store = ((Resource)resource).getStore();
 				String key = store.fetchInfo().getName();
 				if (node.existsInFileSystem())
 					assertEquals("1.0", key, node.getLocalName());
@@ -229,7 +229,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 			public boolean visit(UnifiedTreeNode node) {
 				/* test the node.getLocalName() method */
 				final IResource resource = node.getResource();
-				FileStore store = ((Resource)resource).getStore();
+				IFileStore store = ((Resource)resource).getStore();
 				if (node.existsInFileSystem())
 					assertEquals("1.0", store.fetchInfo().getName(), node.getLocalName());
 				assertEquals("1.1", store, node.getStore());

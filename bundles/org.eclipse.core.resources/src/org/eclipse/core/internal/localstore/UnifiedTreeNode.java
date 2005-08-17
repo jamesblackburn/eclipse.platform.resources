@@ -11,8 +11,8 @@
 package org.eclipse.core.internal.localstore;
 
 import java.util.Iterator;
-import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.filesystem.IFileInfo;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.resources.IResource;
 
@@ -20,11 +20,11 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	protected IResource resource;
 	protected UnifiedTreeNode child;
 	protected UnifiedTree tree;
-	protected FileStore store;
+	protected IFileStore store;
 	protected IFileInfo fileInfo;
 	protected boolean existsWorkspace;
 
-	public UnifiedTreeNode(UnifiedTree tree, IResource resource, FileStore store, IFileInfo fileInfo, boolean existsWorkspace) {
+	public UnifiedTreeNode(UnifiedTree tree, IResource resource, IFileStore store, IFileInfo fileInfo, boolean existsWorkspace) {
 		this.tree = tree;
 		this.resource = resource;
 		this.store = store;
@@ -67,7 +67,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	/**
 	 * Returns the local store of this resource.  May be null.
 	 */
-	public FileStore getStore() {
+	public IFileStore getStore() {
 		//initialize store lazily, because it is not always needed
 		if (store == null)
 			store = ((Resource)resource).getStore();
@@ -119,7 +119,7 @@ public class UnifiedTreeNode implements ILocalStoreConstants {
 	/**
 	 * Reuses this object by assigning all new values for the fields.
 	 */
-	public void reuse(UnifiedTree aTree, IResource aResource, FileStore aStore, IFileInfo info, boolean existsInWorkspace) {
+	public void reuse(UnifiedTree aTree, IResource aResource, IFileStore aStore, IFileInfo info, boolean existsInWorkspace) {
 		this.tree = aTree;
 		this.child = null;
 		this.resource = aResource;

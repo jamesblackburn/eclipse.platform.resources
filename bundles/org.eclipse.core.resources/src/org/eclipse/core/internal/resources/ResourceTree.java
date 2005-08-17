@@ -60,7 +60,7 @@ class ResourceTree implements IResourceTree {
 			lock.acquire();
 			if (!file.exists())
 				return;
-			FileStore store = localManager.getStore(file);
+			IFileStore store = localManager.getStore(file);
 			final IFileInfo fileInfo = store.fetchInfo();
 			if (!fileInfo.exists())
 				return;
@@ -257,7 +257,7 @@ class ResourceTree implements IResourceTree {
 			}
 			// If the file doesn't exist on disk then signal to the workspace to delete the
 			// file and return.
-			FileStore fileStore = localManager.getStore(file);
+			IFileStore fileStore = localManager.getStore(file);
 			boolean localExists = fileStore.fetchInfo().exists();
 			if (!localExists) {
 				deletedFile(file);
@@ -290,7 +290,7 @@ class ResourceTree implements IResourceTree {
 
 			// Try to delete the file from the file system.
 			try {
-				fileStore.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, Policy.totalWork/4));
+				fileStore.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, Policy.totalWork / 4));
 				// If the file was successfully deleted from the file system the
 				// workspace tree should be updated accordingly.
 				deletedFile(file);
@@ -329,7 +329,7 @@ class ResourceTree implements IResourceTree {
 		}
 
 		// If the folder doesn't exist on disk then update the tree and return.
-		FileStore fileStore = localManager.getStore(folder);
+		IFileStore fileStore = localManager.getStore(folder);
 		if (!fileStore.fetchInfo().exists()) {
 			deletedFolder(folder);
 			return true;
@@ -381,14 +381,14 @@ class ResourceTree implements IResourceTree {
 					break;
 			}
 		}
-		FileStore projectStore = localManager.getStore(project);
+		IFileStore projectStore = localManager.getStore(project);
 		// Check to see if the children were deleted ok. If there was a problem
 		// just return as the problem should have been logged by the recursive
 		// call to the child.
 		if (!deletedChildren)
 			// Indicate that the delete was unsuccessful.
 			return false;
-		
+
 		//Check if there are any undiscovered children of the project on disk other than description file
 		String[] children = projectStore.childNames(IFileStoreConstants.NONE, null);
 		if (children.length != 1 || !IProjectDescription.DESCRIPTION_FILE_NAME.equals(children[0])) {
@@ -396,12 +396,12 @@ class ResourceTree implements IResourceTree {
 			failed(new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, project.getFullPath(), message));
 			return false;
 		}
-		
+
 		//Now delete the project description file
 		IResource file = project.findMember(IProjectDescription.DESCRIPTION_FILE_NAME);
 		if (file == null) {
 			//the .project have may have been recreated on disk automatically by snapshot
-			FileStore dotProject = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
+			IFileStore dotProject = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
 			try {
 				dotProject.delete(IFileStoreConstants.NONE, null);
 			} catch (CoreException e) {
@@ -621,8 +621,8 @@ class ResourceTree implements IResourceTree {
 					// log the status but don't return until we try and move the rest of the resource info
 					failed(status);
 				}
-				FileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
-				FileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
+				IFileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
+				IFileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
 				try {
 					oldMetaArea.move(newMetaArea, IFileStoreConstants.NONE, new NullProgressMonitor());
 				} catch (CoreException e) {
@@ -713,20 +713,10 @@ class ResourceTree implements IResourceTree {
 			// should already have a location assigned to it.
 			if (destLocation == null)
 				destLocation = Platform.getLocation().append(destDescription.getName());
-			FileStore destStore = FileStoreFactory.create(destLocation);
+			IFileStore destStore = FileStoreFactory.create(destLocation);
 
 			// Move the contents on disk.
-			try {
-				localManager.move(source, destStore, flags, monitor);
-			} catch (CoreException ce) {
-				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = ce.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore.fetchInfo().exists();
-				// if not, then rethrow the exception to abort the move operation
-				if (!failedDeletingSource)
-					throw ce;
-				// if so, we should log the failure and proceed with moving the tree
-				failed(ce.getStatus());
-			}
+			localManager.move(source, destStore, flags, monitor);
 			monitor.worked(9);
 
 			//if this is a deep move, move the contents of any linked resources
@@ -736,7 +726,7 @@ class ResourceTree implements IResourceTree {
 					if (children[i].isLinked()) {
 						message = NLS.bind(Messages.resources_moving, children[i].getFullPath());
 						monitor.subTask(message);
-						FileStore linkDestination = destStore.getChild(children[i].getName());
+						IFileStore linkDestination = destStore.getChild(children[i].getName());
 						try {
 							localManager.move(children[i], linkDestination, flags, Policy.monitorFor(null));
 						} catch (CoreException ce) {
@@ -814,7 +804,7 @@ class ResourceTree implements IResourceTree {
 					if (success) {
 						deletedProject(project);
 					} else {
-						FileStore store = localManager.getStore(project);
+						IFileStore store = localManager.getStore(project);
 						message = NLS.bind(Messages.resources_couldnotDelete, store.getAbsolutePath());
 						IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message);
 						failed(status);
@@ -823,7 +813,7 @@ class ResourceTree implements IResourceTree {
 				}
 
 				try {
-					FileStore projectStore = localManager.getStore(project);
+					IFileStore projectStore = localManager.getStore(project);
 					// if the project is open, we must perform a best-effort deletion			
 					if (project.isOpen()) {
 						localManager.delete(project, flags, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
@@ -896,20 +886,29 @@ class ResourceTree implements IResourceTree {
 
 			// If the file was successfully moved in the file system then the workspace
 			// tree needs to be updated accordingly. Otherwise signal that we have an error.
-			FileStore destStore = null;
+			IFileStore destStore = null;
+			boolean failedDeletingSource = false;
 			try {
 				destStore = localManager.getStore(destination);
 				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?									
-				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.fetchInfo().exists();
+				failedDeletingSource = destStore != null && destStore.fetchInfo().exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
 			}
 			movedFile(source, destination);
 			updateMovedFileTimestamp(destination, computeTimestamp(destination));
+			if (failedDeletingSource) {
+				//recreate source file to ensure we are not out of sync
+				try {
+					source.refreshLocal(IResource.DEPTH_INFINITE, null);
+				} catch (CoreException e) {
+					//ignore secondary failure - we have already logged the main failure
+				}
+			}
 			monitor.worked(Policy.totalWork / 4);
 			return;
 		} finally {
@@ -957,26 +956,29 @@ class ResourceTree implements IResourceTree {
 
 			// Move the resources in the file system. Only the FORCE flag is valid here so don't
 			// have to worry about clearing the KEEP_HISTORY flag.
-			FileStore destStore = null;
+			IFileStore destStore = null;
+			boolean failedDeletingSource = false;
 			try {
 				destStore = localManager.getStore(destination);
 				localManager.move(source, destStore, flags, monitor);
 			} catch (CoreException e) {
 				failed(e.getStatus());
 				// did the fail occur after copying to the destination?
-				boolean failedDeletingSource = e.getStatus().getCode() == IResourceStatus.FAILED_DELETE_LOCAL && destStore != null && destStore.fetchInfo().exists();
+				failedDeletingSource = destStore != null && destStore.fetchInfo().exists();
 				// if so, we should proceed
 				if (!failedDeletingSource)
 					return;
 			}
-			boolean success = destStore != null && destStore.fetchInfo().exists();
-			if (success) {
-				movedFolderSubtree(source, destination);
-				updateTimestamps(destination, isDeep);
-			} else {
-				message = NLS.bind(Messages.localstore_couldNotCreateFolder, destination.getLocation().toOSString());
-				IStatus status = new ResourceStatus(IResourceStatus.FAILED_WRITE_LOCAL, destination.getFullPath(), message);
-				failed(status);
+			movedFolderSubtree(source, destination);
+			updateTimestamps(destination, isDeep);
+			if (failedDeletingSource) {
+				//the move could have been partially successful, so refresh to ensure we are in sync
+				try {
+					source.refreshLocal(IResource.DEPTH_INFINITE, null);
+					destination.refreshLocal(IResource.DEPTH_INFINITE, null);
+				} catch (CoreException e) {
+					//ignore secondary failures -we have already logged main failure
+				}
 			}
 		} finally {
 			lock.release();
@@ -1016,19 +1018,32 @@ class ResourceTree implements IResourceTree {
 			}
 
 			// Move the project content in the local file system.
+			IFileStore sourceStore = ((Resource)source).getStore();
 			try {
 				moveProjectContent(source, description, flags, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
 			} catch (CoreException e) {
 				message = NLS.bind(Messages.localstore_couldNotMove, source.getFullPath());
 				IStatus status = new ResourceStatus(IStatus.ERROR, source.getFullPath(), message, e);
 				failed(status);
-				return;
 			}
 
 			// If we got this far the project content has been moved on disk (if necessary)
 			// and we need to update the workspace tree.
 			movedProjectSubtree(source, description);
 			monitor.worked(Policy.totalWork * 1 / 8);
+			//if the source still exists on disk due to failure, recreate the source tree
+			if (sourceStore.fetchInfo().exists()) {
+				try {
+					if (!source.exists())
+						source.create(null);
+					if (!source.isOpen())
+						source.open(null);
+					source.refreshLocal(IResource.DEPTH_INFINITE, null);
+				} catch (CoreException e) {
+					//ignore secondary failures - the initial failure will already be logged
+				}
+			}
+			
 			boolean isDeep = (flags & IResource.SHALLOW) == 0;
 			updateTimestamps(source.getWorkspace().getRoot().getProject(description.getName()), isDeep);
 			monitor.worked(Policy.totalWork * 1 / 8);

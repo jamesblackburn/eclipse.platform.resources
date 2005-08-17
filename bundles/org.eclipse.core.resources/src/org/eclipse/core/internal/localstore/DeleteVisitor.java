@@ -12,7 +12,7 @@ package org.eclipse.core.internal.localstore;
 
 import java.util.Iterator;
 import java.util.List;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.resources.ICoreConstants;
 import org.eclipse.core.internal.resources.Resource;
@@ -43,7 +43,7 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 		Resource target = (Resource) node.getResource();
 		try {
 			deleteLocalFile = deleteLocalFile && !target.isLinked() && node.existsInFileSystem();
-			FileStore localFile = deleteLocalFile ? node.getStore() : null;
+			IFileStore localFile = deleteLocalFile ? node.getStore() : null;
 			if (shouldKeepHistory) {
 				IHistoryStore store = target.getLocalManager().getHistoryStore();
 				recursiveKeepHistory(store, node);
@@ -59,6 +59,12 @@ public class DeleteVisitor implements IUnifiedTreeVisitor, ICoreConstants {
 				target.deleteResource(true, status);
 		} catch (CoreException e) {
 			status.add(e.getStatus());
+			//	delete might have been partly successful, so refresh to ensure in sync
+			try {
+				target.refreshLocal(IResource.DEPTH_INFINITE, null);
+			} catch (CoreException e1) {
+				//ignore secondary failure - we are just trying to cleanup from first failure
+			}
 		}
 	}
 

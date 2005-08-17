@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.util.Set;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.localstore.IHistoryStore;
 import org.eclipse.core.internal.resources.*;
 import org.eclipse.core.resources.*;
@@ -79,7 +79,7 @@ public class HistoryStoreConversionTest extends ResourceTest {
 			original = createHistoryStore("1", baseLocation, 0x100, false, false, false);
 			for (int i = 0; i < files.length; i++)
 				for (int j = 0; j < 10; j++) {
-					FileStore store = ((Resource)files[i]).getStore();
+					IFileStore store = ((Resource)files[i]).getStore();
 					original.addState(files[i].getFullPath(), store, store.fetchInfo().getLastModified(), false);
 				}
 			// close existing history store so all data is committed

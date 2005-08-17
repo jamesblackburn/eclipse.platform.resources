@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.Assert;
-import org.eclipse.core.internal.utils.URIUtil;
+import org.eclipse.core.internal.utils.FileUtil;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
@@ -331,7 +331,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	 * @see IProjectDescription#setLocation(IPath)
 	 */
 	public void setLocation(IPath path) {
-		this.location = path == null ? null : URIUtil.toURI(path);
+		this.location = path == null ? null : FileUtil.toURI(path);
 	}
 	
 	public void setLocationURI(URI location) {

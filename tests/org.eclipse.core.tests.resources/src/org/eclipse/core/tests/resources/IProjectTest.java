@@ -13,7 +13,7 @@ package org.eclipse.core.tests.resources;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.*;
@@ -549,7 +549,7 @@ public class IProjectTest extends ResourceTest {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
 		IFile otherFile = project.getFile("myotherfile.txt");
-		FileStore projectStore, fileStore, otherFileStore;
+		IFileStore projectStore, fileStore, otherFileStore;
 
 		/* ======================================================================
 		 * Force = TRUE
@@ -776,7 +776,7 @@ public class IProjectTest extends ResourceTest {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
 		IFile otherFile = project.getFile("myotherfile.txt");
-		FileStore projectStore, fileStore, otherFileStore;
+		IFileStore projectStore, fileStore, otherFileStore;
 
 		/* ======================================================================
 		 * Force = TRUE
@@ -1014,7 +1014,7 @@ public class IProjectTest extends ResourceTest {
 	public void testProjectDeletionClosedUserDefinedInSync() {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
-		FileStore projectStore, fileStore;
+		IFileStore projectStore, fileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
 
 		/* ======================================================================
@@ -1204,7 +1204,7 @@ public class IProjectTest extends ResourceTest {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
 		IFile otherFile = project.getFile("myotherfile.txt");
-		FileStore projectStore, fileStore, otherFileStore;
+		IFileStore projectStore, fileStore, otherFileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
 
 		/* ======================================================================
@@ -1422,7 +1422,7 @@ public class IProjectTest extends ResourceTest {
 	public void testProjectDeletionOpenDefaultInSync() {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
-		FileStore projectStore, fileStore;
+		IFileStore projectStore, fileStore;
 
 		/* ======================================================================
 		 * Force = TRUE
@@ -1556,7 +1556,7 @@ public class IProjectTest extends ResourceTest {
 	public void testProjectDeletionOpenDefaultOutOfSync() {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
-		FileStore projectStore, fileStore;
+		IFileStore projectStore, fileStore;
 
 		/* ======================================================================
 		 * Force = TRUE
@@ -1701,7 +1701,7 @@ public class IProjectTest extends ResourceTest {
 	public void testProjectDeletionOpenUserDefinedInSync() {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
-		FileStore projectStore, fileStore;
+		IFileStore projectStore, fileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
 		/* ======================================================================
 		 * Force = TRUE
@@ -1854,7 +1854,7 @@ public class IProjectTest extends ResourceTest {
 		IProject project = getWorkspace().getRoot().getProject("Project");
 		IFile file = project.getFile("myfile.txt");
 		IFile otherFile = project.getFile("myotherfile.txt");
-		FileStore projectStore, fileStore, otherFileStore;
+		IFileStore projectStore, fileStore, otherFileStore;
 		IProjectDescription description = getWorkspace().newProjectDescription(project.getName());
 
 		/* ======================================================================

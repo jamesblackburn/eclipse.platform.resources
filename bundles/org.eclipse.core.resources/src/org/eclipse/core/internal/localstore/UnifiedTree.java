@@ -13,7 +13,8 @@ package org.eclipse.core.internal.localstore;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.resources.*;
-import org.eclipse.core.internal.utils.*;
+import org.eclipse.core.internal.utils.Assert;
+import org.eclipse.core.internal.utils.Queue;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
@@ -167,7 +168,7 @@ public class UnifiedTree {
 	 * Creates a tree node for a resource that is linked in a different file system location.
 	 */
 	protected UnifiedTreeNode createChildForLinkedResource(IResource target) {
-		FileStore store = ((Resource) target).getStore();
+		IFileStore store = ((Resource) target).getStore();
 		return createNode(target, store, store.fetchInfo(), true);
 	}
 
@@ -211,7 +212,7 @@ public class UnifiedTree {
 	}
 
 	protected void addRootToQueue() {
-		FileStore rootStore = ((Resource)root).getStore();
+		IFileStore rootStore = ((Resource)root).getStore();
 		UnifiedTreeNode node = createNode(root, rootStore, rootStore.fetchInfo(), root.exists());
 		if (!node.existsInFileSystem() && !node.existsInWorkspace())
 			return;
@@ -236,7 +237,7 @@ public class UnifiedTree {
 	 * simple file system traversals, so this avoids creating store objects
 	 * for all files.
 	 */
-	protected UnifiedTreeNode createNode(IResource resource, FileStore store, IFileInfo info, boolean existsWorkspace) {
+	protected UnifiedTreeNode createNode(IResource resource, IFileStore store, IFileInfo info, boolean existsWorkspace) {
 		//first check for reusable objects
 		UnifiedTreeNode node = null;
 		int size = freeNodes.size();

@@ -10,8 +10,8 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
-import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.filesystem.IFileInfo;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.utils.Messages;
 import org.eclipse.core.internal.utils.Policy;
 import org.eclipse.core.resources.*;
@@ -24,7 +24,7 @@ public class Folder extends Container implements IFolder {
 		super(path, container);
 	}
 
-	protected void assertCreateRequirements(FileStore store, IFileInfo localInfo, int updateFlags) throws CoreException {
+	protected void assertCreateRequirements(IFileStore store, IFileInfo localInfo, int updateFlags) throws CoreException {
 		checkDoesNotExist();
 		Container parent = (Container) getParent();
 		ResourceInfo info = parent.getResourceInfo(false, false);
@@ -82,7 +82,7 @@ public class Folder extends Container implements IFolder {
 			final ISchedulingRule rule = workspace.getRuleFactory().createRule(this);
 			try {
 				workspace.prepareOperation(rule, monitor);
-				FileStore store = getStore();
+				IFileStore store = getStore();
 				IFileInfo localInfo = store.fetchInfo();
 				assertCreateRequirements(store, localInfo, updateFlags);
 				workspace.beginOperation(true);

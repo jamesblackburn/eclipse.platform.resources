@@ -148,7 +148,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 		return new TestSuite(IResourceTest.class);
 
 //		TestSuite suite = new TestSuite();
-//		suite.addTest(new IResourceTest("testDelete"));
+//		suite.addTest(new IResourceTest("testAddLocalProject"));
 //		return suite;
 	}
 
@@ -635,7 +635,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	 * This method tests the IResource.refreshLocal() operation */
 	public void testAddLocalProject() throws CoreException {
 		/**
-		 * Add a project in the filesystem, but not in the workspace */
+		 * Add a project in the file system, but not in the workspace */
 
 		IProject project1 = getWorkspace().getRoot().getProject("Project");
 		project1.create(getMonitor());
@@ -644,10 +644,18 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 		IProject project2 = getWorkspace().getRoot().getProject("NewProject");
 
 		IPath projectPath = project1.getLocation().removeLastSegments(1).append("NewProject");
-		projectPath.toFile().mkdirs();
-
-		project1.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
-		project2.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
+		try {
+			projectPath.toFile().mkdirs();
+	
+			project1.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
+			project2.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
+			assertTrue("1.1", project1.exists());
+			assertTrue("1.2", project1.isSynchronized(IResource.DEPTH_INFINITE));
+			assertTrue("1.3", !project2.exists());
+			assertTrue("1.4", project2.isSynchronized(IResource.DEPTH_INFINITE));
+		} finally {
+			Workspace.clear(projectPath.toFile());
+		}
 	}
 
 	public void testAttributeArchive() {

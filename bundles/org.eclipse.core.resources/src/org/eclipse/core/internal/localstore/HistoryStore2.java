@@ -13,8 +13,7 @@ package org.eclipse.core.internal.localstore;
 import java.io.File;
 import java.io.InputStream;
 import java.util.*;
-import org.eclipse.core.filesystem.FileStore;
-import org.eclipse.core.filesystem.IFileStoreConstants;
+import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.localstore.Bucket.Entry;
 import org.eclipse.core.internal.localstore.HistoryBucket.HistoryEntry;
 import org.eclipse.core.internal.resources.*;
@@ -68,7 +67,7 @@ public class HistoryStore2 implements IHistoryStore {
 	BucketTree tree;
 	private Workspace workspace;
 
-	public HistoryStore2(Workspace workspace, FileStore store, int limit) {
+	public HistoryStore2(Workspace workspace, IFileStore store, int limit) {
 		this.workspace = workspace;
 		try {
 			store.create(IFileStoreConstants.DIRECTORY, null);
@@ -83,7 +82,7 @@ public class HistoryStore2 implements IHistoryStore {
 	/**
 	 * @see IHistoryStore#addState(IPath, FileStore, long, boolean)
 	 */
-	public synchronized IFileState addState(IPath key, FileStore localFile, long lastModified, boolean moveContents) {
+	public synchronized IFileState addState(IPath key, IFileStore localFile, long lastModified, boolean moveContents) {
 		if (Policy.DEBUG_HISTORY)
 			System.out.println("History: Adding state for key: " + key + ", file: " + localFile + ", timestamp: " + lastModified + ", size: " + localFile.fetchInfo().getLength()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 		if (!isValid(localFile))
@@ -230,7 +229,7 @@ public class HistoryStore2 implements IHistoryStore {
 	}
 
 	public File getFileFor(IFileState state) {
-		FileStore store = blobStore.fileFor(((FileState) state).getUUID());
+		IFileStore store = blobStore.fileFor(((FileState) state).getUUID());
 		//assume it is local - java.io.File is leaking out of our internal API here
 		return new java.io.File(store.getAbsolutePath());
 	}
@@ -265,7 +264,7 @@ public class HistoryStore2 implements IHistoryStore {
 	 * @return <code>true</code> if this file should be added to the history
 	 * 	store and <code>false</code> otherwise
 	 */
-	private boolean isValid(FileStore localFile) {
+	private boolean isValid(IFileStore localFile) {
 		WorkspaceDescription description = workspace.internalGetDescription();
 		long length = localFile.fetchInfo().getLength();
 		boolean result = length <= description.getMaxFileStateSize();

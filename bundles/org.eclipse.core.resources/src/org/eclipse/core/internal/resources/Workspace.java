@@ -635,12 +635,10 @@ public class Workspace extends PlatformObject implements IWorkspace, ICoreConsta
 		// get/set the node id from the source's resource info so we can later put it in the
 		// info for the destination resource. This will help us generate the proper deltas,
 		// indicating a move rather than a add/delete
-		long nodeid = ((Resource) source).getResourceInfo(true, false).getNodeId();
-		newInfo.setNodeId(nodeid);
+		newInfo.setNodeId(sourceInfo.getNodeId());
 
 		// preserve local sync info but not location info
-		ResourceInfo oldInfo = ((Resource) source).getResourceInfo(true, false);
-		newInfo.setFlags(newInfo.getFlags() | (oldInfo.getFlags() & M_LOCAL_EXISTS));
+		newInfo.setFlags(newInfo.getFlags() | (sourceInfo.getFlags() & M_LOCAL_EXISTS));
 		newInfo.setFileStoreRoot(null);
 
 		// forget content-related caching flags

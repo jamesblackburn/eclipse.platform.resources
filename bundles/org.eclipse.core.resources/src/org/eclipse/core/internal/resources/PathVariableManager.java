@@ -14,7 +14,7 @@ import java.net.URI;
 import java.util.*;
 import org.eclipse.core.internal.events.PathVariableChangeEvent;
 import org.eclipse.core.internal.utils.Messages;
-import org.eclipse.core.internal.utils.URIUtil;
+import org.eclipse.core.internal.utils.FileUtil;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
 import org.eclipse.osgi.util.NLS;
@@ -176,7 +176,7 @@ public class PathVariableManager implements IPathVariableManager, IManager {
 			return uri;
 		IPath raw = new Path(uri.getSchemeSpecificPart());
 		IPath resolved = resolvePath(raw);
-		return URIUtil.toURI(resolved);
+		return FileUtil.toURI(resolved);
 	}
 
 	/**

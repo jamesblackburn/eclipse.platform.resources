@@ -824,7 +824,7 @@ public class SaveManager implements IElementInfoFlattener, IManager, IStringPool
 					WorkspaceTreeReader reader = WorkspaceTreeReader.getReader(workspace, input.readInt());
 					complete = reader.readSnapshotTree(input, complete, monitor);
 				} finally {
-					input.close();
+					FileUtil.safeClose(input);
 					//reader returned an immutable tree, but since we're inside
 					//an operation, we must return an open tree
 					lastSnap = complete;

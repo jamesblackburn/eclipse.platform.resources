@@ -11,8 +11,8 @@ package org.eclipse.core.internal.localstore;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import org.eclipse.core.filesystem.FileStore;
 import org.eclipse.core.filesystem.FileStoreFactory;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IPathVariableManager;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
@@ -67,7 +67,7 @@ public class FileStoreRoot {
 		}
 	}
 
-	FileStore createStore(IPath workspacePath) {
+	IFileStore createStore(IPath workspacePath) {
 		URI uri = variableManager.resolveURI(buildURI(workspacePath));
 		return FileStoreFactory.create(uri);
 	}

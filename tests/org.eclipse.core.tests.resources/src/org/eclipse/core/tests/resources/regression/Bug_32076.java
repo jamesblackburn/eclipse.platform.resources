@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStore;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.resources.Resource;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.CoreException;
@@ -83,9 +83,9 @@ public class Bug_32076 extends ResourceTest {
 				// success							
 			}
 
-			// the source parent is out-of-sync
-			assertTrue("3.0", !sourceParent.isSynchronized(IResource.DEPTH_INFINITE));
-			// the target parent is in-sync
+			// the source parent is in sync
+			assertTrue("3.0", sourceParent.isSynchronized(IResource.DEPTH_INFINITE));
+			// the target parent is in sync
 			assertTrue("3.1", destinationParent.isSynchronized(IResource.DEPTH_INFINITE));
 
 			// file has been copied to destination
@@ -101,7 +101,8 @@ public class Bug_32076 extends ResourceTest {
 			}
 
 			// non-removable file has been moved (but not in file system - they are out-of-sync)
-			assertTrue("4.1", !sourceFile.exists());
+			assertTrue("4.1", sourceFile.exists());
+			assertTrue("4.2", sourceFile.isSynchronized(IResource.DEPTH_ZERO));
 
 			// refresh the source parent 
 			try {
@@ -110,7 +111,7 @@ public class Bug_32076 extends ResourceTest {
 				fail("4.4");
 			}
 
-			// non-removable file now reappear in the resource tree
+			// file is still found in source tree
 			assertTrue("4.7", sourceFile.exists());
 
 		} finally {
@@ -173,8 +174,8 @@ public class Bug_32076 extends ResourceTest {
 				// success										
 			}
 
-			// the source parent is out-of-sync
-			assertTrue("3.0", !sourceParent.isSynchronized(IResource.DEPTH_INFINITE));
+			// the source parent is in sync
+			assertTrue("3.0", sourceParent.isSynchronized(IResource.DEPTH_INFINITE));
 			// the target parent is in-sync
 			assertTrue("3.1", destinationParent.isSynchronized(IResource.DEPTH_INFINITE));
 
@@ -192,9 +193,10 @@ public class Bug_32076 extends ResourceTest {
 				fail("3.8", e);
 			}
 
-			// non-removable resources have been moved (but not in file system - they are out-of-sync)
-			assertTrue("4.1", !folder.exists());
-			assertTrue("4.2", !file1.exists());
+			// non-removable resources still exist in source
+			assertTrue("4.1", folder.exists());
+			assertTrue("4.2", file1.exists());
+			//this file should be successfully moved
 			assertTrue("4.3", !file2.exists());
 
 			// refresh the source parent 
@@ -204,7 +206,7 @@ public class Bug_32076 extends ResourceTest {
 				fail("4.4");
 			}
 
-			// non-removable resources now reappear in the resource tree
+			// non-removable resources still in source tree
 			assertTrue("4.6", folder.exists());
 			assertTrue("4.7", file1.exists());
 			assertTrue("4.8", !file2.exists());
@@ -267,11 +269,12 @@ public class Bug_32076 extends ResourceTest {
 				// success					
 			}
 
-			// the source does not exist
-			assertTrue("3.0", !sourceProject.exists());
+			// the source still exists and is in sync
+			assertTrue("3.0", sourceProject.exists());
+			assertTrue("3.1", sourceProject.isSynchronized(IResource.DEPTH_INFINITE));
 			// the target exists and is in sync
-			assertTrue("3.1", destinationProject.exists());
-			assertTrue("3.2", destinationProject.isSynchronized(IResource.DEPTH_INFINITE));
+			assertTrue("3.2", destinationProject.exists());
+			assertTrue("3.3", destinationProject.isSynchronized(IResource.DEPTH_INFINITE));
 
 			// resources have been copied to destination
 			assertTrue("3.4", destinationProject.getFile(file1.getProjectRelativePath()).exists());
@@ -285,8 +288,6 @@ public class Bug_32076 extends ResourceTest {
 			} catch (CoreException e) {
 				fail("3.8", e);
 			}
-
-			assertTrue("4.0", !sourceProject.exists());
 
 			assertTrue("5.0", workspace.getRoot().isSynchronized(IResource.DEPTH_INFINITE));
 
@@ -309,7 +310,7 @@ public class Bug_32076 extends ResourceTest {
 		if (!(Platform.getOS().equals(Platform.OS_LINUX) && usingNatives()))
 			return;
 
-		FileStore roFolderStore = null;
+		IFileStore roFolderStore = null;
 		IProject project = null;
 		try {
 			IWorkspace workspace = getWorkspace();
@@ -389,7 +390,7 @@ public class Bug_32076 extends ResourceTest {
 		if (!(Platform.getOS().equals(Platform.OS_LINUX) && usingNatives()))
 			return;
 
-		FileStore roFolderLocation = null, destinationROFolderLocation = null;
+		IFileStore roFolderLocation = null, destinationROFolderLocation = null;
 		IProject project = null;
 		try {
 			IWorkspace workspace = getWorkspace();
@@ -489,8 +490,8 @@ public class Bug_32076 extends ResourceTest {
 		IWorkspace workspace = getWorkspace();
 		IProject sourceProject = workspace.getRoot().getProject("SourceProject");
 		IProject destinationProject = null;
-		FileStore projectParentStore = getTempStore();
-		FileStore projectStore = projectParentStore.getChild(sourceProject.getName());
+		IFileStore projectParentStore = getTempStore();
+		IFileStore projectStore = projectParentStore.getChild(sourceProject.getName());
 		try {
 			IProjectDescription sourceDescription = workspace.newProjectDescription(sourceProject.getName());
 			sourceDescription.setLocationURI(projectStore.toURI());
