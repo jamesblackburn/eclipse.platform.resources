@@ -31,40 +31,40 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	protected static final IProgressMonitor[] PROGRESS_MONITORS = new IProgressMonitor[] {new FussyProgressMonitor(), new CancelingProgressMonitor(), null};
 
 	/**
-	 * Resource exists in both filesystem and workspace, but has been changed
-	 * in the filesystem since the last sync. This only applies to files.
+	 * Resource exists in both file system and workspace, but has been changed
+	 * in the file system since the last sync. This only applies to files.
 	 */
 	protected static final int S_CHANGED = 3;
 
 	/**
-	 * Resource does not exist in filesystem or workspace. */
+	 * Resource does not exist in file system or workspace. */
 	protected static final int S_DOES_NOT_EXIST = 4;
 
 	/**
 	 * Resource is a file in the workspace, but has been converted to a folder
-	 * in the filesystem.
+	 * in the file system.
 	 */
 	protected static final int S_FILE_TO_FOLDER = 6;
 
 	/**
-	 * Resource exists in the filesystem only. It has been added to the
-	 * filesystem manually since the last local refresh.
+	 * Resource exists in the file system only. It has been added to the
+	 * file system manually since the last local refresh.
 	 */
 	protected static final int S_FILESYSTEM_ONLY = 1;
 
 	/**
 	 * Resource is a folder in the workspace, but has been converted to a file
-	 * in the filesystem.
+	 * in the file system.
 	 */
 	protected static final int S_FOLDER_TO_FILE = 5;
 
 	/**
-	 * Resource exists in the filesytem and workspace, and is in sync */
+	 * Resource exists in the file system and workspace, and is in sync */
 	protected static final int S_UNCHANGED = 2;
 
 	/**
 	 * Resource only exists in the workspace. It has been deleted from the
-	 * filesystem manually
+	 * file system manually
 	 */
 	protected static final int S_WORKSPACE_ONLY = 0;
 	protected static final Boolean[] TRUE_AND_FALSE = new Boolean[] {Boolean.TRUE, Boolean.FALSE};
@@ -148,7 +148,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 		return new TestSuite(IResourceTest.class);
 
 //		TestSuite suite = new TestSuite();
-//		suite.addTest(new IResourceTest("testAddLocalProject"));
+//		suite.addTest(new IResourceTest("testAttributeArchive"));
 //		return suite;
 	}
 
@@ -196,7 +196,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 		ensureOutOfSync(unsynchronized[0]);
 		unsynchronizedResources.add(unsynchronized[0]);
 
-		//filesystem only
+		//file system only
 		unsynchronized = buildResources(root, new String[] {"1/1/2/2/1"});
 		ensureExistsInFileSystem(unsynchronized);
 		unsynchronizedResources.add(unsynchronized[0]);
@@ -444,7 +444,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	}
 
 	/**
-	 * Sets up the workspace and filesystem for this test. */
+	 * Sets up the workspace and file system for this test. */
 	protected void setupBeforeState(IResource receiver, IResource target, int state, int depth, boolean addVerifier) throws CoreException {
 		if (addVerifier) {
 			/* install the verifier */
@@ -1858,7 +1858,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 	 * This method tests the IResource.refreshLocal() operation */
 	public void testRefreshWithMissingParent() throws CoreException {
 		/**
-		 * Add a folder and file to the filesystem. Call refreshLocal on the
+		 * Add a folder and file to the file system. Call refreshLocal on the
 		 * file, when neither of them exist in the workspace.
 		 */
 		IProject project1 = getWorkspace().getRoot().getProject("Project");

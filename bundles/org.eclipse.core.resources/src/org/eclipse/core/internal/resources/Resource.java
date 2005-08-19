@@ -976,12 +976,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @see IResource#getResourceAttributes()
 	 */
 	public ResourceAttributes getResourceAttributes() {
-		try {
-			return getLocalManager().attributes(this);
-		} catch (CoreException e) {
-			//failure is not an option
-			return null;
-		}
+		return getLocalManager().attributes(this);
 	}
 
 	/**

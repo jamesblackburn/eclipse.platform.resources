@@ -112,12 +112,15 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	}
 
 	/* (non-javadoc)
-	 * @see IResource.setResourceAttributes
+	 * @see IResource.getResourceAttributes
 	 */
-	public ResourceAttributes attributes(IResource resource) throws CoreException {
+	public ResourceAttributes attributes(IResource resource) {
 		IFileStore store = getStore(resource);
 		ResourceAttributes attributes = new ResourceAttributes();
-		attributes.setReadOnly(store.fetchInfo().isReadOnly());
+		IFileInfo fileInfo = store.fetchInfo();
+		attributes.setReadOnly(fileInfo.getAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY));
+		attributes.setArchive(fileInfo.getAttribute(IFileStoreConstants.ATTRIBUTE_ARCHIVE));
+		attributes.setExecutable(fileInfo.getAttribute(IFileStoreConstants.ATTRIBUTE_EXECUTABLE));
 		return attributes;
 	}
 
@@ -820,9 +823,11 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 */
 	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
 		IFileStore store = getStore(resource);
-		IFileInfo fileInfo = store.fetchInfo();
-		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_DIRECTORY, attributes.isReadOnly());
-		store.setFileInfo(fileInfo, IFileStoreConstants.NONE, null);
+		IFileInfo fileInfo = FileStoreFactory.createFileInfo();
+		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY, attributes.isReadOnly());
+		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_EXECUTABLE, attributes.isExecutable());
+		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_ARCHIVE, attributes.isArchive());
+		store.setFileInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES, null);
 	}
 
 	public void shutdown(IProgressMonitor monitor) throws CoreException {
