@@ -851,7 +851,7 @@ public class ResourceTest extends CoreTest {
 
 	protected boolean usingNatives() {
 		return false;
-		//return CoreFileSystemLibrary.usingNatives();
+		//return LocalFileNatives.usingNatives();
 	}
 
 	/**
