@@ -889,7 +889,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * </p>
 	 *
 	 * @param type the type of marker to consider, or <code>null</code> to indicate all types
-	 * @param includeSubtypes whether or not to consider subtypes of the given type
+	 * @param includeSubtypes whether or not to consider sub-types of the given type
 	 * @param depth how far to recurse (see <code>IResource.DEPTH_* </code>)
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -972,7 +972,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * are no matching markers.
 	 *
 	 * @param type the type of marker to consider, or <code>null</code> to indicate all types
-	 * @param includeSubtypes whether or not to consider subtypes of the given type
+	 * @param includeSubtypes whether or not to consider sub-types of the given type
 	 * @param depth how far to recurse (see <code>IResource.DEPTH_* </code>)
 	 * @return an array of markers
 	 * @exception CoreException if this method fails. Reasons include:
@@ -1165,7 +1165,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * <li>creating a non-project resource (changes from <code>NULL_STAMP</code>)</li>
 	 * <li>changing the contents of a file</li>
 	 * <li><code>touch</code>ing a resource</li>
-	 * <li>setting the atttributes of a project presented in a project description</li>
+	 * <li>setting the attributes of a project presented in a project description</li>
 	 * <li>deleting a resource (changes to <code>NULL_STAMP</code>)</li>
 	 * <li>moving a resource (source changes to <code>NULL_STAMP</code>,
 	 destination changes from <code>NULL_STAMP</code>)</li>
@@ -1499,14 +1499,14 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * A resource is considered to be in sync if all of the following 
 	 * conditions are true:
 	 * <ul>
-	 * <li>The resource exists in both the workspace and the filesystem.</li>
-	 * <li>The timestamp in the filesystem has not changed since the 
+	 * <li>The resource exists in both the workspace and the file system.</li>
+	 * <li>The timestamp in the file system has not changed since the 
 	 * last synchronization.</li>
 	 * <li>The resource in the workspace is of the same type as the corresponding
-	 * file in the filesystem (they are either both files or both folders).</li>
+	 * file in the file system (they are either both files or both folders).</li>
 	 * </ul>
 	 *  A resource is also considered to be in sync if it is missing from both
-	 * the workspace and the filesystem.  In all other cases the resource is
+	 * the workspace and the file system.  In all other cases the resource is
 	 * considered to be out of sync.
 	 * </p>
 	 * <p>
@@ -2035,7 +2035,7 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * or otherwise truncated, so the actual recorded time stamp that is returned may
 	 * not be the same as the supplied value.
 	 * 
-	 * @param value a time stamp in millseconds.
+	 * @param value a time stamp in milliseconds.
 	 * @return a local file system time stamp.
 	 * @exception CoreException if this method fails. Reasons include:
 	 * <ul>
@@ -2092,8 +2092,8 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	public void setReadOnly(boolean readOnly);
 	
 	/**
-	 * Sets this resource with the given extended attributues. This sets the
-	 * attributes in the file system. Only attributes that are suported by
+	 * Sets this resource with the given extended attributes. This sets the
+	 * attributes in the file system. Only attributes that are supported by
 	 * the underlying file system will be set. 
 	 * <p>
 	 * Sample usage: <br>
