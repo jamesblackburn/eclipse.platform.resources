@@ -46,15 +46,6 @@ public class BlobStoreTest extends LocalStoreTest {
 		}
 		assertTrue("1.1", ok);
 
-		/* empty location */
-		ok = false;
-		try {
-			new BlobStore(FileStoreFactory.create(Path.EMPTY), 128);
-		} catch (RuntimeException e) {
-			ok = true;
-		}
-		assertTrue("2.1", ok);
-
 		/* nonexistent location */
 		ok = false;
 		try {
