@@ -283,7 +283,13 @@ public class UnifiedTree {
 	}
 
 	protected IFileInfo[] getLocalList(UnifiedTreeNode node) {
-		IFileInfo[] list = node.getStore().childInfos(IFileStoreConstants.NONE, null);
+		IFileInfo[] list;
+		try {
+			list = node.getStore().childInfos(IFileStoreConstants.NONE, null);
+		} catch (CoreException e) {
+			//treat failure to access the directory as a non-existent directory
+			return null;
+		}
 		if (list == null)
 			return null;
 		int size = list.length;

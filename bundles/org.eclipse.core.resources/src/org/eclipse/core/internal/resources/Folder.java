@@ -36,11 +36,11 @@ public class Folder extends Container implements IFolder {
 			if (!Workspace.caseSensitive) {
 				String name = getLocalManager().getLocalName(store);
 				if (name != null && !store.getName().equals(name)) {
-					String msg = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.getAbsolutePath()).removeLastSegments(1).append(name).toOSString());
+					String msg = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.toString()).removeLastSegments(1).append(name).toOSString());
 					throw new ResourceException(IResourceStatus.CASE_VARIANT_EXISTS, getFullPath(), msg, null);
 				}
 			}
-			String msg = NLS.bind(Messages.resources_fileExists, store.getAbsolutePath());
+			String msg = NLS.bind(Messages.resources_fileExists, store.toString());
 			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, getFullPath(), msg, null);
 		}
 	}
@@ -92,7 +92,7 @@ public class Folder extends Container implements IFolder {
 						delete(true, null);
 					} else {
 						// The file system is not case sensitive and a case variant exists at this location
-						String msg = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.getAbsolutePath()).removeLastSegments(1).append(name).toOSString());
+						String msg = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.toString()).removeLastSegments(1).append(name).toOSString());
 						throw new ResourceException(IResourceStatus.CASE_VARIANT_EXISTS, getFullPath(), msg, null);
 					}
 				}

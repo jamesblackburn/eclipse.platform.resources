@@ -297,7 +297,7 @@ class ResourceTree implements IResourceTree {
 				// Indicate that the delete was successful.
 				return true;
 			} catch (CoreException e) {
-				message = NLS.bind(Messages.resources_couldnotDelete, fileStore.getAbsolutePath());
+				message = NLS.bind(Messages.resources_couldnotDelete, fileStore.toString());
 				IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, file.getFullPath(), message, e);
 				failed(status);
 			}
@@ -390,7 +390,13 @@ class ResourceTree implements IResourceTree {
 			return false;
 
 		//Check if there are any undiscovered children of the project on disk other than description file
-		String[] children = projectStore.childNames(IFileStoreConstants.NONE, null);
+		String[] children;
+		try {
+			children = projectStore.childNames(IFileStoreConstants.NONE, null);
+		} catch (CoreException e) {
+			//treat failure to access the directory as a non-existent directory
+			children = new String[0];
+		}
 		if (children.length != 1 || !IProjectDescription.DESCRIPTION_FILE_NAME.equals(children[0])) {
 			String message = NLS.bind(Messages.localstore_resourceIsOutOfSync, project.getName());
 			failed(new ResourceStatus(IResourceStatus.OUT_OF_SYNC_LOCAL, project.getFullPath(), message));
@@ -425,7 +431,7 @@ class ResourceTree implements IResourceTree {
 			// Indicate that the delete was successful.
 			return true;
 		} catch (CoreException e) {
-			String message = NLS.bind(Messages.resources_couldnotDelete, projectStore.getAbsolutePath());
+			String message = NLS.bind(Messages.resources_couldnotDelete, projectStore.toString());
 			IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message, e);
 			failed(status);
 			// Indicate that the delete was unsuccessful.
@@ -805,7 +811,7 @@ class ResourceTree implements IResourceTree {
 						deletedProject(project);
 					} else {
 						IFileStore store = localManager.getStore(project);
-						message = NLS.bind(Messages.resources_couldnotDelete, store.getAbsolutePath());
+						message = NLS.bind(Messages.resources_couldnotDelete, store.toString());
 						IStatus status = new ResourceStatus(IResourceStatus.FAILED_DELETE_LOCAL, project.getFullPath(), message);
 						failed(status);
 					}

@@ -227,7 +227,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	public int doGetEncoding(IFileStore store) throws CoreException {
 		InputStream input = null;
 		try {
-			input = store.openInputStream(IFileStoreConstants.NONE);
+			input = store.openInputStream(IFileStoreConstants.NONE, null);
 			int first = input.read();
 			int second = input.read();
 			if (first == -1 || second == -1)
@@ -247,7 +247,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				return IFile.ENCODING_UTF_8;
 			return IFile.ENCODING_UNKNOWN;
 		} catch (IOException e) {
-			String message = NLS.bind(Messages.localstore_couldNotRead, store.getAbsolutePath());
+			String message = NLS.bind(Messages.localstore_couldNotRead, store.toString());
 			throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, null, message, e);
 		} finally {
 			FileUtil.safeClose(input);
@@ -286,7 +286,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		// thread safety: (the location can be null if the project for this file does not exist)
 		IFileStore store = getStore(target);
 		if (!store.fetchInfo().exists()) {
-			String message = NLS.bind(Messages.localstore_fileNotFound, store.getAbsolutePath());
+			String message = NLS.bind(Messages.localstore_fileNotFound, store.toString());
 			throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, target.getFullPath(), message, null);
 		}
 		return doGetEncoding(store);
@@ -308,11 +308,15 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 	 */
 	public String getLocalName(IFileStore target) {
 		IFileStore parent = target.getParent();
-		String[] list = parent.childNames(IFileStoreConstants.NONE, null);
-		String targetName = target.getName();
-		for (int i = 0; i < list.length; i++)
-			if (targetName.equalsIgnoreCase(list[i]))
-				return list[i];
+		try {
+			String[] list = parent.childNames(IFileStoreConstants.NONE, null);
+			String targetName = target.getName();
+			for (int i = 0; i < list.length; i++)
+				if (targetName.equalsIgnoreCase(list[i]))
+					return list[i];
+		} catch (CoreException e) {
+			//fall through and treat non-accessible directory as non-existent directory
+		}
 		return null;
 	}
 
@@ -602,7 +606,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		if (!fileInfo.exists()) {
 			// thread safety: (the location can be null if the project for this file does not exist)
 			((Project) target.getProject()).checkExists(NULL_FLAG, true);
-			String message = NLS.bind(Messages.localstore_fileNotFound, store.getAbsolutePath());
+			String message = NLS.bind(Messages.localstore_fileNotFound, store.toString());
 			throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, target.getFullPath(), message, null);
 		}
 		if (!force) {
@@ -614,7 +618,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				throw new ResourceException(IResourceStatus.OUT_OF_SYNC_LOCAL, target.getFullPath(), message, null);
 			}
 		}
-		return store.openInputStream(IFileStoreConstants.NONE);
+		return store.openInputStream(IFileStoreConstants.NONE, monitor);
 	}
 
 	/**
@@ -661,7 +665,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		ResourceException error = null;
 		InputStream in = null;
 		try {
-			in = new BufferedInputStream(descriptionStore.openInputStream(IFileStoreConstants.NONE));
+			in = new BufferedInputStream(descriptionStore.openInputStream(IFileStoreConstants.NONE, null));
 			description = new ProjectDescriptionReader().read(new InputSource(in));
 		} catch (CoreException e) {
 			String msg = NLS.bind(Messages.resources_readProjectMeta, target.getName());
@@ -898,8 +902,9 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 				getHistoryStore().addState(target.getFullPath(), store, lastModified, false);
 			if (!fileInfo.exists())
 				store.getParent().create(IFileStoreConstants.DIRECTORY, null);
-			OutputStream out = store.openOutputStream(append ? IFileStoreConstants.APPEND : IFileStoreConstants.NONE);
-			FileUtil.transferStreams(content, out, store.getAbsolutePath(), monitor);
+			int options = append ? IFileStoreConstants.APPEND : IFileStoreConstants.NONE;
+			OutputStream out = store.openOutputStream(options, Policy.subMonitorFor(monitor, 0));
+			FileUtil.transferStreams(content, out, store.toString(), monitor);
 			// get the new last modified time and stash in the info
 			lastModified = store.fetchInfo().getLastModified();
 			ResourceInfo info = ((Resource) target).getResourceInfo(false, true);
@@ -954,7 +959,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager {
 		IFileStore fileStore = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
 		OutputStream out = null;
 		try {
-			out = fileStore.openOutputStream(IFileStoreConstants.NONE);
+			out = fileStore.openOutputStream(IFileStoreConstants.NONE, null);
 			new ModelObjectWriter().write(desc, out);
 		} catch (IOException e) {
 			String msg = NLS.bind(Messages.resources_writeMeta, target.getFullPath());

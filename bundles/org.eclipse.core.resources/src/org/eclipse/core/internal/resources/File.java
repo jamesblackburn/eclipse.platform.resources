@@ -122,7 +122,7 @@ public class File extends Resource implements IFile {
 							} else {
 								// The file system is not case sensitive and there is already a file
 								// under this location.
-								message = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.getAbsolutePath()).removeLastSegments(1).append(name).toOSString());
+								message = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.toString()).removeLastSegments(1).append(name).toOSString());
 								throw new ResourceException(IResourceStatus.CASE_VARIANT_EXISTS, getFullPath(), message, null);
 							}
 						}
@@ -133,11 +133,11 @@ public class File extends Resource implements IFile {
 						if (!Workspace.caseSensitive) {
 							String name = getLocalManager().getLocalName(store);
 							if (name != null && !localInfo.getName().equals(name)) {
-								message = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.getAbsolutePath()).removeLastSegments(1).append(name).toOSString());
+								message = NLS.bind(Messages.resources_existsLocalDifferentCase, new Path(store.toString()).removeLastSegments(1).append(name).toOSString());
 								throw new ResourceException(IResourceStatus.CASE_VARIANT_EXISTS, getFullPath(), message, null);
 							}
 						}
-						message = NLS.bind(Messages.resources_fileExists, store.getAbsolutePath());
+						message = NLS.bind(Messages.resources_fileExists, store.toString());
 						throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, getFullPath(), message, null);
 					}
 				}

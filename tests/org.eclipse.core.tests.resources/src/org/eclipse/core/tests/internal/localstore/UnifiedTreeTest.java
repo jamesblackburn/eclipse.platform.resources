@@ -41,7 +41,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 			IFileStore child = folder.getChild("fsFile" + i);
 			OutputStream out = null;
 			try {
-				out = child.openOutputStream(NONE);
+				out = child.openOutputStream(NONE, null);
 				out.write("contents".getBytes());
 			} finally {
 				try {
@@ -51,8 +51,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 					//ignore
 				}
 			}
-			String location = child.getAbsolutePath();
-			set.put(location, "");
+			set.put(child.toString(), "");
 		}
 	}
 
@@ -76,8 +75,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		for (int i = 0; i < limit; i++) {
 			IFileStore child = folder.getChild("fsFolder" + i);
 			child.create(DIRECTORY, null);
-			String location = child.getAbsolutePath();
-			set.put(location, "");
+			set.put(child.toString(), "");
 			if (i < (limit / 2))
 				createFiles(child, set);
 		}

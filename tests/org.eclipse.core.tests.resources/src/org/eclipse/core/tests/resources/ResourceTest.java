@@ -441,7 +441,7 @@ public class ResourceTest extends CoreTest {
 		OutputStream output = null;
 		try {
 			file.getParent().create(IFileStoreConstants.DIRECTORY, null);
-			output = file.openOutputStream(IFileStoreConstants.NONE);
+			output = file.openOutputStream(IFileStoreConstants.NONE, null);
 			output.write(getRandomString().getBytes("UTF8"));
 		} catch (IOException e) {
 			fail("ResourceTest#createFileInFileSystem.1", e);

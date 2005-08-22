@@ -70,7 +70,7 @@ public abstract class LocalStoreTest extends ResourceTest implements IFileStoreC
 	protected void createFile(IFileStore target, String content) throws CoreException {
 		target.delete(NONE, null);
 		InputStream input = new ByteArrayInputStream(content.getBytes());
-		transferData(input, target.openOutputStream(NONE));
+		transferData(input, target.openOutputStream(NONE, null));
 		IFileInfo info = target.fetchInfo();
 		assertTrue(info.exists() && !info.isDirectory());
 	}
@@ -92,7 +92,7 @@ public abstract class LocalStoreTest extends ResourceTest implements IFileStoreC
 			node.create(DIRECTORY, null);
 		else {
 			InputStream input = getRandomContents();
-			OutputStream output = node.openOutputStream(NONE);
+			OutputStream output = node.openOutputStream(NONE, null);
 			transferData(input, output);
 		}
 	}

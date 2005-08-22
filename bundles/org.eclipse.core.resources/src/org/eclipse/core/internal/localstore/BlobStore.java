@@ -122,7 +122,7 @@ public class BlobStore {
 
 	public InputStream getBlob(UniversalUniqueIdentifier uuid) throws CoreException {
 		IFileStore blobFile = fileFor(uuid);
-		return blobFile.openInputStream(IFileStoreConstants.NONE);
+		return blobFile.openInputStream(IFileStoreConstants.NONE, null);
 	}
 
 	/**

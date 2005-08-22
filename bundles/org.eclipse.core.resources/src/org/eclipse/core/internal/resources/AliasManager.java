@@ -426,8 +426,8 @@ public class AliasManager implements IManager, ILifecycleListener {
 			public int compare(Object o1, Object o2) {
 				IFileStore store1 = (IFileStore)o1;
 				IFileStore store2 = (IFileStore)o2;
-				IPath path1 = new Path(store1.getAbsolutePath());
-				IPath path2 = new Path(store2.getAbsolutePath());
+				IPath path1 = new Path(store1.toString());
+				IPath path2 = new Path(store2.toString());
 				int segmentCount1 = path1.segmentCount();
 				int segmentCount2 = path2.segmentCount();
 				for (int i = 0; (i < segmentCount1) && (i < segmentCount2); i++) {

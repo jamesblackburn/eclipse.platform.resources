@@ -151,7 +151,7 @@ public class ContentDescriptionManager implements IManager, IRegistryChangeListe
 			if (target == null)
 				throw new FileNotFoundException();
 			try {
-				actual = target.openInputStream(IFileStoreConstants.NONE);
+				actual = target.openInputStream(IFileStoreConstants.NONE, null);
 			} catch (CoreException e) {
 				throw new IOException(e.getMessage());
 			}

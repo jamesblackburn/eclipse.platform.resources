@@ -231,7 +231,7 @@ public class HistoryStore2 implements IHistoryStore {
 	public File getFileFor(IFileState state) {
 		IFileStore store = blobStore.fileFor(((FileState) state).getUUID());
 		//assume it is local - java.io.File is leaking out of our internal API here
-		return new java.io.File(store.getAbsolutePath());
+		return new java.io.File(store.toString());
 	}
 
 	public synchronized IFileState[] getStates(IPath filePath, IProgressMonitor monitor) {
@@ -269,7 +269,7 @@ public class HistoryStore2 implements IHistoryStore {
 		long length = localFile.fetchInfo().getLength();
 		boolean result = length <= description.getMaxFileStateSize();
 		if (Policy.DEBUG_HISTORY && !result)
-			System.out.println("History: Ignoring file (too large). File: " + localFile.getAbsolutePath() + //$NON-NLS-1$
+			System.out.println("History: Ignoring file (too large). File: " + localFile.toString() + //$NON-NLS-1$
 					", size: " + length + //$NON-NLS-1$
 					", max: " + description.getMaxFileStateSize()); //$NON-NLS-1$
 		return result;
