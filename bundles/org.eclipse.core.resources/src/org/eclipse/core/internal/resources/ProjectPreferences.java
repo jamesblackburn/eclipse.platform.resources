@@ -563,7 +563,7 @@ public class ProjectPreferences extends EclipsePreferences {
 		ArrayList result = new ArrayList();
 		for (int i = 0; i < members.length; i++) {
 			IResource resource = members[i];
-			if (resource.getType() == IResource.FILE && resource.getFullPath().getFileExtension().equals(PREFS_FILE_EXTENSION))
+			if (resource.getType() == IResource.FILE && PREFS_FILE_EXTENSION.equals(resource.getFullPath().getFileExtension()))
 				result.add(resource.getFullPath().removeFileExtension().lastSegment());
 		}
 		return (String[]) result.toArray(EMPTY_STRING_ARRAY);
