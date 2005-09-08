@@ -140,7 +140,7 @@ public class Bug_32076 extends ResourceTest {
 			IFolder destinationParent = project.getFolder("destination_parent");
 			IFolder folder = sourceParent.getFolder("folder");
 			IFolder destinationFolder = destinationParent.getFolder(folder.getName());
-			// this file will be made irremovable
+			// this file will be made un-removable
 			IFile file1 = folder.getFile("file1.txt");
 			// but not this one
 			IFile file2 = folder.getFile("file2.txt");
@@ -235,7 +235,7 @@ public class Bug_32076 extends ResourceTest {
 			IWorkspace workspace = getWorkspace();
 			sourceProject = workspace.getRoot().getProject("SourceProject");
 			destinationProject = workspace.getRoot().getProject("DestinationProject");
-			// this file will be made irremovable
+			// this file will be made un-removable
 			IFile file1 = sourceProject.getFile("file1.txt");
 			// but not this one
 			IFile file2 = sourceProject.getFile("file2.txt");
@@ -269,8 +269,8 @@ public class Bug_32076 extends ResourceTest {
 				// success					
 			}
 
-			// the source still exists and is in sync
-			assertTrue("3.0", sourceProject.exists());
+			// the source does not exist
+			assertTrue("3.0", !sourceProject.exists());
 			assertTrue("3.1", sourceProject.isSynchronized(IResource.DEPTH_INFINITE));
 			// the target exists and is in sync
 			assertTrue("3.2", destinationProject.exists());
@@ -318,7 +318,7 @@ public class Bug_32076 extends ResourceTest {
 			IFolder sourceParent = project.getFolder("source_parent");
 			IFolder roFolder = sourceParent.getFolder("sub-folder");
 			IFolder destinationParent = project.getFolder("destination_parent");
-			// this file will be made irremovable
+			// this file will be made un-removable
 			IFile sourceFile = roFolder.getFile("file.txt");
 			IFile destinationFile = destinationParent.getFile("file.txt");
 

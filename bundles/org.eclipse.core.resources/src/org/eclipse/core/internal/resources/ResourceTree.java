@@ -1024,31 +1024,24 @@ class ResourceTree implements IResourceTree {
 			}
 
 			// Move the project content in the local file system.
-			IFileStore sourceStore = ((Resource)source).getStore();
 			try {
 				moveProjectContent(source, description, flags, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
 			} catch (CoreException e) {
 				message = NLS.bind(Messages.localstore_couldNotMove, source.getFullPath());
 				IStatus status = new ResourceStatus(IStatus.ERROR, source.getFullPath(), message, e);
 				failed(status);
+				//refresh the project because it might have been partially moved
+				try {
+					source.refreshLocal(IResource.DEPTH_INFINITE, null);
+				} catch (CoreException e2) {
+					//ignore secondary failures
+				}
 			}
 
 			// If we got this far the project content has been moved on disk (if necessary)
 			// and we need to update the workspace tree.
 			movedProjectSubtree(source, description);
 			monitor.worked(Policy.totalWork * 1 / 8);
-			//if the source still exists on disk due to failure, recreate the source tree
-			if (sourceStore.fetchInfo().exists()) {
-				try {
-					if (!source.exists())
-						source.create(null);
-					if (!source.isOpen())
-						source.open(null);
-					source.refreshLocal(IResource.DEPTH_INFINITE, null);
-				} catch (CoreException e) {
-					//ignore secondary failures - the initial failure will already be logged
-				}
-			}
 			
 			boolean isDeep = (flags & IResource.SHALLOW) == 0;
 			updateTimestamps(source.getWorkspace().getRoot().getProject(description.getName()), isDeep);

@@ -22,6 +22,9 @@ import org.eclipse.core.tests.resources.ResourceTest;
  * Tests regression of bug 25457.  In this case, attempting to move a project
  * that is only a case change, where the move fails due to another handle being
  * open on a file in the hierarchy, would cause deletion of the source.
+ * 
+ * Note: this is similar to Bug_32076, which deals with failure to move in
+ * the non case-change scenario.
  */
 public class Bug_25457 extends ResourceTest {
 	public static Test suite() {
@@ -148,13 +151,13 @@ public class Bug_25457 extends ResourceTest {
 			} catch (CoreException e1) {
 				//should fail
 			}
-			//ensure source still exists
-			assertTrue("2.0", source.exists());
-			assertTrue("2.1", sourceFile.exists());
+			//ensure source does not exist
+			assertTrue("2.0", !source.exists());
+			assertTrue("2.1", !sourceFile.exists());
 
 			//ensure destination does not exist
-			assertTrue("2.2", !destination.exists());
-			assertTrue("2.3", !destFile.exists());
+			assertTrue("2.2", destination.exists());
+			assertTrue("2.3", destFile.exists());
 
 		} finally {
 			assertClose(stream);
