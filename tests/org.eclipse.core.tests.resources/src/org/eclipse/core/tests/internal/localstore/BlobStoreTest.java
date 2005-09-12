@@ -89,7 +89,7 @@ public class BlobStoreTest extends LocalStoreTest {
 	private IFileStore createStore() {
 		IFileStore root = getTempStore();
 		try {
-			root.create(IFileStoreConstants.DIRECTORY, null);
+			root.mkdir(IFileStoreConstants.NONE, null);
 		} catch (CoreException e1) {
 			fail("createStore.99", e1);
 		}

@@ -34,7 +34,7 @@ public class FileStoreTest extends LocalStoreTest {
 	private IFileStore createDir(IFileStore store, boolean clear) throws CoreException {
 		if (clear && store.fetchInfo().exists())
 			store.delete(NONE, null);
-		store.create(DIRECTORY, null);
+		store.mkdir(NONE, null);
 		IFileInfo info = store.fetchInfo();
 		assertTrue("createDir.1", info.exists());
 		assertTrue("createDir.1", info.isDirectory());
@@ -104,7 +104,7 @@ public class FileStoreTest extends LocalStoreTest {
 	public void testCopyDirectory() throws Throwable {
 		/* build scenario */
 		IFileStore temp = FileStoreFactory.create(getWorkspace().getRoot().getLocation().append("temp"));
-		temp.create(DIRECTORY, null);
+		temp.mkdir(NONE, null);
 		assertTrue("1.1", temp.fetchInfo().isDirectory());
 		// create tree
 		IFileStore target = temp.getChild("target");

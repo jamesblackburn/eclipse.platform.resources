@@ -89,7 +89,7 @@ public abstract class LocalStoreTest extends ResourceTest implements IFileStoreC
 	protected void createNode(IFileStore node) throws CoreException {
 		char type = node.getName().charAt(0);
 		if (type == 'd')
-			node.create(DIRECTORY, null);
+			node.mkdir(NONE, null);
 		else {
 			InputStream input = getRandomContents();
 			OutputStream output = node.openOutputStream(NONE, null);

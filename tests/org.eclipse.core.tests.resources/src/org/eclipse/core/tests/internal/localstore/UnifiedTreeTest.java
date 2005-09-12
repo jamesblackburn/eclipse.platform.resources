@@ -74,7 +74,7 @@ public class UnifiedTreeTest extends LocalStoreTest {
 		createFiles(folder, set);
 		for (int i = 0; i < limit; i++) {
 			IFileStore child = folder.getChild("fsFolder" + i);
-			child.create(DIRECTORY, null);
+			child.mkdir(NONE, null);
 			set.put(child.toString(), "");
 			if (i < (limit / 2))
 				createFiles(child, set);

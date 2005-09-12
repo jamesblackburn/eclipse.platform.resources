@@ -440,7 +440,7 @@ public class ResourceTest extends CoreTest {
 	public void createFileInFileSystem(IFileStore file) {
 		OutputStream output = null;
 		try {
-			file.getParent().create(IFileStoreConstants.DIRECTORY, null);
+			file.getParent().mkdir(IFileStoreConstants.NONE, null);
 			output = file.openOutputStream(IFileStoreConstants.NONE, null);
 			output.write(getRandomString().getBytes("UTF8"));
 		} catch (IOException e) {
@@ -561,7 +561,7 @@ public class ResourceTest extends CoreTest {
 			ensureExistsInFileSystem((IFile) resource);
 		else {
 			try {
-				((Resource)resource).getStore().create(IFileStoreConstants.DIRECTORY, null);
+				((Resource)resource).getStore().mkdir(IFileStoreConstants.NONE, null);
 			} catch (CoreException e) {
 				fail("ensureExistsInFileSystem.1", e);
 			}
@@ -885,7 +885,7 @@ public class ResourceTest extends CoreTest {
 		IFileInfo fileInfo = target.fetchInfo();
 		fileInfo.setAttribute(IFileStoreConstants.ATTRIBUTE_READ_ONLY, value);
 		try {
-			target.setFileInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES, null);
+			target.putInfo(fileInfo, IFileStoreConstants.SET_ATTRIBUTES, null);
 		} catch (CoreException e) {
 			fail("ResourceTest#setReadOnly", e);
 		}

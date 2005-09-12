@@ -50,7 +50,7 @@ public class BlobStore {
 		UniversalUniqueIdentifier uuid = new UniversalUniqueIdentifier();
 		IFileStore dir = folderFor(uuid);
 		if (!dir.fetchInfo().exists())
-			dir.create(IFileStoreConstants.DIRECTORY, null);
+			dir.mkdir(IFileStoreConstants.NONE, null);
 		IFileStore destination = fileFor(uuid);
 		if (moveContents)
 			target.move(destination, IFileStoreConstants.NONE, null);
