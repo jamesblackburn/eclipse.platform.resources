@@ -705,7 +705,7 @@ public class ResourceTest extends CoreTest {
 	 * the test is completed.
 	 */
 	protected IFileStore getTempStore() {
-		IFileStore store = FileStoreFactory.create(FileSystemHelper.getRandomLocation(getTempDir()));
+		IFileStore store = FileSystemCore.getLocalFileSystem().getStore(FileSystemHelper.getRandomLocation(getTempDir()));
 		storesToDelete.add(store);
 		return store;
 	}

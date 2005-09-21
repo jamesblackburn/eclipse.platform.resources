@@ -334,7 +334,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 		//handle case where resource location cannot be resolved
 		//location can be null if based on an undefined variable
 		if (root == null) {
-			return FileStoreFactory.createNullStore(target.getFullPath());
+			return FileSystemCore.createNullStore(target.getFullPath());
 //			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
 //			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 		}
@@ -827,7 +827,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 	 */
 	public void setResourceAttributes(IResource resource, ResourceAttributes attributes) throws CoreException {
 		IFileStore store = getStore(resource);
-		IFileInfo fileInfo = FileStoreFactory.createFileInfo();
+		IFileInfo fileInfo = FileSystemCore.createFileInfo();
 		fileInfo.setAttribute(ATTRIBUTE_READ_ONLY, attributes.isReadOnly());
 		fileInfo.setAttribute(ATTRIBUTE_EXECUTABLE, attributes.isExecutable());
 		fileInfo.setAttribute(ATTRIBUTE_ARCHIVE, attributes.isArchive());

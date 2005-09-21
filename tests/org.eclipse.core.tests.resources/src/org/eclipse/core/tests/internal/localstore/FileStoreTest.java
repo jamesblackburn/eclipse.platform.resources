@@ -42,7 +42,7 @@ public class FileStoreTest extends LocalStoreTest {
 	}
 
 	private IFileStore createDir(String string, boolean clear) throws CoreException {
-		return createDir(FileStoreFactory.create(new Path(string)), clear);
+		return createDir(FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(new Path(string)), clear);
 	}
 
 	/**
@@ -103,7 +103,7 @@ public class FileStoreTest extends LocalStoreTest {
 
 	public void testCopyDirectory() throws Throwable {
 		/* build scenario */
-		IFileStore temp = FileStoreFactory.create(getWorkspace().getRoot().getLocation().append("temp"));
+		IFileStore temp = FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(getWorkspace().getRoot().getLocation().append("temp"));
 		temp.mkdir(NONE, null);
 		assertTrue("1.1", temp.fetchInfo().isDirectory());
 		// create tree
@@ -246,14 +246,14 @@ public class FileStoreTest extends LocalStoreTest {
 		IFileStore target = temp.getChild("target");
 		long stat;
 
-		/* test stat with an nexisting file */
+		/* test stat with an non-existing file */
 		stat = target.fetchInfo().getLastModified();
-		assertTrue("1.0", stat == 0);
+		assertEquals("1.0", IFileStoreConstants.INVALID, stat);
 
 		/* test stat with an existing folder */
 		createDir(target, true);
 		stat = target.fetchInfo().getLastModified();
-		assertTrue("2.0", stat != 0);
+		assertTrue("2.0", IFileStoreConstants.INVALID != stat);
 
 		/* remove trash */
 		temp.delete(NONE, null);

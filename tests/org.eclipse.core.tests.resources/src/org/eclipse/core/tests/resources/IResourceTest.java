@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.*;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.eclipse.core.filesystem.FileStoreFactory;
+import org.eclipse.core.filesystem.FileSystemCore;
 import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.*;
@@ -1508,7 +1508,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 			project.open(getMonitor());
 			ensureDoesNotExistInWorkspace(topFolder);
 			ensureDoesNotExistInWorkspace(topFile);
-			createFileInFileSystem(FileStoreFactory.create(fileLocation));
+			createFileInFileSystem(FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(fileLocation));
 			folderLocation.toFile().mkdirs();
 			topFolder.createLink(folderLocation, IResource.NONE, getMonitor());
 			topFile.createLink(fileLocation, IResource.NONE, getMonitor());
@@ -1536,7 +1536,7 @@ public class IResourceTest extends ResourceTest implements IFileStoreConstants {
 			IPath variableFileLocation = new Path(variableName).append("/VarFileName");
 			ensureDoesNotExistInWorkspace(topFolder);
 			ensureDoesNotExistInWorkspace(topFile);
-			createFileInFileSystem(FileStoreFactory.create(varMan.resolvePath(variableFileLocation)));
+			createFileInFileSystem(FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(varMan.resolvePath(variableFileLocation)));
 			varMan.resolvePath(variableFolderLocation).toFile().mkdirs();
 			topFolder.createLink(variableFolderLocation, IResource.NONE, getMonitor());
 			topFile.createLink(variableFileLocation, IResource.NONE, getMonitor());

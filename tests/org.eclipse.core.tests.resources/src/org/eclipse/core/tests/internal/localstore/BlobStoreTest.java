@@ -49,7 +49,7 @@ public class BlobStoreTest extends LocalStoreTest {
 		/* nonexistent location */
 		ok = false;
 		try {
-			new BlobStore(FileStoreFactory.create(new Path("../this/path/should/not/be/a/folder")), 128);
+			new BlobStore(FileSystemCore.getLocalFileSystem().getStore(new Path("../this/path/should/not/be/a/folder")), 128);
 		} catch (RuntimeException e) {
 			ok = true;
 		}

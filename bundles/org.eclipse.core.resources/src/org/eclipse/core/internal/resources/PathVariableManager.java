@@ -176,7 +176,7 @@ public class PathVariableManager implements IPathVariableManager, IManager {
 			return uri;
 		IPath raw = new Path(uri.getSchemeSpecificPart());
 		IPath resolved = resolvePath(raw);
-		return FileUtil.toURI(resolved);
+		return raw == resolved ? uri : FileUtil.toURI(resolved);
 	}
 
 	/**

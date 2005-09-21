@@ -306,7 +306,7 @@ public class LinkedResourceWithPathVariableTest extends LinkedResourceTest {
 		assertTrue("1.2", getWorkspace().validateLinkLocation(testFolder, folderLocation).getSeverity() == IStatus.WARNING);
 		assertTrue("1.3", getWorkspace().validateLinkLocation(testFile, fileLocation).getSeverity() == IStatus.WARNING);
 
-		//should suceed with ALLOW_MISSING_LOCAL
+		//should succeed with ALLOW_MISSING_LOCAL
 		try {
 			testFile.createLink(fileLocation, IResource.ALLOW_MISSING_LOCAL, getMonitor());
 		} catch (CoreException e) {

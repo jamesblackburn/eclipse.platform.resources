@@ -11,10 +11,11 @@ package org.eclipse.core.internal.localstore;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import org.eclipse.core.filesystem.FileStoreFactory;
+import org.eclipse.core.filesystem.FileSystemCore;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IPathVariableManager;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 
 /**
@@ -69,7 +70,14 @@ public class FileStoreRoot {
 
 	IFileStore createStore(IPath workspacePath) {
 		URI uri = variableManager.resolveURI(buildURI(workspacePath));
-		return FileStoreFactory.create(uri);
+		try {
+			//scheme is null for undefined path variables
+			if (uri.getScheme() != null)
+				return FileSystemCore.getStore(uri);
+		} catch (CoreException e) {
+			//the resource location has an undefined or invalid protocol - fall through below
+		}
+		return FileSystemCore.createNullStore(workspacePath);
 	}
 
 	boolean isValid() {

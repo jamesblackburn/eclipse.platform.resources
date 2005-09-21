@@ -627,8 +627,9 @@ class ResourceTree implements IResourceTree {
 					// log the status but don't return until we try and move the rest of the resource info
 					failed(status);
 				}
-				IFileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
-				IFileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
+				final IFileSystem fileSystem = FileSystemCore.getLocalFileSystem();
+				IFileStore oldMetaArea = fileSystem.getStore(workspace.getMetaArea().locationFor(source));
+				IFileStore newMetaArea = fileSystem.getStore(workspace.getMetaArea().locationFor(destination));
 				try {
 					oldMetaArea.move(newMetaArea, IFileStoreConstants.NONE, new NullProgressMonitor());
 				} catch (CoreException e) {
@@ -719,7 +720,7 @@ class ResourceTree implements IResourceTree {
 			// should already have a location assigned to it.
 			if (destLocation == null)
 				destLocation = Platform.getLocation().append(destDescription.getName());
-			IFileStore destStore = FileStoreFactory.create(destLocation);
+			IFileStore destStore = FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(destLocation);
 
 			// Move the contents on disk.
 			localManager.move(source, destStore, flags, monitor);

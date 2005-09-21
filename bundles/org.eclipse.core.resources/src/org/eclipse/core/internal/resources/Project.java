@@ -233,8 +233,8 @@ public class Project extends Container implements IProject {
 	}
 
 	protected void copyMetaArea(IProject source, IProject destination, IProgressMonitor monitor) throws CoreException {
-		IFileStore oldMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(source));
-		IFileStore newMetaArea = FileStoreFactory.create(workspace.getMetaArea().locationFor(destination));
+		IFileStore oldMetaArea = FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(workspace.getMetaArea().locationFor(source));
+		IFileStore newMetaArea = FileSystemCore.getFileSystem(IFileStoreConstants.SCHEME_FILE).getStore(workspace.getMetaArea().locationFor(destination));
 		oldMetaArea.copy(newMetaArea, IFileStoreConstants.NONE, monitor);
 	}
 
