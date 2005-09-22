@@ -334,7 +334,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 		//handle case where resource location cannot be resolved
 		//location can be null if based on an undefined variable
 		if (root == null) {
-			return FileSystemCore.createNullStore(target.getFullPath());
+			return FileSystemCore.getNullFileSystem().getStore(target.getFullPath());
 //			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
 //			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
 		}

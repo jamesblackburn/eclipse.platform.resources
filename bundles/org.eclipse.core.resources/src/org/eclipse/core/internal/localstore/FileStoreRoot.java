@@ -77,7 +77,7 @@ public class FileStoreRoot {
 		} catch (CoreException e) {
 			//the resource location has an undefined or invalid protocol - fall through below
 		}
-		return FileSystemCore.createNullStore(workspacePath);
+		return FileSystemCore.getNullFileSystem().getStore(workspacePath);
 	}
 
 	boolean isValid() {
