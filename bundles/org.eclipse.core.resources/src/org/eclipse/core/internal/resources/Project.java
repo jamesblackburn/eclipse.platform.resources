@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.core.internal.resources;
 
+import java.net.URI;
 import java.util.*;
 import org.eclipse.core.filesystem.*;
 import org.eclipse.core.internal.events.LifecycleEvent;
@@ -133,7 +134,7 @@ public class Project extends Container implements IProject {
 	 * Checks validity of the given project description.
 	 */
 	protected void checkDescription(IProject project, IProjectDescription desc, boolean moving) throws CoreException {
-		IPath location = desc.getLocation();
+		URI location = desc.getLocationURI();
 		if (location == null)
 			return;
 		String message = Messages.resources_invalidProjDesc;
@@ -147,15 +148,12 @@ public class Project extends Container implements IProject {
 			// of the new description. Otherwise both locations aren't null and they are equal so ignore validation.
 			IPath sourceLocation = internalGetDescription().getLocation();
 			if (sourceLocation == null || !sourceLocation.equals(location))
-				status.merge(workspace.validateProjectLocation(project, location));
+				status.merge(workspace.validateProjectLocationURI(project, location));
 		} else
 			// otherwise continue on like before
-			status.merge(workspace.validateProjectLocation(project, location));
+			status.merge(workspace.validateProjectLocationURI(project, location));
 		if (!status.isOK())
 			throw new ResourceException(status);
-		//try infer the device if there isn't one (windows)
-		if (location.isAbsolute() && location.getDevice() == null)
-			desc.setLocation(new Path(location.toFile().getAbsolutePath()));
 	}
 
 	/* (non-Javadoc)

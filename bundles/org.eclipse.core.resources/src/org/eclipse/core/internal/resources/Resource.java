@@ -418,7 +418,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @exception CoreException if the path is not valid
 	 */
 	public void checkValidPath(IPath toValidate, int type, boolean lastSegmentOnly) throws CoreException {
-		IStatus result = workspace.validatePath(toValidate, type, lastSegmentOnly);
+		IStatus result = workspace.locationValidator.validatePath(toValidate, type, lastSegmentOnly);
 		if (!result.isOK())
 			throw new ResourceException(result);
 	}

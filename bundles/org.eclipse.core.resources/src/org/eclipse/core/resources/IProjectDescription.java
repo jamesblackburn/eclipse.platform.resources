@@ -73,9 +73,12 @@ public interface IProjectDescription {
 	 * Returns the  local file system location for the described project.  The path
 	 * will be either an absolute file system path, or a relative path whose first
 	 * segment is the name of a workspace path variable. <code>null</code> is
-	 * returned if the default location should be used.
+	 * returned if the default location should be used, or if this project is not
+	 * located in the local file system.
 	 *
 	 * @return the location for the described project or <code>null</code>
+	 * @deprecated Since 3.2, project locations are not necessarily in the local file
+	 * system.  The more general {@link #getLocationURI()} method should be used instead.
 	 */
 	public IPath getLocation();
 
@@ -84,6 +87,7 @@ public interface IProjectDescription {
 	 * returned if the default location should be used.
 	 *
 	 * @return the location for the described project or <code>null</code>
+	 * @since 3.2
 	 */
 	public URI getLocationURI();
 
@@ -227,7 +231,9 @@ public interface IProjectDescription {
 	 * </p>
 	 *
 	 * @param location the location for the described project or <code>null</code>
-	 * @see #getLocation()
+	 * @see #getLocationURI()
+	 * @see IWorkspace#validateProjectLocationURI(IProject, URI)
+	 * @since 3.2
 	 */
 	public void setLocationURI(URI location);
 
