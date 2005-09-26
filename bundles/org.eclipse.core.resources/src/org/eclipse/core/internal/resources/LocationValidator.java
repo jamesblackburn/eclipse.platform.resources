@@ -11,6 +11,7 @@ package org.eclipse.core.internal.resources;
 
 import java.net.URI;
 import org.eclipse.core.filesystem.IFileStoreConstants;
+import org.eclipse.core.internal.utils.FileUtil;
 import org.eclipse.core.internal.utils.Messages;
 import org.eclipse.core.resources.*;
 import org.eclipse.core.runtime.*;
@@ -283,15 +284,21 @@ public class LocationValidator {
 		return validatePath(Path.fromOSString(path), type, false);
 	}
 
-	/* (non-Javadoc)
-	 * @see IWorkspace#validateProjectLocation(IProject, IPath)
-	 */
 	public IStatus validateProjectLocation(IProject context, IPath unresolvedLocation) {
 		// the default default is ok for all projects
 		if (unresolvedLocation == null)
 			return Status.OK_STATUS;
 		IPath location = workspace.getPathVariableManager().resolvePath(unresolvedLocation);
-		return validateProjectLocationURI(context, location.toFile().toURI());
+		//check that the location is absolute
+		if (!location.isAbsolute()) {
+			String message;
+			if (location.segmentCount() > 0)
+				message = NLS.bind(Messages.pathvar_undefined, location.toString(), location.segment(0));
+			else
+				message = Messages.links_noPath;
+			return new ResourceStatus(IResourceStatus.VARIABLE_NOT_DEFINED, null, message);
+		}
+		return validateProjectLocationURI(context, FileUtil.toURI(location));
 	}
 
 	/* (non-Javadoc)
@@ -304,7 +311,7 @@ public class LocationValidator {
 			return Status.OK_STATUS;
 		//check the standard path name restrictions
 		URI location = workspace.getPathVariableManager().resolveURI(unresolvedLocation);
-		IPath pathPart = new Path(location.getPath());
+		IPath pathPart = new Path(location.getSchemeSpecificPart());
 		int segmentCount = pathPart.segmentCount();
 		for (int i = 0; i < segmentCount; i++) {
 			IStatus result = validateName(pathPart.segment(i), IResource.PROJECT);

@@ -11,6 +11,8 @@ package org.eclipse.core.internal.utils;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
+import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.resources.ResourceException;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.runtime.*;
@@ -59,8 +61,23 @@ public class FileUtil {
 	 * Converts a path to a URI
 	 */
 	public static URI toURI(IPath path) {
-		if (path.isAbsolute())
-			return path.toFile().toURI();
+		if (path.isAbsolute()) {
+			String filePath = path.toFile().getAbsolutePath();
+			StringBuffer pathBuf = new StringBuffer(filePath.length() + 1);
+			//double-slash is the URI host separator
+			pathBuf.append('/');
+			//additional double-slash for UNC paths
+			if (path.isUNC())
+				pathBuf.append('/').append('/');
+			pathBuf.append(filePath);
+			try {
+				return new URI(IFileStoreConstants.SCHEME_FILE, null, pathBuf.toString(), null);
+			} catch (URISyntaxException e) {
+				IllegalArgumentException iae = new IllegalArgumentException();
+				iae.initCause(e);
+				throw iae;
+			}
+		}
 		return URI.create(path.toString());
 	}
 
