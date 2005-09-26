@@ -248,12 +248,12 @@ public class FileStoreTest extends LocalStoreTest {
 
 		/* test stat with an non-existing file */
 		stat = target.fetchInfo().getLastModified();
-		assertEquals("1.0", IFileStoreConstants.INVALID, stat);
+		assertEquals("1.0", IFileStoreConstants.NONE, stat);
 
 		/* test stat with an existing folder */
 		createDir(target, true);
 		stat = target.fetchInfo().getLastModified();
-		assertTrue("2.0", IFileStoreConstants.INVALID != stat);
+		assertTrue("2.0", IFileStoreConstants.NONE != stat);
 
 		/* remove trash */
 		temp.delete(NONE, null);
