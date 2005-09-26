@@ -227,7 +227,7 @@ public class LinkedResourceWithPathVariableTest extends LinkedResourceTest {
 		//try to create a sub-file
 		try {
 			destination.create(getRandomContents(), IResource.NONE, getMonitor());
-			//shoudl fail
+			//should fail
 			fail("3.7");
 		} catch (CoreException e) {
 			//expected
@@ -352,7 +352,7 @@ public class LinkedResourceWithPathVariableTest extends LinkedResourceTest {
 			//should fail
 		}
 
-		//refresh local should suceed
+		//refresh local should succeed
 		try {
 			testFile.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
 			testFolder.refreshLocal(IResource.DEPTH_INFINITE, getMonitor());
@@ -373,7 +373,7 @@ public class LinkedResourceWithPathVariableTest extends LinkedResourceTest {
 			fail("6.0");
 		}
 
-		//delete should suceed
+		//delete should succeed
 		try {
 			testFile.delete(IResource.NONE, getMonitor());
 			testFolder.delete(IResource.NONE, getMonitor());
@@ -434,7 +434,7 @@ public class LinkedResourceWithPathVariableTest extends LinkedResourceTest {
 		// the location is different - does not exist anymore
 		assertDoesNotExistInFileSystem("3.3", file);
 
-		// successfuly changes resource's contents (using IResource.FORCE)
+		// successfully changes resource's contents (using IResource.FORCE)
 		try {
 			file.setContents(getContents("contents in different location"), IResource.FORCE, getMonitor());
 		} catch (CoreException e) {
