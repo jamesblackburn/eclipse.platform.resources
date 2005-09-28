@@ -63,10 +63,14 @@ public class FileUtil {
 	public static URI toURI(IPath path) {
 		if (path.isAbsolute()) {
 			String filePath = path.toFile().getAbsolutePath();
-			StringBuffer pathBuf = new StringBuffer(filePath.length() + 1);
-			//double-slash is the URI host separator
-			pathBuf.append('/');
-			//additional double-slash for UNC paths
+			if (File.separatorChar != '/')
+				filePath = filePath.replace(File.separatorChar, '/');
+			final int length = filePath.length();
+			StringBuffer pathBuf = new StringBuffer(length + 1);
+			//There must be a leading slash in a hierarchical URI
+			if (length > 0 && (filePath.charAt(0) != '/'))
+				pathBuf.append('/');
+			//additional double-slash for UNC paths to distinguish from host separator
 			if (path.isUNC())
 				pathBuf.append('/').append('/');
 			pathBuf.append(filePath);
