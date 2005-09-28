@@ -40,7 +40,7 @@ public class IFileTest extends ResourceTest {
 	/**
 	 * Bug states that the error code in the CoreException which is thrown when
 	 * you try to create a file in a read-only folder on Linux should be 
-	 * FAILED_WRITE_LOCAL.
+	 * ERROR_WRITE.
 	 */
 	public void testBug25658() {
 
