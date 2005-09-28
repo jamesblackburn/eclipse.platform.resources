@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2004 IBM Corporation and others.
+ * Copyright (c) 2000, 2005 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,7 @@
 package org.eclipse.core.tests.internal.localstore;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.Date;
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -18,6 +19,9 @@ import org.eclipse.core.filesystem.*;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.*;
 
+/**
+ * Basic tests for the IFileStore API
+ */
 public class FileStoreTest extends LocalStoreTest {
 	public static Test suite() {
 		return new TestSuite(FileStoreTest.class);
@@ -235,6 +239,33 @@ public class FileStoreTest extends LocalStoreTest {
 
 		/* remove trash */
 		target.delete(NONE, null);
+	}
+
+	public void testGetLength() throws Exception {
+		// evaluate test environment 
+		IPath root = getWorkspace().getRoot().getLocation().append("" + new Date().getTime());
+		IFileStore temp = createDir(root.toString(), true);
+		try {
+			// create common objects
+			IFileStore target = temp.getChild("target");
+
+			// test non-existent file 
+			assertEquals("1.0", IFileStoreConstants.NONE, target.fetchInfo().getLength());
+
+			// create empty file
+			target.openOutputStream(IFileStoreConstants.NONE, null).close();
+			assertEquals("1.0", 0, target.fetchInfo().getLength());
+
+			// add a byte
+			OutputStream out = target.openOutputStream(IFileStoreConstants.NONE, null);
+			out.write(5);
+			out.close();
+			assertEquals("1.0", 1, target.fetchInfo().getLength());
+		} finally {
+			/* remove trash */
+			temp.delete(NONE, null);
+		}
+
 	}
 
 	public void testGetStat() throws CoreException {
