@@ -823,7 +823,8 @@ class ResourceTree implements IResourceTree {
 					IFileStore projectStore = localManager.getStore(project);
 					// if the project is open, we must perform a best-effort deletion			
 					if (project.isOpen()) {
-						localManager.delete(project, flags, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
+						//use force because we already checked for synchronization above
+						localManager.delete(project, flags & IResource.FORCE, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
 						projectStore.delete(IFileStoreConstants.NONE, null);
 					} else {
 						projectStore.delete(IFileStoreConstants.NONE, Policy.subMonitorFor(monitor, Policy.totalWork * 3 / 4));
