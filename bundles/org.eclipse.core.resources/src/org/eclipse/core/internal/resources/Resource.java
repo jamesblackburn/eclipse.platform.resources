@@ -1135,7 +1135,8 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @deprecated
 	 */
 	public boolean isReadOnly() {
-		return getResourceAttributes().isReadOnly();
+		final ResourceAttributes attributes = getResourceAttributes();
+		return attributes == null ? false : attributes.isReadOnly();
 	}
 
 	/* (non-Javadoc)

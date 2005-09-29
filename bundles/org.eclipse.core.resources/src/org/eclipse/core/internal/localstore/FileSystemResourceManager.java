@@ -116,8 +116,10 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 	 */
 	public ResourceAttributes attributes(IResource resource) {
 		IFileStore store = getStore(resource);
-		ResourceAttributes attributes = new ResourceAttributes();
 		IFileInfo fileInfo = store.fetchInfo();
+		if (!fileInfo.exists())
+			return null;
+		ResourceAttributes attributes = new ResourceAttributes();
 		attributes.setReadOnly(fileInfo.getAttribute(ATTRIBUTE_READ_ONLY));
 		attributes.setArchive(fileInfo.getAttribute(ATTRIBUTE_ARCHIVE));
 		attributes.setExecutable(fileInfo.getAttribute(ATTRIBUTE_EXECUTABLE));
