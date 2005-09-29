@@ -22,9 +22,9 @@ import org.eclipse.core.runtime.*;
 import org.eclipse.core.tests.harness.*;
 
 /**
- * Tests that use the Eclipse Platform workspace.
+ * Superclass for tests that use the Eclipse Platform workspace.
  */
-public class ResourceTest extends CoreTest {
+public abstract class ResourceTest extends CoreTest {
 	/** delta change listener if requested */
 	public static IResourceChangeListener deltaListener;
 
