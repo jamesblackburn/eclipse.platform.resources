@@ -64,7 +64,6 @@ public class ModelObjectReaderWriterTest extends ResourceTest {
 		ProjectDescriptionReader reader = new ProjectDescriptionReader();
 		IPath root = getWorkspace().getRoot().getLocation();
 		IPath location = root.append("ModelObjectWriterTest2.pbs");
-		String defaultCharset = "ISO-1234-5";
 		/* test write */
 		ProjectDescription description = new ProjectDescription();
 		description.setLocation(location);
