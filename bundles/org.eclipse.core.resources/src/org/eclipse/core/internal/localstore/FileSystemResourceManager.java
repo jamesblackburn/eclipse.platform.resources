@@ -332,17 +332,12 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 	 * @return The file store for this resource
 	 */
 	public IFileStore getStore(IResource target) {
-		FileStoreRoot root = getStoreRoot(target);
-		//handle case where resource location cannot be resolved
-		//location can be null if based on an undefined variable
-		if (root == null) {
-			return FileSystemCore.getNullFileSystem().getStore(target.getFullPath());
-//			String message = NLS.bind(Messages.localstore_locationUndefined, target.getFullPath());
-//			throw new ResourceException(IResourceStatus.FAILED_WRITE_LOCAL, target.getFullPath(), message, null);
-		}
-		return root.createStore(target.getFullPath());
+		return getStoreRoot(target).createStore(target.getFullPath());
 	}
 
+	/**
+	 * Returns the file store root for the provided resource. Never returns null.
+	 */
 	private FileStoreRoot getStoreRoot(IResource target) {
 		ResourceInfo info = workspace.getResourceInfo(target.getFullPath(), true, false);
 		FileStoreRoot root;
