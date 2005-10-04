@@ -311,15 +311,18 @@ public class LocationValidator {
 			return Status.OK_STATUS;
 		//check the standard path name restrictions
 		URI location = workspace.getPathVariableManager().resolveURI(unresolvedLocation);
-		IPath pathPart = new Path(location.getSchemeSpecificPart());
-		int segmentCount = pathPart.segmentCount();
-		for (int i = 0; i < segmentCount; i++) {
-			IStatus result = validateName(pathPart.segment(i), IResource.PROJECT);
-			if (!result.isOK())
-				return result;
+		if (IFileStoreConstants.SCHEME_FILE.equals(location.getScheme())) {
+			IPath pathPart = new Path(location.getSchemeSpecificPart());
+			int segmentCount = pathPart.segmentCount();
+			for (int i = 0; i < segmentCount; i++) {
+				IStatus result = validateName(pathPart.segment(i), IResource.PROJECT);
+				if (!result.isOK())
+					return result;
+			}
 		}
 		//check that the location is absolute
 		if (!location.isAbsolute()) {
+			IPath pathPart = new Path(location.getSchemeSpecificPart());
 			if (pathPart.segmentCount() > 0)
 				message = NLS.bind(Messages.pathvar_undefined, location.toString(), pathPart.segment(0));
 			else
