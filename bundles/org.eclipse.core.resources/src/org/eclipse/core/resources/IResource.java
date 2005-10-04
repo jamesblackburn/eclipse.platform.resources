@@ -1083,10 +1083,16 @@ public interface IResource extends IAdaptable, ISchedulingRule {
 	 * or a file or folder below such a project, this method returns
 	 * <code>null</code>.
 	 * </p>
+	 * <p>
+	 * This method fails if called on a resource that is not stored in the local
+	 * file system.  For such resources {@link #getLocationURI()} should
+	 * be used instead.
+	 * </p>
 	 * 
 	 * @return the absolute path of this resource in the local file system,
 	 *  or <code>null</code> if no path can be determined
 	 * @see #getRawLocation()
+	 * @see #getLocationURI()
 	 * @see  IProjectDescription#setLocation(IPath)
 	 * @see Platform#getLocation()
 	 */

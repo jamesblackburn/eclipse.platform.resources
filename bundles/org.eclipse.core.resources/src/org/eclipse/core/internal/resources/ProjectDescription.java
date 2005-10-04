@@ -13,6 +13,7 @@ package org.eclipse.core.internal.resources;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
+import org.eclipse.core.filesystem.IFileStoreConstants;
 import org.eclipse.core.internal.events.BuildCommand;
 import org.eclipse.core.internal.utils.Assert;
 import org.eclipse.core.internal.utils.FileUtil;
@@ -167,11 +168,18 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 		return linkDescriptions;
 	}
 
-	/* (non-Javadoc)
+	/**
 	 * @see IProjectDescription#getLocation()
+	 * @deprecated
 	 */
 	public IPath getLocation() {
-		return location == null ? null : new Path(location.getSchemeSpecificPart());
+		if (location == null)
+			return null;
+		final String scheme = location.getScheme();
+		// null scheme represents path variable
+		if (scheme == null || IFileStoreConstants.SCHEME_FILE.equals(scheme))
+			return new Path(location.getSchemeSpecificPart());
+		throw new RuntimeException("Project is not in the local file system: " + location); //$NON-NLS-1$
 	}
 
 	/* (non-Javadoc)

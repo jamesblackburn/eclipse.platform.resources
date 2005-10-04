@@ -73,8 +73,8 @@ public interface IProjectDescription {
 	 * Returns the  local file system location for the described project.  The path
 	 * will be either an absolute file system path, or a relative path whose first
 	 * segment is the name of a workspace path variable. <code>null</code> is
-	 * returned if the default location should be used, or if this project is not
-	 * located in the local file system.
+	 * returned if the default location should be used.  This method will fail if this 
+	 * project is not located in the local file system.
 	 *
 	 * @return the location for the described project or <code>null</code>
 	 * @deprecated Since 3.2, project locations are not necessarily in the local file

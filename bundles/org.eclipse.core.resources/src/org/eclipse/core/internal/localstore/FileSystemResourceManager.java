@@ -630,23 +630,23 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 	 */
 	public ProjectDescription read(IProject target, boolean creation) throws CoreException {
 		//read the project location if this project is being created
-		IPath projectLocation = null;
+		URI projectLocation = null;
 		ProjectDescription privateDescription = null;
 		if (creation) {
 			privateDescription = new ProjectDescription();
 			getWorkspace().getMetaArea().readPrivateDescription(target, privateDescription);
-			projectLocation = privateDescription.getLocation();
+			projectLocation = privateDescription.getLocationURI();
 		} else {
 			IProjectDescription description = ((Project) target).internalGetDescription();
-			if (description != null && description.getLocation() != null) {
-				projectLocation = description.getLocation();
+			if (description != null && description.getLocationURI() != null) {
+				projectLocation = description.getLocationURI();
 			}
 		}
 		final boolean isDefaultLocation = projectLocation == null;
 		if (isDefaultLocation) {
-			projectLocation = getProjectDefaultLocation(target);
+			projectLocation = FileUtil.toURI(getProjectDefaultLocation(target));
 		}
-		IFileStore projectStore = initializeStore(target, FileUtil.toURI(projectLocation));
+		IFileStore projectStore = initializeStore(target, projectLocation);
 		IFileStore descriptionStore = projectStore.getChild(IProjectDescription.DESCRIPTION_FILE_NAME);
 		ProjectDescription description = null;
 		if (!descriptionStore.fetchInfo().exists()) {
@@ -678,7 +678,7 @@ public class FileSystemResourceManager implements ICoreConstants, IManager, IFil
 			//don't trust the project name in the description file
 			description.setName(target.getName());
 			if (!isDefaultLocation)
-				description.setLocation(projectLocation);
+				description.setLocationURI(projectLocation);
 			if (creation && privateDescription != null)
 				description.setDynamicReferences(privateDescription.getDynamicReferences(false));
 		}
