@@ -184,8 +184,7 @@ public class ProjectDescription extends ModelObject implements IProjectDescripti
 	synchronized public LinkedList/*<FilterDescription>*/ getFilter(IPath aPath) {
 		if (filterDescriptions == null)
 			return null;
-		LinkedList/*<FilterDescription>*/ desc = (LinkedList /*<FilterDescription> */) filterDescriptions.get(aPath);
-		return desc;
+		return (LinkedList /*<FilterDescription> */) filterDescriptions.get(aPath);
 	}
 
 	/**
