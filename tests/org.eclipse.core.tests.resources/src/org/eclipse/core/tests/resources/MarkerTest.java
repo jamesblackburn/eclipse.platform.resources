@@ -1,11 +1,11 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2005 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ *  Copyright (c) 2000, 2009 IBM Corporation and others.
+ *  All rights reserved. This program and the accompanying materials
+ *  are made available under the terms of the Eclipse Public License v1.0
+ *  which accompanies this distribution, and is available at
+ *  http://www.eclipse.org/legal/epl-v10.html
  * 
- * Contributors:
+ *  Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.core.tests.resources;
@@ -719,6 +719,35 @@ public class MarkerTest extends ResourceTest {
 			project.delete(true, true, null);
 		} catch (CoreException e) {
 			fail("1.99", e);
+		}
+	}
+
+	/*
+	 * Bug 289811 - ArrayIndexOutOfBoundsException in MarkerAttributeMap 
+	 */
+	public void test_289811() {
+		debug("test_289811");
+
+		IFile file = null;
+		String testValue = getRandomString();
+		try {
+			IProject project = getWorkspace().getRoot().getProject(getUniqueString());
+			project.create(null);
+			project.open(null);
+			file = project.getFile("foo.txt");
+			file.create(getRandomContents(), true, null);
+			IMarker marker = file.createMarker(IMarker.PROBLEM);
+			marker.setAttributes(new HashMap());
+			marker.setAttribute(IMarker.SEVERITY, testValue);
+			Object value = marker.getAttribute(IMarker.SEVERITY);
+			assertEquals("1.0." + file.getFullPath(), value, testValue);
+			project.delete(true, true, null);
+		} catch (CoreException e) {
+			fail("1.1." + file.getFullPath(), e);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			fail("1.2." + file.getFullPath(), e);
+		} catch (RuntimeException e) {
+			fail("1.3." + file.getFullPath(), e);
 		}
 	}
 
