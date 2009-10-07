@@ -671,7 +671,13 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				Project project = (Project) getProject();
 				boolean changed = project.internalGetDescription().setLinkLocation(getProjectRelativePath(), linkDescription);
 				if (changed)
-					project.writeDescription(IResource.NONE);
+					try {
+						project.writeDescription(IResource.NONE);
+					} catch (CoreException e) {
+						// a problem happened updating the description, so delete the resource from the workspace
+						workspace.deleteResource(this);
+						throw e; // rethrow
+					}	
 				monitor.worked(Policy.opWork * 5 / 100);
 
 				//refresh to discover any new resources below this linked location
