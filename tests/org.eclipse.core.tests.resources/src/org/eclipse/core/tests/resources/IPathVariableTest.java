@@ -221,7 +221,7 @@ public class IPathVariableTest extends ResourceTest {
 	 */
 	public void testGetSetValue() {
 		boolean WINDOWS = java.io.File.separatorChar == '\\';
-		IPath pathOne = WINDOWS ? new Path("C:\\temp") : new Path("/temp");
+		IPath pathOne = WINDOWS ? new Path("C:\\testGetSetValue") : new Path("/testGetSetValue");
 		IPath pathTwo = new Path("/blort/backup");
 		//add device if necessary
 		pathTwo = new Path(pathTwo.toFile().getAbsolutePath());
@@ -323,8 +323,7 @@ public class IPathVariableTest extends ResourceTest {
 	 */
 	public void testResolvePathWithMacro() {
 		final boolean WINDOWS = java.io.File.separatorChar == '\\';
-		IPath pathOne = WINDOWS ? new Path("c:/temp/foo") : new Path(
-				"/temp/foo");
+		IPath pathOne = WINDOWS ? new Path("c:/testGetSetValue/foo") : new Path("/testGetSetValue/foo");
 		IPath pathTwo = new Path("/tmp/backup");
 		// add device if neccessary
 		pathTwo = new Path(pathTwo.toFile().getAbsolutePath());
@@ -419,7 +418,7 @@ public class IPathVariableTest extends ResourceTest {
 	 */
 	public void testResolvePath() {
 		final boolean WINDOWS = java.io.File.separatorChar == '\\';
-		IPath pathOne = WINDOWS ? new Path("C:/temp/foo") : new Path("/temp/foo");
+		IPath pathOne = WINDOWS ? new Path("c:/testGetSetValue/foo") : new Path("/testGetSetValue/foo");
 		IPath pathTwo = new Path("/blort/backup");
 		//add device if necessary
 		pathTwo = new Path(pathTwo.toFile().getAbsolutePath());
@@ -439,7 +438,7 @@ public class IPathVariableTest extends ResourceTest {
 
 		// one substitution
 		IPath path = new Path("one/bar");
-		IPath expected = new Path("/temp/foo/bar").setDevice(WINDOWS ? "C:" : null);
+		IPath expected = new Path("/testGetSetValue/foo/bar").setDevice(WINDOWS ? "C:" : null);
 		IPath actual = manager.resolvePath(path);
 		assertEquals("1.0", expected, actual);
 
