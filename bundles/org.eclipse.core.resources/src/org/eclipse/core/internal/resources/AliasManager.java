@@ -363,7 +363,7 @@ public class AliasManager implements IManager, ILifecycleListener, IResourceChan
 	}
 
 	private void addToLocationsMap(IResource link, IFileStore location) {
-		if (location != null && !link.isGroup())
+		if (location != null && !link.isVirtual())
 			if (locationsMap.add(location, link))
 				nonDefaultResourceCount++;
 	}

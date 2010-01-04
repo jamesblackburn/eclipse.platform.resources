@@ -59,10 +59,10 @@ public interface ICoreConstants {
 	 */
 	static final int M_LINK = 0x10000;
 	/**
-	 * Marks this resource as a group.
+	 * Marks this resource as virtual.
 	 * @since 3.6
 	 */
-	static final int M_GROUP = 0x80000;
+	static final int M_VIRTUAL = 0x80000;
 	/**
 	 * The file has no content description.
 	 * @since 3.0

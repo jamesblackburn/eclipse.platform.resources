@@ -72,8 +72,8 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 
 	protected boolean copyContents(UnifiedTreeNode node, Resource source, Resource destination) {
 		try {
-			if (source.isGroup()) {
-				((Folder) destination).createGroup(updateFlags & IResource.ALLOW_MISSING_LOCAL, null);
+			if (source.isVirtual()) {
+				((Folder) destination).create(IResource.VIRTUAL, true, null);
 				return true;
 			}
 			if ((!isDeep || source.isUnderGroup()) && source.isLinked()) {
@@ -144,8 +144,8 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 	}
 
 	protected boolean isSynchronized(UnifiedTreeNode node) {
-		/* groups are always deemed as being synchronized */
-		if (node.getResource().isGroup())
+		/* virtual resources are always deemed as being synchronized */
+		if (node.getResource().isVirtual())
 			return true;
 		/* does the resource exist in workspace and file system? */
 		if (!node.existsInWorkspace() || !node.existsInFileSystem())

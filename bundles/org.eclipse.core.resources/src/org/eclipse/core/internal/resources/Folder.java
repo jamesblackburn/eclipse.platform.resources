@@ -75,7 +75,12 @@ public class Folder extends Container implements IFolder {
 	/* (non-Javadoc)
 	 * @see IFolder#create(int, boolean, IProgressMonitor)
 	 */
-	public void create(int updateFlags, boolean local, IProgressMonitor monitor) throws CoreException {
+	public void create(int updateFlags, boolean local, IProgressMonitor monitor) throws CoreException {	
+		if ((updateFlags & IResource.VIRTUAL) == IResource.VIRTUAL) {
+			createLink(LinkDescription.GROUP_LOCATION, updateFlags, monitor);
+			return;
+		}
+		
 		final boolean force = (updateFlags & IResource.FORCE) != 0;
 		monitor = Policy.monitorFor(monitor);
 		try {
@@ -120,16 +125,6 @@ public class Folder extends Container implements IFolder {
 		create((force ? IResource.FORCE : IResource.NONE), local, monitor);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see org.eclipse.core.resources.IFolder#createGroup(int,
-	 *      IProgressMonitor)
-	 */
-	public void createGroup(int updateFlags, IProgressMonitor monitor) throws CoreException {
-		createLink(LinkDescription.GROUP_LOCATION, updateFlags, monitor);
-	}
-
 	/**
 	 * Ensures that this folder exists in the workspace. This is similar in
 	 * concept to mkdirs but it does not work on projects.
@@ -151,7 +146,7 @@ public class Folder extends Container implements IFolder {
 		} else
 			((Folder) parent).ensureExists(monitor);
 		if (getType() == FOLDER && isUnderGroup())
-			createGroup(IResource.FORCE, monitor);
+			create(IResource.VIRTUAL | IResource.FORCE, true, monitor);
 		else
 			internalCreate(IResource.FORCE, true, monitor);
 	}

@@ -981,7 +981,7 @@ class ResourceTree implements IResourceTree {
 
 			//for linked resources, nothing needs to be moved in the file system
 			boolean isDeep = (flags & IResource.SHALLOW) == 0;
-			if (!isDeep && (source.isLinked() || source.isGroup())) {
+			if (!isDeep && (source.isLinked() || source.isVirtual())) {
 				movedFolderSubtree(source, destination);
 				return;
 			}

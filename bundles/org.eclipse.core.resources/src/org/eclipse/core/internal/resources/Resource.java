@@ -238,7 +238,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		checkAccessibleAndLocal(DEPTH_INFINITE);
 
 		IPath destinationParent = destination.removeLastSegments(1);
-		checkValidGroupContainer(destinationParent, isLinked(), isGroup());
+		checkValidGroupContainer(destinationParent, isLinked(), isVirtual());
 
 		Resource dest = workspace.newResource(destination, destinationType);
 		dest.checkDoesNotExist();
@@ -371,7 +371,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		checkAccessibleAndLocal(DEPTH_INFINITE);
 
 		IPath destinationParent = destination.removeLastSegments(1);
-		checkValidGroupContainer(destinationParent, isLinked(), isGroup());
+		checkValidGroupContainer(destinationParent, isLinked(), isVirtual());
 
 		Resource dest = workspace.newResource(destination, destinationType);
 
@@ -444,7 +444,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 			String message = Messages.group_invalidParent;
 			ResourceInfo info = workspace.getResourceInfo(destination, false,
 					false);
-			if (info != null && info.isSet(M_GROUP))
+			if (info != null && info.isSet(M_VIRTUAL))
 				throw new ResourceException(new ResourceStatus(
 						IResourceStatus.INVALID_VALUE, null, message));
 		}
@@ -460,7 +460,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	public void checkValidGroupContainer(Container destination, boolean isLink, boolean isGroup) throws CoreException {
 		if (!isLink && !isGroup) {
 			String message = Messages.group_invalidParent;
-			if (destination.isGroup())
+			if (destination.isVirtual())
 				throw new ResourceException(new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message));
 		}
 	}
@@ -469,7 +469,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		if (!isLink && !isGroup) {
 			String message = Messages.group_invalidParent;
 			ResourceInfo info = workspace.getResourceInfo(destination, false, false);
-			if (info.isSet(M_GROUP))
+			if (info.isSet(M_VIRTUAL))
 				return new ResourceStatus(IResourceStatus.INVALID_VALUE, null, message);
 		}
 		return Status.OK_STATUS;
@@ -667,7 +667,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				localLocation = FileUtil.canonicalURI(localLocation);
 				LinkDescription linkDescription = new LinkDescription(this, localLocation);
 				if (linkDescription.isGroup())
-					info.set(M_GROUP);
+					info.set(M_VIRTUAL);
 				getLocalManager().link(this, localLocation, fileInfo);
 				monitor.worked(Policy.opWork * 5 / 100);
 				//save the location in the project description
@@ -1156,7 +1156,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	protected void fixupAfterMoveSource() throws CoreException {
 		ResourceInfo info = getResourceInfo(true, true);
 		//if a linked resource is moved, we need to remove the location info from the .project 
-		if (isLinked() || isGroup()) {
+		if (isLinked() || isVirtual()) {
 			Project project = (Project) getProject();
 			if (project.internalGetDescription().setLinkLocation(getProjectRelativePath(), null))
 				project.writeDescription(IResource.NONE);
@@ -1220,7 +1220,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 */
 	public long getLocalTimeStamp() {
 		ResourceInfo info = getResourceInfo(false, false);
-		return (info == null || isGroup()) ? IResource.NULL_STAMP : info.getLocalSyncInfo();
+		return (info == null || isVirtual()) ? IResource.NULL_STAMP : info.getLocalSyncInfo();
 	}
 
 	/* (non-Javadoc)
@@ -1338,7 +1338,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * @see IResource#getResourceAttributes()
 	 */
 	public ResourceAttributes getResourceAttributes() {
-		if (!isAccessible() || isGroup())
+		if (!isAccessible() || isVirtual())
 			return null;
 		return getLocalManager().attributes(this);
 	}
@@ -1530,9 +1530,9 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 	 * (non-Javadoc)
 	 * @see IResource#isGroup()
 	 */
-	public boolean isGroup() {
+	public boolean isVirtual() {
 		ResourceInfo info = getResourceInfo(false, false);
-		return info != null && info.isSet(M_GROUP);
+		return info != null && info.isSet(M_VIRTUAL);
 	}
 
 	/* (non-Javadoc)
@@ -2122,7 +2122,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 			case IResource.FOLDER :
 				if (isLinked())
 					workspace.broadcastEvent(LifecycleEvent.newEvent(LifecycleEvent.PRE_LINK_MOVE, this, destination, updateFlags));
-				if (isGroup())
+				if (isVirtual())
 					workspace.broadcastEvent(LifecycleEvent.newEvent(LifecycleEvent.PRE_GROUP_MOVE, this, destination, updateFlags));
 				break;
 			case IResource.PROJECT :
@@ -2291,12 +2291,11 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 
 	/*
 	 * @return whether the current resource has a parent that is a group.
-	 * 
 	 */
 	public boolean isUnderGroup() {
 		IContainer parent = getParent();
 		while (parent != null) {
-			if (parent.isGroup())
+			if (parent.isVirtual())
 				return true;
 			parent = parent.getParent();
 		}
