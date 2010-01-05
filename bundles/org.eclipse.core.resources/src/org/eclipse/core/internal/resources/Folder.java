@@ -145,7 +145,7 @@ public class Folder extends Container implements IFolder {
 			parent.checkExists(getFlags(info), true);
 		} else
 			((Folder) parent).ensureExists(monitor);
-		if (getType() == FOLDER && isUnderGroup())
+		if (getType() == FOLDER && isUnderVirtual())
 			create(IResource.VIRTUAL | IResource.FORCE, true, monitor);
 		else
 			internalCreate(IResource.FORCE, true, monitor);

@@ -76,7 +76,7 @@ public class CopyVisitor implements IUnifiedTreeVisitor {
 				((Folder) destination).create(IResource.VIRTUAL, true, null);
 				return true;
 			}
-			if ((!isDeep || source.isUnderGroup()) && source.isLinked()) {
+			if ((!isDeep || source.isUnderVirtual()) && source.isLinked()) {
 				destination.createLink(source.getRawLocationURI(), updateFlags & IResource.ALLOW_MISSING_LOCAL, null);
 				return false;
 			}

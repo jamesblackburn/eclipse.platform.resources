@@ -269,7 +269,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, getFullPath(), message, null);
 			}
 			URI destLocation = dest.getLocationURI();
-			if (destLocation == null && (dest.isUnderGroup() == false)) {
+			if (destLocation == null && (dest.isUnderVirtual() == false)) {
 				message = NLS.bind(Messages.localstore_locationUndefined, dest.getFullPath());
 				throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, dest.getFullPath(), message, null);
 			}
@@ -406,7 +406,7 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 				throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, getFullPath(), message, null);
 			}
 			URI destLocation = dest.getLocationURI();
-			if (destLocation == null && (dest.isUnderGroup() == false)) {
+			if (destLocation == null && (dest.isUnderVirtual() == false)) {
 				message = NLS.bind(Messages.localstore_locationUndefined, dest.getFullPath());
 				throw new ResourceException(IResourceStatus.FAILED_READ_LOCAL, dest.getFullPath(), message, null);
 			}
@@ -1526,13 +1526,25 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 		return info != null && info.isSet(M_LINK);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see IResource#isGroup()
+	/* (non-Javadoc)
+	 * @see org.eclipse.core.resources.IResource#isVirtual()
 	 */
 	public boolean isVirtual() {
 		ResourceInfo info = getResourceInfo(false, false);
 		return info != null && info.isSet(M_VIRTUAL);
+	}
+	
+	/*
+	 * @return whether the current resource has a parent that is virtual.
+	 */
+	public boolean isUnderVirtual() {
+		IContainer parent = getParent();
+		while (parent != null) {
+			if (parent.isVirtual())
+				return true;
+			parent = parent.getParent();
+		}
+		return false;
 	}
 
 	/* (non-Javadoc)
@@ -2287,18 +2299,5 @@ public abstract class Resource extends PlatformObject implements IResource, ICor
 			} catch (URISyntaxException e) {
 				setLinkLocation(URIUtil.toURI(location.toPortableString()), updateFlags, monitor);
 			}
-	}
-
-	/*
-	 * @return whether the current resource has a parent that is a group.
-	 */
-	public boolean isUnderGroup() {
-		IContainer parent = getParent();
-		while (parent != null) {
-			if (parent.isVirtual())
-				return true;
-			parent = parent.getParent();
-		}
-		return false;
 	}
 }

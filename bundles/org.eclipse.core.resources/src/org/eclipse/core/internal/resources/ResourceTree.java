@@ -1123,7 +1123,7 @@ class ResourceTree implements IResourceTree {
 		IResourceVisitor visitor = new IResourceVisitor() {
 			public boolean visit(IResource resource) {
 				if (resource.isLinked()) {
-					if (isDeep && !((Resource) resource).isUnderGroup()) {
+					if (isDeep && !((Resource) resource).isUnderVirtual()) {
 						//clear the linked resource bit, if any
 						ResourceInfo info = ((Resource) resource).getResourceInfo(false, true);
 						info.clear(ICoreConstants.M_LINK);
